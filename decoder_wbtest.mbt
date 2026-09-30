@@ -2,7 +2,7 @@ fn slice(b : Bytes, start : Int, end : Int) -> Bytes { Bytes::from_array(b.to_ar
 
 test "all two-way and three-way splits including UTF8 CRLF NUL and concatenation" {
   let wire = b"\r\nSEND\r\ndestination:a\r\nx:a\\cb\r\ncontent-length:4\r\n\r\na\x00\xffb\x00RECEIPT\nreceipt-id:r\n\n\x00"
-  let expected = [Heartbeat, Frame(Frame::new("SEND", [("destination", "a"), ("x", "a:b"), ("content-length", "4")], body=b"a\x00\xffb")), Frame(Frame::new("RECEIPT", [("receipt-id", "r")]))]
+  let expected : Array[WireEvent] = [Heartbeat, Frame(Frame::new("SEND", [("destination", "a"), ("x", "a:b"), ("content-length", "4")], body=b"a\x00\xffb")), Frame(Frame::new("RECEIPT", [("receipt-id", "r")]))]
   for i = 0; i <= wire.length(); i = i+1 {
     for j = i; j <= wire.length(); j = j+1 {
       let d = Decoder::new()
