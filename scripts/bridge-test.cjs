@@ -1,0 +1,15 @@
+'use strict';
+const assert = require('node:assert/strict');
+const {protocol} = require('../transport/tcp.cjs');
+const c = protocol.create();
+assert.equal(protocol.state(c), 'fresh');
+assert.deepEqual(Buffer.from(protocol.send(c, 'CONNECT', [['accept-version','1.2'],['host','localhost']], Buffer.alloc(0), 0n)), Buffer.from('CONNECT\naccept-version:1.2\nhost:localhost\n\n\0'));
+assert.deepEqual(protocol.receive(c,Buffer.from('CONNECTED\nversion:1.2\n\n\0'),0n).map(JSON.parse), [{event:'connected'}]);
+const wire = protocol.send(c,'SEND',[['destination','tasks']],Buffer.from([65,0,255]),0n);
+const decoded = protocol.parse(wire).map(JSON.parse)[0];
+assert.deepEqual(decoded.body, [65,0,255]);
+assert.equal(decoded.command, 'SEND');
+assert.throws(() => protocol.send(c,'ACK',[['id','unknown']],Buffer.alloc(0),0n));
+protocol.close(c);
+assert.equal(protocol.state(c), 'closed');
+console.log('PASS JS boundary: JSON headers, byte body, errors and cleanup');
