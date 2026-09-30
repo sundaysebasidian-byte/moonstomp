@@ -1,0 +1,89 @@
+Warning: [0024]
+    ╭─[ <TASK_ROOT>/moonstomp/client.mbt:77:75 ]
+    │
+ 77 │ fn Client::settle(self : Client, index : Int, tx : String?) -> Unit raise ProtocolError {
+    │                                                                           ──────┬──────  
+    │                                                                                 ╰──────── Warning (unused_error_type): The error type of this function is never used.
+────╯
+Warning: [0020]
+    ╭─[ <TASK_ROOT>/moonstomp/decoder.mbt:73:48 ]
+    │
+ 73 │     let key = String::from_array(chars[:colon].to_array())
+    │                                                ────┬───  
+    │                                                    ╰───── Warning (deprecated): `to_array` is deprecated, use `to_owned` instead
+────╯
+Warning: [0020]
+    ╭─[ <TASK_ROOT>/moonstomp/decoder.mbt:74:52 ]
+    │
+ 74 │     let value = String::from_array(chars[colon+1:].to_array())
+    │                                                    ────┬───  
+    │                                                        ╰───── Warning (deprecated): `to_array` is deprecated, use `to_owned` instead
+────╯
+Warning: [0092]
+     ╭─[ <TASK_ROOT>/moonstomp/decoder.mbt:106:3 ]
+     │
+ 106 │   try self.consume(chunk) catch {
+     │   ─┬─  
+     │    ╰─── Warning (fragile_catch_all): 
+Found code that can be simplified:
+
+  try <expr> catch {
+    err => {
+      <cleanup code>
+      raise err
+    }
+  }
+
+If <cleanup code> does not mention `err` or perform `return`/`break`/`continue`, rewrite to:
+
+  errdefer <cleanup code>
+  <expr>
+
+Note: `try ... catch` will no longer capture async cancellation in the future, so using `catch` for cleanup is dangerous for async code.
+If your handler need to manipulate or inspect `err`, but contain cleanup code as well,
+it is still recommended to move the cleanup part to `errdefer` as well, leaving only the error inspecting part in `catch`.
+      
+─────╯
+Warning: [0027]
+   ╭─[ <TASK_ROOT>/moonstomp/headers.mbt:5:7 ]
+   │
+ 5 │       '\x00' => raise Invalid("NUL in header")
+   │       ───┬──  
+   │          ╰──── Warning (deprecated_syntax): The syntax `\x..` in char literal for type Char is deprecated. Use `\u..` instead.
+───╯
+Warning: [0027]
+    ╭─[ <TASK_ROOT>/moonstomp/headers.mbt:32:15 ]
+    │
+ 32 │       if c == '\x00' || c == '\r' || c == '\n' || c == ':' {
+    │               ───┬──  
+    │                  ╰──── Warning (deprecated_syntax): The syntax `\x..` in char literal for type Char is deprecated. Use `\u..` instead.
+────╯
+Warning: [0027]
+    ╭─[ <TASK_ROOT>/moonstomp/headers.mbt:44:13 ]
+    │
+ 44 │     if c == '\x00' || c == '\n' || c == '\r' || (key && c == ':') {
+    │             ───┬──  
+    │                ╰──── Warning (deprecated_syntax): The syntax `\x..` in char literal for type Char is deprecated. Use `\u..` instead.
+────╯
+Warning: [0027]
+   ╭─[ <TASK_ROOT>/moonstomp/headers_wbtest.mbt:9:52 ]
+   │
+ 9 │   for s in ["\\t", "\\", "raw:colon", "raw\r", "raw\x00"] {
+   │                                                    ──┬─  
+   │                                                      ╰─── Warning (deprecated_syntax): The syntax `\x..` in string literal for type String is deprecated. Use `\u..` instead.
+───╯
+Warning: [0020]
+    ╭─[ <TASK_ROOT>/moonstomp/heartbeat.mbt:15:22 ]
+    │
+ 15 │   (decimal(pieces[0].to_string(), 2147483647), decimal(pieces[1].to_string(), 2147483647))
+    │                      ────┬────  
+    │                          ╰────── Warning (deprecated): Use `to_owned` to allocate an owned String from a StringView; use `Show::to_string` or format strings for display
+────╯
+Warning: [0020]
+    ╭─[ <TASK_ROOT>/moonstomp/heartbeat.mbt:15:66 ]
+    │
+ 15 │   (decimal(pieces[0].to_string(), 2147483647), decimal(pieces[1].to_string(), 2147483647))
+    │                                                                  ────┬────  
+    │                                                                      ╰────── Warning (deprecated): Use `to_owned` to allocate an owned String from a StringView; use `Show::to_string` or format strings for display
+────╯
+Total tests: 23, passed: 23, failed: 0.
