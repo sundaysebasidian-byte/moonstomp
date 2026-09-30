@@ -1,0 +1,7 @@
+Error: [4036]
+    ╭─[ <TASK_ROOT>/moonstomp/examples/offline/main.mbt:26:19 ]
+    │
+ 26 │   if c.state() != Closed { abort("connection not closed") }
+    │                   ───┬──  
+    │                      ╰──── Cannot create values of the read-only type: Closed.
+────╯
