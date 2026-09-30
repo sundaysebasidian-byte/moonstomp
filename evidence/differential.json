@@ -1,0 +1,33 @@
+{
+  "reference": "@stomp/stompjs 7.2.0 Apache-2.0",
+  "valid_cases": 401,
+  "reference_chunk_runs": 1201,
+  "passed": true,
+  "documented_strictness_differences": [
+    {
+      "name": "header whitespace",
+      "moonstomp": "spaces preserved",
+      "reference": "accepted/trimmed",
+      "basis": "STOMP 1.2 Value Encoding / content-length"
+    },
+    {
+      "name": "undefined escape",
+      "moonstomp": "fatal",
+      "reference": "accepted/trimmed",
+      "basis": "STOMP 1.2 Value Encoding / content-length"
+    },
+    {
+      "name": "wrong terminator",
+      "moonstomp": "fatal",
+      "reference": "accepted/trimmed",
+      "basis": "STOMP 1.2 Value Encoding / content-length"
+    },
+    {
+      "name": "signed length",
+      "moonstomp": "fatal",
+      "reference": "accepted/trimmed",
+      "basis": "STOMP 1.2 Value Encoding / content-length"
+    }
+  ],
+  "broker_interop": "NOT TESTED"
+}

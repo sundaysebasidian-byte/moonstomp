@@ -23,7 +23,7 @@ fn run() -> Unit raise @stomp.ProtocolError {
   ignore(c.send(@stomp.unsubscribe("worker"), 0))
   ignore(c.send(@stomp.disconnect("bye"), 0))
   ignore(c.receive(b"RECEIPT\nreceipt-id:bye\n\n\x00", 0))
-  if c.state() != Closed { abort("connection not closed") }
+  match c.state() { Closed => (); _ => abort("connection not closed") }
   println("disconnect receipt consumed, connection closed")
 }
 fn main { run() catch { _ => abort("offline example failed") } }
