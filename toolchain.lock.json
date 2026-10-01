@@ -13,5 +13,5 @@
   },
   "compiler_requirement": "exact release; minimum competition requirement 0.10.14",
   "runtime_dependencies": "MoonBit core included with SDK; Node built-ins; no registry install required",
-  "ci_note": "CI configuration prepared; remote Linux job not run. macOS hashes are observations, not Linux hashes."
+  "ci_note": "0.1.0 and public 6b12658 passed Linux x86_64 CI; exact 0.1.1 CI is recorded in docs/publication-0.1.1.zh-CN.md. macOS hashes are observations, not Linux hashes."
 }

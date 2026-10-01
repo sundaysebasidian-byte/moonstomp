@@ -31,6 +31,7 @@ pub struct Client {
   capacity : Int
   max_pending : Int
   subscriptions : Array[(String, String)]
+  unsubscribing : Array[(String, String)] // subscription id, receipt fence
   transactions : Array[String]
   receipts : Array[String]
   deliveries : Array[Delivery]
@@ -55,6 +56,7 @@ pub fn Client::new(
     capacity,
     max_pending,
     subscriptions: [],
+    unsubscribing: [],
     transactions: [],
     receipts: [],
     deliveries: [],
@@ -76,6 +78,7 @@ pub fn Client::state(self : Client) -> State {
 pub fn Client::fail(self : Client) -> Unit {
   self.state = Closed
   self.subscriptions.clear()
+  self.unsubscribing.clear()
   self.transactions.clear()
   self.receipts.clear()
   self.deliveries.clear()
@@ -105,6 +108,15 @@ fn Client::subscription_mode(self : Client, id : String) -> String? {
     }
   }
   None
+}
+
+///|
+fn Client::remove_subscription(self : Client, id : String) -> Unit {
+  for i = self.subscriptions.length() - 1; i >= 0; i = i - 1 {
+    if self.subscriptions[i].0 == id {
+      ignore(self.subscriptions.remove(i))
+    }
+  }
 }
 
 ///|
@@ -176,7 +188,10 @@ pub fn Client::send(
     Some(c) => c.advance(now)
     None => ()
   }
-  if f.headers.length() > 128 || f.body.length() > 1048576 {
+  let automatic_length = f.body.length() > 0 && f.header("content-length") == None
+  if f.headers.length() > 128 ||
+    (automatic_length && f.headers.length() == 128) ||
+    f.body.length() > 1048576 {
     raise Invalid("outbound limit")
   }
   for h in f.headers {
@@ -241,10 +256,17 @@ pub fn Client::send(
         _ => raise Invalid("invalid ack mode")
       }
     }
-    "UNSUBSCRIBE" =>
-      if self.subscription_mode(required(f, "id")) == None {
+    "UNSUBSCRIBE" => {
+      let id = required(f, "id")
+      if self.subscription_mode(id) == None {
         raise Invalid("unknown subscription")
       }
+      for pending in self.unsubscribing {
+        if pending.0 == id {
+          raise Invalid("unsubscribe already pending")
+        }
+      }
+    }
     "BEGIN" => {
       let tx = required(f, "transaction")
       if self.transactions.contains(tx) {
@@ -281,10 +303,12 @@ pub fn Client::send(
       )
     "UNSUBSCRIBE" => {
       let id = required(f, "id")
-      for i = self.subscriptions.length() - 1; i >= 0; i = i - 1 {
-        if self.subscriptions[i].0 == id {
-          ignore(self.subscriptions.remove(i))
+      match f.header("receipt") {
+        Some(receipt) => {
+          // Keep the slot/mode until the ordered receipt fences earlier MESSAGEs.
+          self.unsubscribing.push((id, receipt))
         }
+        None => self.remove_subscription(id)
       }
       // Pending acknowledgements remain valid until explicitly settled/connection closes.
     }
@@ -381,6 +405,12 @@ fn Client::accept_frame(
         raise Invalid("unsolicited receipt")
       }
       remove_string(self.receipts, id)
+      for i = self.unsubscribing.length() - 1; i >= 0; i = i - 1 {
+        if self.unsubscribing[i].1 == id {
+          self.remove_subscription(self.unsubscribing[i].0)
+          ignore(self.unsubscribing.remove(i))
+        }
+      }
       if self.disconnect_receipt == Some(id) {
         self.fail()
       }

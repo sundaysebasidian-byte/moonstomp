@@ -120,5 +120,31 @@ async function listen(handler) {
     assert.equal((await observed).event,'heartbeat');assert.deepEqual((await message).frame.body,[118]);
     assert.equal(hb.queue.length,0);assert.equal(hb.queueBytes,0);assert.equal(hb.state(),'active');tests++;
   } finally {hb.stop();await beats.close();}
+  const retirePeer=await listen(s=>{
+    let buffer='';
+    s.on('data',bytes=>{
+      buffer+=bytes.toString();
+      while(buffer.includes('\0')) {
+        const at=buffer.indexOf('\0'),frame=buffer.slice(0,at);buffer=buffer.slice(at+1);
+        const id=frame.match(/\nreceipt:([^\n]+)/)?.[1];
+        if(frame.startsWith('CONNECT\n'))s.write('CONNECTED\nversion:1.2\n\n\0');
+        else if(frame.startsWith('UNSUBSCRIBE\n')) {
+          s.write('MESSAGE\nsubscription:s\nmessage-id:inflight\ndestination:tasks\nack:old\n\njob\0RECEIPT\nreceipt-id:'+id+'\n\n\0');
+        } else if(id)s.write('RECEIPT\nreceipt-id:'+id+'\n\n\0');
+      }
+    });
+  });
+  const retiring=new TcpClient({port:retirePeer.port});
+  try {
+    await retiring.connect({heartbeat:'0,0'});
+    await retiring.receipt('SUBSCRIBE',[['id','s'],['destination','tasks'],['ack','client-individual']]);
+    const inFlight=retiring.waitFor(event=>event.event==='message');
+    await retiring.receipt('UNSUBSCRIBE',[['id','s']]);
+    const delivered=(await inFlight).frame;
+    assert.deepEqual(delivered.body,[106,111,98]);assert.equal(retiring.state(),'active');
+    retiring.send('ACK',[['id','old']]);
+    await retiring.receipt('SUBSCRIBE',[['id','s'],['destination','other']]);
+    await retiring.disconnect();assert.equal(retiring.timer,null);tests++;
+  } finally {retiring.stop();await retirePeer.close();}
   console.log(JSON.stringify({passed:true,tests,scope:'scripted loopback TCP lifecycle and API bounds, not broker interoperability'},null,2));
 })().catch(e=>{console.error(e);process.exitCode=1;});

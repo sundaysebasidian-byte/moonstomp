@@ -2,7 +2,9 @@
 
 MoonBit 实现的 STOMP 1.2 增量字节流编解码与传输分层客户端。适合将 MoonBit 程序接入任务队列、事件通道或现有 STOMP broker。核心协议不依赖 socket、系统时钟或 Node；Node TCP 适配器仅负责连接、读写、事件等待和关闭。
 
-首版版本 `0.1.0`，按 MIT 发布。已实跑 Apache Artemis 2.57.0 无凭据回环互操作：三个场景和五项补充检查通过；事务 ACK 在该 broker 不受支持，NACK 按丢弃处理。结果只适用于已测版本和配置，不是所有 broker 的兼容认证。源码地址为 https://github.com/sundaysebasidian-byte/moonstomp ，发布状态、远端 CI 和正式包安装证据以对应提交的发布记录为准。
+本版源码版本 `0.1.1`，按 MIT 发布；0.1.0 历史版本保留。已实跑 Apache Artemis 2.57.0 无凭据回环互操作：三个场景和五项补充检查通过；事务 ACK 在该 broker 不受支持，NACK 按丢弃处理。结果只适用于已测版本和配置，不是所有 broker 的兼容认证。源码地址为 https://github.com/sundaysebasidian-byte/moonstomp ，发布状态、远端 CI 和正式包安装证据以对应提交的发布记录为准。
+
+0.1.1 修复自动 content-length 计入最终 header 预算，以及带 receipt 的退订保留在途消息至回执到来；0.1.0 未包含这两项修复。[边界与失败行为](docs/boundaries.zh-CN.md) 区分核心、JS 运输、后端、容量、时钟和已知未测项。本轮公开和发布已获明确批准，准确 CI、正式包与独立安装状态见 [0.1.1 发布记录](docs/publication-0.1.1.zh-CN.md)，不覆盖 0.1.0。
 
 ## 支持范围
 
@@ -21,7 +23,7 @@ MoonBit 实现的 STOMP 1.2 增量字节流编解码与传输分层客户端。�
 
 - `moonc v0.10.14+7d59c7ec9 (2026-09-18)`
 - `moon 0.1.20260920 (914d7da 2026-09-20)`
-- 已验证 Node `v24.18.0`、Python `3.14.6`、macOS arm64；其他系统与版本未实测。
+- 已验证 Node `v24.18.0`、Python `3.14.6`、macOS arm64；已发布版本另有 Linux CI。真实 broker runner 仅 macOS 实跑，0.1.1 的准确远端 CI 状态见版本发布记录；其他系统与工具版本未实测。
 
 ```sh
 # 换成你的现有 SDK 路径；MOON_HOME 可指向本任务独立副本。
@@ -57,7 +59,7 @@ decoder.end()
 
 无 I/O 的 codec 只检查帧语法；必需 header 和命令时序由 Client 校验。decoder/feed 同一批中后续出现非法输入时整批报错，先前事件不会作为部分成功返回，调用者应关闭运输。出站 API 校验错误不会将核心 Client 自动毒化；TCP 便利适配器采取关闭策略。
 
-正式 Mooncakes 包为 [sundaysebasidian-byte/moonstomp@0.1.0](https://mooncakes.io/docs/sundaysebasidian-byte/moonstomp)。已在全新缓存的独立工程实跑下载安装，两个后端各三个场景通过，全部 49 个安装文件与发布 ZIP 摘要一致。在你的 MoonBit 工程运行 `moon add sundaysebasidian-byte/moonstomp@0.1.0`，在 `moon.pkg` 导入该包为 `@stomp` 即可使用；本源码自身不要求 registry 拉取。
+Mooncakes 包名为 [sundaysebasidian-byte/moonstomp](https://mooncakes.io/docs/sundaysebasidian-byte/moonstomp)，本版安装固定 `0.1.1`；正式发布及全新 registry 下载验证以 [版本证据](docs/publication-0.1.1.zh-CN.md) 为准。0.1.0 的 49 文件/两个后端各三个场景证据保留为历史，不能代替 0.1.1 安装验证。在工程中运行 `moon add sundaysebasidian-byte/moonstomp@0.1.1`，在 `moon.pkg` 导入该包为 `@stomp`；本源码自身不要求 registry 拉取。
 
 完整消费例可从仓库根目录复制到新工程（JSON manifest 兼容格式会有弃用提示，已记录）：
 
@@ -69,7 +71,7 @@ cat > ../moonstomp-consumer/moon.mod.json <<'JSON'
 {"name":"independent/moonstomp-registry-consumer","version":"0.1.0","license":"MIT"}
 JSON
 cd ../moonstomp-consumer
-moon add sundaysebasidian-byte/moonstomp@0.1.0
+moon add sundaysebasidian-byte/moonstomp@0.1.1
 moon check --target js -j 1
 moon build --target js -j 1
 moon test --target js --package independent/moonstomp-registry-consumer -j 1
@@ -121,9 +123,13 @@ runner 会校验官方 SHA512 和已锁定摘要；不会下载软件或连接�
 | JS 边界 | bridge/main.mbt | 明确的 JSON header/event 与字节正文边界，隐藏编译器内部表示 |
 | TCP glue | transport/tcp.cjs | Node net、有限等待/缓存、运输错误及关闭 |
 
-默认单行 8192 字节（包含 CR，不含 LF）、128 个 header、1 MiB 正文、每次 feed 1024 事件。可通过 `Limits::new()` 设置；事件数上限按一次 feed 计算，调用者须选择合适的分块与上限。Client 出站 header 名值 UTF-8 合计不超过 2047 字节（转义后仍受 8192 行预算），最多 128 header、1 MiB 正文；默认各 256 个活跃订阅/事务/待 receipt、1024 个待确认消息。
+默认单行 8192 字节（包含 CR，不含 LF）、128 个 header、1 MiB 正文、每次 feed 1024 事件（包括心跳）。可通过 `Limits::new()` 设置；Client 内部使用默认 Decoder。Client 出站**每对** header 名值 UTF-8 合计不超过 2047 字节，最多 128 个最终 wire headers、1 MiB 正文；0.1.1 将自动补的长度计入 header 预算。默认各 256 个订阅（含等待退订回执）、事务、待 receipt，1024 个待确认消息。单独 encode 不使用 Limits；这些上限不是总 RSS、返回事件总正文或调用者分配预算。
+
+0.1.1 中，带 receipt 的 UNSUBSCRIBE 直到收到相应回执才移除订阅，保留回执前在途 MESSAGE 的原 ACK 模式；禁止重复退订、提前 ID 复用。已经交付的消息在退订后仍能 ACK/NACK。`unsubscribe(id)` 无 receipt，立即移除；之后收到该 ID 的 MESSAGE 会关闭，因此需要排空时应通过 Frame 设置 receipt 或用 TCP receipt 便利方法。详细严格策略见边界文档。
 
 TCP 默认缓存最多 1024 个业务/回执事件且 JSON 估算总量不超过 4 MiB，最多 256 个等待者，写缓冲最多 2 MiB。心跳已由核心更新存活时间，仅交付给当前匹配等待者，未观察的心跳不积压进业务队列。超限会拒绝或关闭；不无限排队。每个 Client 对应一次连接，不复用已关闭实例。CPU 测试脚本始终 `-j 1`。
+
+JSON 队列预算不等于 raw body 预算，1 MiB 高 octet 正文及元数据可能超过 4 MiB 排队估算；应预先注册业务等待者。`waitFor` 超时不撤销已发送意图，服务端结果可能不确定；predicate 须同步、快速、无副作用，异步回调不支持。详细失败/关闭和诊断边界见 [边界文档](docs/boundaries.zh-CN.md)。
 
 `receipt(command, headers, body, id)` 自行设置 receipt header：传入 header 不能再包含 receipt，body 须为 Buffer/Uint8Array。等待者已满、参数类型/结构无效、重复 receipt header 或同 ID 的旧回执尚未消费时，拒绝调用且不发送命令；先消费旧回执再复用 ID。`waitFor(predicate, timeout)` 的 predicate 须为函数，timeout 和 tickMs 不超过 Node 定时器的 2147483647 ms 范围。这些便利方法的预校验拒绝保留健康连接；后续核心协议校验、发送或运输故障仍采取关闭策略。
 

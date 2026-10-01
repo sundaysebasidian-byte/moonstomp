@@ -9,6 +9,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import tomllib
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -42,9 +43,13 @@ def main():
         if completed.returncode:
             raise RuntimeError(name+' failed; see original log')
     try:
+        metadata = tomllib.loads((ROOT / 'moon.mod').read_text())
+        module, version = metadata['name'], metadata['version']
+        report['candidate_module'] = module
+        report['candidate_version'] = version
         run('local-package', [moon, 'package', '--frozen'], ROOT)
-        archive = ROOT / '_build/publish/sundaysebasidian-byte-moonstomp-0.1.0.zip'
-        shutil.copyfile(archive, out / 'moonstomp-0.1.0-local-candidate.zip')
+        archive = ROOT / '_build/publish' / (module.replace('/', '-') + '-' + version + '.zip')
+        shutil.copyfile(archive, out / ('moonstomp-' + version + '-local-candidate.zip'))
         candidate = out / 'candidate'
         candidate.mkdir()
         with zipfile.ZipFile(archive) as bundle:
