@@ -1,0 +1,185 @@
+// Separate downstream module. Supplied server frames are fixtures, not a broker.
+
+///|
+fn read_outgoing(wire : Bytes) -> @stomp.Frame raise {
+  let d = @stomp.Decoder::new()
+  let events = d.feed(wire)
+  assert_eq(events.length(), 1)
+  d.end()
+  match events[0] {
+    Frame(f) => f
+    _ => abort("expected outgoing frame")
+  }
+}
+
+///|
+fn session(heartbeat? : String = "0,0") -> @stomp.Client raise {
+  let c = @stomp.Client::new()
+  let request = read_outgoing(c.send(@stomp.connect("localhost", heartbeat~), 0))
+  assert_eq(request.command, "CONNECT")
+  assert_eq(request.header("accept-version"), Some("1.2"))
+  let connected = c.receive(b"CONNECTED\nversion:1.2\nheart-beat:20,10\n\n\x00", 0)
+  assert_eq(connected.length(), 1)
+  match connected[0] { Connected => (); _ => abort("handshake") }
+  c
+}
+
+///|
+fn close(c : @stomp.Client, now : Int64) -> Unit raise {
+  assert_eq(read_outgoing(c.send(@stomp.disconnect("bye"), now)).command, "DISCONNECT")
+  let events = c.receive(b"RECEIPT\nreceipt-id:bye\n\n\x00", now)
+  match events[0] { Receipt(id) => assert_eq(id, "bye"); _ => abort("disconnect receipt") }
+  match c.state() { Closed => (); _ => abort("closed state") }
+}
+
+///|
+fn media_worker() -> String raise {
+  let c = session()
+  let subscription = read_outgoing(c.send(@stomp.subscribe("resize-worker", "/queue/images", ack="client-individual"), 0))
+  assert_eq(subscription.command, "SUBSCRIBE")
+  assert_eq(subscription.header("destination"), Some("/queue/images"))
+  assert_eq(subscription.header("ack"), Some("client-individual"))
+  let payload = b"resize\x00image"
+  let publish = read_outgoing(c.send(@stomp.send_message("/queue/images", payload, receipt="job-published"), 0))
+  assert_eq(publish.body, payload)
+  assert_eq(publish.header("content-length"), Some("12"))
+  let delivered = c.receive(b"MESSAGE\nsubscription:resize-worker\nmessage-id:image-1\ndestination:/queue/images\nack:image-ok\ncontent-length:12\n\nresize\x00image\x00", 1)
+  match delivered[0] { Message(f) => assert_eq(f.body, payload); _ => abort("binary job") }
+  assert_eq(c.pending_deliveries(), 1)
+  assert_eq(read_outgoing(c.send(@stomp.acknowledge("image-ok"), 1)).command, "ACK")
+  ignore(c.receive(b"MESSAGE\nsubscription:resize-worker\nmessage-id:image-2\ndestination:/queue/images\nack:image-bad\n\ninvalid-job\x00", 2))
+  assert_eq(read_outgoing(c.send(@stomp.acknowledge("image-bad", negative=true), 2)).command, "NACK")
+  assert_eq(c.pending_deliveries(), 0)
+  let receipt = c.receive(b"RECEIPT\nreceipt-id:job-published\n\n\x00", 2)
+  match receipt[0] { Receipt(id) => assert_eq(id, "job-published"); _ => abort("publish receipt") }
+  assert_eq(c.pending_receipts(), 0)
+  ignore(c.send(@stomp.unsubscribe("resize-worker"), 2))
+  close(c, 2)
+  "media-worker: bytes=" + payload.length().to_string() + ", ACK=1, NACK=1, pending=0"
+}
+
+///|
+fn sensor_feed() -> String raise {
+  let c = session(heartbeat="10,20")
+  ignore(c.send(@stomp.subscribe("sensors", "/topic/temperature"), 0))
+  let input = b"MESSAGE\nsubscription:sensors\nmessage-id:t1\ndestination:/topic/temperature\nx-label:room\\cone\\nroom2\nx-label:ignored\n\n25\x00MESSAGE\nsubscription:sensors\nmessage-id:t2\ndestination:/topic/temperature\n\n26\x00"
+  let bodies : Array[Bytes] = []
+  for byte in input {
+    for event in c.receive(Bytes::from_array([byte]), 5) {
+      match event {
+        Message(f) => {
+          if bodies.length() == 0 {
+            assert_eq(f.header("x-label"), Some("room:one\nroom2"))
+            assert_eq(f.headers.filter(h => h.0 == "x-label").length(), 2)
+          }
+          bodies.push(f.body)
+        }
+        _ => abort("only readings expected")
+      }
+    }
+  }
+  assert_eq(bodies.length(), 2)
+  assert_eq(bodies[0], b"25")
+  assert_eq(bodies[1], b"26")
+  assert_eq(c.pending_deliveries(), 0)
+  assert_eq(c.tick(10), b"\n")
+  ignore(c.send(@stomp.unsubscribe("sensors"), 10))
+  close(c, 10)
+  "sensor-feed: readings=" + bodies.length().to_string() + ", values=25/26, duplicate-first, heartbeat=LF"
+}
+
+///|
+fn ledger_batch() -> String raise {
+  let c = session()
+  ignore(c.send(@stomp.subscribe("ledger", "/queue/ledger", ack="client"), 0))
+  ignore(c.receive(b"MESSAGE\nsubscription:ledger\nmessage-id:entry-1\ndestination:/queue/ledger\nack:l1\n\ndebit\x00MESSAGE\nsubscription:ledger\nmessage-id:entry-2\ndestination:/queue/ledger\nack:l2\n\ncredit\x00", 0))
+  assert_eq(c.pending_deliveries(), 2)
+  ignore(c.send(@stomp.begin_transaction("draft"), 0))
+  let staged = read_outgoing(c.send(@stomp.acknowledge("l2", transaction="draft"), 0))
+  assert_eq(staged.header("transaction"), Some("draft"))
+  assert_eq(c.pending_deliveries(), 2)
+  assert_eq(read_outgoing(c.send(@stomp.finish_transaction("draft", commit=false), 0)).command, "ABORT")
+  assert_eq(c.pending_deliveries(), 2)
+  // ABORT restores acknowledgement eligibility; a repeated staged ACK would fail.
+  assert_eq(read_outgoing(c.send(@stomp.acknowledge("l1"), 0)).command, "ACK")
+  assert_eq(c.pending_deliveries(), 1)
+  ignore(c.send(@stomp.begin_transaction("accepted"), 0))
+  let published = read_outgoing(c.send(@stomp.send_message("/queue/ledger-audit", b"batch-1", transaction="accepted", receipt="audit"), 0))
+  assert_eq(published.header("destination"), Some("/queue/ledger-audit"))
+  assert_eq(published.header("transaction"), Some("accepted"))
+  assert_eq(published.body, b"batch-1")
+  ignore(c.send(@stomp.acknowledge("l2", transaction="accepted"), 0))
+  let commit = @stomp.Frame::new("COMMIT", [("transaction", "accepted"), ("receipt", "committed")])
+  assert_eq(read_outgoing(c.send(commit, 0)).command, "COMMIT")
+  assert_eq(c.pending_deliveries(), 0)
+  let receipts = c.receive(b"RECEIPT\nreceipt-id:audit\n\n\x00RECEIPT\nreceipt-id:committed\n\n\x00", 1)
+  assert_eq(receipts.length(), 2)
+  match receipts[0] { Receipt(id) => assert_eq(id, "audit"); _ => abort("audit receipt") }
+  match receipts[1] { Receipt(id) => assert_eq(id, "committed"); _ => abort("commit receipt") }
+  assert_eq(c.pending_receipts(), 0)
+  ignore(c.send(@stomp.unsubscribe("ledger"), 1))
+  close(c, 1)
+  "ledger-batch: staged=2, abort-restored=2, commit-pending=0, receipts=2"
+}
+
+///|
+test "media worker consumes binary tasks and chooses ACK or NACK" {
+  assert_eq(media_worker(), "media-worker: bytes=12, ACK=1, NACK=1, pending=0")
+}
+
+///|
+test "sensor feed parses bytewise multi-message stream without acknowledgements" {
+  assert_eq(sensor_feed(), "sensor-feed: readings=2, values=25/26, duplicate-first, heartbeat=LF")
+}
+
+///|
+test "ledger batch restores aborted cumulative ACK and commits a new batch" {
+  assert_eq(ledger_batch(), "ledger-batch: staged=2, abort-restored=2, commit-pending=0, receipts=2")
+}
+
+///|
+fn main {
+  try {
+    println(media_worker())
+    println(sensor_feed())
+    println(ledger_batch())
+  } catch {
+    _ => abort("downstream scenario failed")
+  }
+}
+
+///|
+test "registry 0.1.1 counts automatic length in the public client header budget" {
+  let c = session()
+  let headers : Array[(String, String)] = [("destination", "tasks")]
+  for i = 0; i < 127; i = i + 1 { headers.push(("x", "v")) }
+  assert_true(try { ignore(c.send(@stomp.Frame::new("SEND", headers, body=b"\x00"), 0)); false } catch { _ => true })
+  match c.state() { Active => (); _ => fail("outbound rejection must preserve active state") }
+  assert_eq(c.pending_receipts(), 0)
+  ignore(headers.pop())
+  let d = @stomp.Decoder::new()
+  match d.feed(c.send(@stomp.Frame::new("SEND", headers, body=b"\x00"), 0))[0] {
+    Frame(f) => { assert_eq(f.headers.length(), 128); assert_eq(f.body, b"\x00") }
+    _ => fail("binary frame")
+  }
+  d.end()
+  c.fail()
+}
+
+///|
+test "registry 0.1.1 preserves messages before unsubscribe receipt and prevents id reuse" {
+  let c = session()
+  ignore(c.send(@stomp.subscribe("s", "tasks", ack="client-individual"), 0))
+  ignore(c.send(@stomp.Frame::new("UNSUBSCRIBE", [("id", "s"), ("receipt", "unsub")]), 0))
+  assert_true(try { ignore(c.send(@stomp.subscribe("s", "other"), 0)); false } catch { _ => true })
+  let events = c.receive(b"MESSAGE\nsubscription:s\nmessage-id:inflight\ndestination:tasks\nack:old\n\njob\x00RECEIPT\nreceipt-id:unsub\n\n\x00", 0)
+  assert_eq(events.length(), 2)
+  assert_eq(c.pending_receipts(), 0)
+  assert_eq(c.pending_deliveries(), 1)
+  assert_true(try { ignore(c.send(@stomp.subscribe("s", "other"), 0)); false } catch { _ => true })
+  assert_eq(read_outgoing(c.send(@stomp.acknowledge("old"), 0)).command, "ACK")
+  ignore(c.send(@stomp.subscribe("s", "other"), 0))
+  assert_eq(c.pending_deliveries(), 0)
+  match c.state() { Active => (); _ => fail("receipt-fenced unsubscribe remains healthy") }
+  c.fail()
+}

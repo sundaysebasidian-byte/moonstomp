@@ -1,0 +1,3 @@
+Registry index cloned successfully
+Symbols updated successfully
+Downloading sundaysebasidian-byte/moonstomp@0.1.1

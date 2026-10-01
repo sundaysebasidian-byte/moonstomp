@@ -1,0 +1,210 @@
+{
+  "started_utc": "2026-10-01T10:31:24.166648+00:00",
+  "status": "PASSED_OFFICIAL_REGISTRY_CONSUMPTION",
+  "package": "sundaysebasidian-byte/moonstomp",
+  "version": "0.1.1",
+  "source": "official Mooncakes registry; fresh isolated index/cache; no local path override",
+  "git_head": "d4a7785a97226b126e00e6a9d6117bfe4d625b59",
+  "broker": "NOT RUN: consumer server frames are offline fixtures",
+  "stages": [
+    {
+      "name": "registry-add",
+      "command": [
+        "<TASK_ROOT>/outputs/mooncakes-registry-consumption-0.1.1/isolated-sdk/bin/moon",
+        "add",
+        "sundaysebasidian-byte/moonstomp@0.1.1"
+      ],
+      "exit_code": 0,
+      "status": "PASSED"
+    },
+    {
+      "name": "registry-check-js",
+      "command": [
+        "<TASK_ROOT>/outputs/mooncakes-registry-consumption-0.1.1/isolated-sdk/bin/moon",
+        "check",
+        "--target",
+        "js",
+        "--deny-warn",
+        "-j",
+        "1"
+      ],
+      "exit_code": 0,
+      "status": "PASSED"
+    },
+    {
+      "name": "registry-build-js",
+      "command": [
+        "<TASK_ROOT>/outputs/mooncakes-registry-consumption-0.1.1/isolated-sdk/bin/moon",
+        "build",
+        "--target",
+        "js",
+        "--deny-warn",
+        "-j",
+        "1"
+      ],
+      "exit_code": 0,
+      "status": "PASSED"
+    },
+    {
+      "name": "registry-test-js",
+      "command": [
+        "<TASK_ROOT>/outputs/mooncakes-registry-consumption-0.1.1/isolated-sdk/bin/moon",
+        "test",
+        "--target",
+        "js",
+        "--deny-warn",
+        "-j",
+        "1",
+        "--package",
+        "independent/moonstomp-registry-consumer"
+      ],
+      "exit_code": 0,
+      "status": "PASSED"
+    },
+    {
+      "name": "registry-run-js",
+      "command": [
+        "<TASK_ROOT>/outputs/mooncakes-registry-consumption-0.1.1/isolated-sdk/bin/moon",
+        "run",
+        ".",
+        "--target",
+        "js",
+        "--deny-warn",
+        "-j",
+        "1"
+      ],
+      "exit_code": 0,
+      "status": "PASSED"
+    },
+    {
+      "name": "registry-check-wasm-gc",
+      "command": [
+        "<TASK_ROOT>/outputs/mooncakes-registry-consumption-0.1.1/isolated-sdk/bin/moon",
+        "check",
+        "--target",
+        "wasm-gc",
+        "--deny-warn",
+        "-j",
+        "1"
+      ],
+      "exit_code": 0,
+      "status": "PASSED"
+    },
+    {
+      "name": "registry-build-wasm-gc",
+      "command": [
+        "<TASK_ROOT>/outputs/mooncakes-registry-consumption-0.1.1/isolated-sdk/bin/moon",
+        "build",
+        "--target",
+        "wasm-gc",
+        "--deny-warn",
+        "-j",
+        "1"
+      ],
+      "exit_code": 0,
+      "status": "PASSED"
+    },
+    {
+      "name": "registry-test-wasm-gc",
+      "command": [
+        "<TASK_ROOT>/outputs/mooncakes-registry-consumption-0.1.1/isolated-sdk/bin/moon",
+        "test",
+        "--target",
+        "wasm-gc",
+        "--deny-warn",
+        "-j",
+        "1",
+        "--package",
+        "independent/moonstomp-registry-consumer"
+      ],
+      "exit_code": 0,
+      "status": "PASSED"
+    },
+    {
+      "name": "registry-run-wasm-gc",
+      "command": [
+        "<TASK_ROOT>/outputs/mooncakes-registry-consumption-0.1.1/isolated-sdk/bin/moon",
+        "run",
+        ".",
+        "--target",
+        "wasm-gc",
+        "--deny-warn",
+        "-j",
+        "1"
+      ],
+      "exit_code": 0,
+      "status": "PASSED"
+    }
+  ],
+  "installed_source_sha256": {
+    "moon.pkg": "2f7fa5e32aeda7db8d875c8ccaa2a58a5cc32769edc21ecd7f77cd700afc4fde",
+    "moon.mod": "823af5b001a1b82307c0a3e46d045122342ecfbcd6a6d574306fcc4959f46edb",
+    "decoder.mbt": "8e70e0cfa787e332932695ceddbf4b1a35fe8acd5ec1251ee278bda33347b05b",
+    "transport/tcp.cjs": "57b364aca102df5692747ce15e50c879e425589139d25830badb6f5fbc4b6e3f",
+    "LICENSE": "7f826986b233f872395bc9a7265317f79069f12fa31c55f6e12ef8220738b9dc",
+    "toolchain.lock.json": "b94ea8a651346025223503a0f43932413aebae7800ec6c303ff7cc344776b983",
+    "bridge/moon.pkg": "b7259fb2e3e73f157b9110d5205521b043783a4551269eb76ad84e25bf2ad393",
+    "bridge/main.mbt": "8ab2192a93147dd6fcdf56e3a7ae24ae4266bc68370865ee017f8e70b3ca475e",
+    "tests/reference/stompjs-7.2.0.umd.cjs": "4004988e61bc0b15c60bc2d495a12ced18933eda1551ee9e2643b5f0754546b1",
+    "tests/reference/LICENSE": "c46641c7a00292f58f73544f661200f940d31622be1137aef70c19da4182ffcc",
+    "tests/reference/package-metadata.json": "57badc1bbec3e78bc5b19388523d42d5ca755518ad70128ed8788fb33a958364",
+    "docs/publication-gate.zh-CN.md": "5b3862835abbbe1120101dcd79ae7492d8726e35e135fd99f3e5dd011472b712",
+    "docs/publication.zh-CN.md": "683075f061ec7955691e7f120151eafe798be0632b3953ab7242f47c810f7978",
+    "docs/broker-plan.zh-CN.md": "785b97ea68071597a2a221e412fb3bc43bd21e150cea416c4ecf56fb52824c06",
+    "docs/reuse-review.zh-CN.md": "49877a3deb49fb59a932bb8da5dbbfbe4770e98eabe89e54a212907eb3fb4455",
+    "docs/acceptance.zh-CN.md": "abcea32b88d94a22a7ad653dc7e35b92ffc3c65e94f5d9e1bd36d4652f4f7d0f",
+    "docs/boundaries.zh-CN.md": "242980132f905dcae452af222e4095a97c2e7ce36aac4eaf8cd51995c2a20d48",
+    "docs/reference.zh-CN.md": "5e7101b953765a292f7ad5e1c0b8e7bbaee13f93360fcb52f4e581d1469801f7",
+    "docs/final-review.zh-CN.md": "aec67ea761bff02b9a28ec3a22cf2dc8ce4114e0cf76213aca2c2829c3df8dbb",
+    "docs/broker-interop.zh-CN.md": "0924c3ab05728a849d475827588160d9757c2524780caa80a6331a8d0af215a3",
+    "docs/delivery-review.zh-CN.md": "d37ee34920ca403970367e69dd4bcec56fe19f00740eb87e1d24a03d2765599e",
+    "docs/publication-0.1.1.zh-CN.md": "4eda06afb17fc8eabd03f2a9df1415c5d58e44cf7fa77a532dc6e979b3e71f8a",
+    "headers.mbt": "8049d929dff95385955be63fb9188103bb8e93cee699e892dacfde2149f48aa6",
+    "README.md": "b326a18431368a2423fc03026ce24fd74b2d22ee879324d7114e5f0a31b19b82",
+    "api_test.mbt": "516eda07e847cb29e6991a22b9e3a1f668ee6e094b30551ef8b2100ee12075bb",
+    "client.mbt": "b2d3606597aa42a893ab88b25d5371eb9ba27aa4bfafd183ed647ee0da4ececc",
+    "heartbeat_wbtest.mbt": "e1b232d17130ea1c0d64319d18afed2eb46abc5a54156eca11af9214582a7a07",
+    "headers_wbtest.mbt": "c7e9d5af4631b0f0b5a495e0b91883633f1add4e844e280bc459d8d91d210e9b",
+    "examples/2-reliable.cjs": "c5b7c5222c6726664eb9144e22d8db206db6e423d2794577c07e32306175a15c",
+    "examples/broker-common.cjs": "499b5d998585da72406ee5310848e5a0e032757078f38f543c59ee0f80beb596",
+    "examples/3-transactions.cjs": "3fc321c84e2d241143188053afd99db5bfbbfd56f5a2300040407c035e32d360",
+    "examples/1-tasks.cjs": "dcb28128e45e15f8faffd569a8b04e7fe7008fbac19a8ff01791f42cbafa5b78",
+    "examples/offline/moon.pkg": "a9e88f66c69fe5db9d88a6b76098e8537261d8c2543c07c830f1236a14b305f8",
+    "examples/offline/main.mbt": "902b272cd8efab7a6859db800c948936a316b8f050edfdee85242ea0e6561ec4",
+    "decoder_wbtest.mbt": "388fc93da6112995a03b286c007c2bb60b269fba8c00cf0565473ef8768853cd",
+    "scripts/transport-test.cjs": "fccfbb621e6b2c20efcbac9f0885efc61839a97bfcdb96f8138376661712ad93",
+    "scripts/broker-trace.cjs": "8bd918d36f65f71ba17f9970cf2459579b1076ae37ff8ab7575710d32b67ed9c",
+    "scripts/bridge-test.cjs": "e130a1c0a7d8a7a3f648c9f75c141c69613302a4cc65877ab8bdaa84637679f3",
+    "scripts/broker-test.cjs": "74191a0e67576835814069412ed55b4e93bda2240dee2bc25d325d69e19d5080",
+    "scripts/broker-run.py": "5b0d7b2a5d819b996ae2d7f85ddcbd494cf6d65e16d8a302d93dd733d7bce991",
+    "scripts/verify.py": "90eecee96c80dcfa5da0403b1a838a7c7401253feabc50bf8a0ba387807c347a",
+    "scripts/differential.cjs": "598c769934781f46fdf551ef5c27c65f23d6b4f674171545f20ffdc69736841a",
+    "scripts/downstream.py": "770e547aaa918bbca84b8b94d8b1b622856919ab6d362d4faea89ac11a8889cc",
+    "frame.mbt": "5f0462ca01e91d2f85676975217d741c6682ddbc24d83d31ff8cb58dfddbb6b6",
+    "api.mbt": "24cb142ff5b32756632582ee993dc1b52e446931fd8c6b04b6cdfd066b29a099",
+    "reliability_wbtest.mbt": "4f9225c6bd975bb0a7e049eb751cbaee8d080701b11976714065feec42eb6ae0",
+    "client_wbtest.mbt": "7110df27ccbddca17564b9cdac84e2d4eeb1c77a619c0c2058ba06b96d745d42",
+    "heartbeat.mbt": "f8e399c98222ca140be98a4f51d4ce45cbb884b357822a8cfdecdeb1f173d6ac",
+    "adversarial_wbtest.mbt": "b37ad90d48c1427148e1e890cb9d95ddf1c1de655d71fbd7453c9ea9d0933358",
+    "validation/consumer/moon.pkg.in": "fb258f76dbde587f00d34c537bbcf6472b10c1d29b593503b7e037bdc9fc86da",
+    "validation/consumer/main.mbt.in": "1a61b3efd8b920b14ba3e62fcce1772d111a4f6e5c8b269ed80e8e22d1392fc3",
+    "AI_USAGE.md": "9cb89ae9a0111c3ba87958ac649d2c24c19d4df2580171588be9450eaf51e5c4",
+    "frame_wbtest.mbt": "9a58fadb7b4b06a02d4ae0a6b1046b384a255a6911dc87de9669d4b4c3d7c255"
+  },
+  "installed_source_path": "<TASK_ROOT>/outputs/mooncakes-registry-consumption-0.1.1/consumer/.mooncakes/sundaysebasidian-byte/moonstomp",
+  "manifest": {
+    "name": "independent/moonstomp-registry-consumer",
+    "version": "0.1.1",
+    "deps": {
+      "sundaysebasidian-byte/moonstomp": "0.1.1"
+    },
+    "license": "MIT"
+  },
+  "published_archive_sha256": "6477b2b376c4f959d4aa20dadef9ad91cfc7079827ea12f87d72d38998ac10c3",
+  "checked_files": 53,
+  "js_cases_passed": 5,
+  "wasm_gc_cases_passed": 5,
+  "business_scenarios": 3,
+  "patch_regressions": 2,
+  "finished_utc": "2026-10-01T10:31:36.394982+00:00"
+}

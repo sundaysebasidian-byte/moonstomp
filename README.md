@@ -4,7 +4,7 @@ MoonBit 实现的 STOMP 1.2 增量字节流编解码与传输分层客户端。�
 
 本版源码版本 `0.1.1`，按 MIT 发布；0.1.0 历史版本保留。已实跑 Apache Artemis 2.57.0 无凭据回环互操作：三个场景和五项补充检查通过；事务 ACK 在该 broker 不受支持，NACK 按丢弃处理。结果只适用于已测版本和配置，不是所有 broker 的兼容认证。源码地址为 https://github.com/sundaysebasidian-byte/moonstomp ，发布状态、远端 CI 和正式包安装证据以对应提交的发布记录为准。
 
-0.1.1 修复自动 content-length 计入最终 header 预算，以及带 receipt 的退订保留在途消息至回执到来；0.1.0 未包含这两项修复。[边界与失败行为](docs/boundaries.zh-CN.md) 区分核心、JS 运输、后端、容量、时钟和已知未测项。本轮公开和发布已获明确批准，准确 CI、正式包与独立安装状态见 [0.1.1 发布记录](docs/publication-0.1.1.zh-CN.md)，不覆盖 0.1.0。
+0.1.1 修复自动 content-length 计入最终 header 预算，以及带 receipt 的退订保留在途消息至回执到来；0.1.0 未包含这两项修复。[边界与失败行为](docs/boundaries.zh-CN.md) 区分核心、JS 运输、后端、容量、时钟和已知未测项。本轮公开和发布已获明确批准且完成，准确 CI、正式包与独立安装状态见 [0.1.1 发布记录](docs/publication-0.1.1.zh-CN.md)，不覆盖 0.1.0。
 
 ## 支持范围
 
@@ -59,7 +59,7 @@ decoder.end()
 
 无 I/O 的 codec 只检查帧语法；必需 header 和命令时序由 Client 校验。decoder/feed 同一批中后续出现非法输入时整批报错，先前事件不会作为部分成功返回，调用者应关闭运输。出站 API 校验错误不会将核心 Client 自动毒化；TCP 便利适配器采取关闭策略。
 
-Mooncakes 包名为 [sundaysebasidian-byte/moonstomp](https://mooncakes.io/docs/sundaysebasidian-byte/moonstomp)，本版安装固定 `0.1.1`；正式发布及全新 registry 下载验证以 [版本证据](docs/publication-0.1.1.zh-CN.md) 为准。0.1.0 的 49 文件/两个后端各三个场景证据保留为历史，不能代替 0.1.1 安装验证。在工程中运行 `moon add sundaysebasidian-byte/moonstomp@0.1.1`，在 `moon.pkg` 导入该包为 `@stomp`；本源码自身不要求 registry 拉取。
+Mooncakes 包名为 [sundaysebasidian-byte/moonstomp](https://mooncakes.io/docs/sundaysebasidian-byte/moonstomp)，本版安装固定 `0.1.1`；0.1.1 已正式发布并在全新 registry 缓存验证：两个后端各 5/5（原三个业务场景加两项修复回归），53 个安装文件与正式 ZIP 摘要一致，详见 [版本证据](docs/publication-0.1.1.zh-CN.md)。0.1.0 的 49 文件/两个后端各三个场景证据保留为历史，不能代替 0.1.1 安装验证。在工程中运行 `moon add sundaysebasidian-byte/moonstomp@0.1.1`，在 `moon.pkg` 导入该包为 `@stomp`；本源码自身不要求 registry 拉取。
 
 完整消费例可从仓库根目录复制到新工程（JSON manifest 兼容格式会有弃用提示，已记录）：
 
@@ -137,7 +137,7 @@ JSON 队列预算不等于 raw body 预算，1 MiB 高 octet 正文及元数据�
 
 本地脚本覆盖正常、错误、边界、资源上限、所有三段切分点与 200 组多段切分、1 MiB 正文、假时钟、状态机、公开 API、连接清理。独立参考 `@stomp/stompjs 7.2.0`：401 个有效用例、1201 次参考分段解析比较；四项严格性差异保留在报告中。差分不会证明真实 broker 互操作或替代它。
 
-GitHub Actions 配置见 [.github/workflows/ci.yml](.github/workflows/ci.yml)，覆盖 check/build/test/示例/差分/回环 TCP。首发提交 `16343c8b8cc5704984335acb2837ab85c9a5f096` 的 [远端 CI 已成功](https://github.com/sundaysebasidian-byte/moonstomp/actions/runs/36832378116)。准确发布提交、registry 摘要、安装原始输出和范围见 [发布证据](docs/publication.zh-CN.md)，通过、失败、未测的中文验收矩阵见 [docs/acceptance.zh-CN.md](docs/acceptance.zh-CN.md)。
+GitHub Actions 配置见 [.github/workflows/ci.yml](.github/workflows/ci.yml)，覆盖 check/build/test/示例/差分/回环 TCP。首发提交 `16343c8b8cc5704984335acb2837ab85c9a5f096` 的 [远端 CI 已成功](https://github.com/sundaysebasidian-byte/moonstomp/actions/runs/36832378116)。0.1.0 的历史见 [首发证据](docs/publication.zh-CN.md)；0.1.1 准确提交/CI/安装见 [新版证据](docs/publication-0.1.1.zh-CN.md)，通过、失败、未测的中文验收矩阵见 [docs/acceptance.zh-CN.md](docs/acceptance.zh-CN.md)。
 
 本地交付复核与已修复的生命周期边界见 [docs/delivery-review.zh-CN.md](docs/delivery-review.zh-CN.md)。真实 broker 已测范围有限，特别是该版本不支持事务 ACK；不能宣称完整兼容或比赛验收通过。
 
