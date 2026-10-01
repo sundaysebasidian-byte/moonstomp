@@ -83,6 +83,8 @@ def main():
         run('offline-example', [moon, 'run', 'examples/offline', '--target', 'js', '-j', '1'])
         run('js-bridge', ['node', 'scripts/bridge-test.cjs'])
         run('differential', ['node', 'scripts/differential.cjs'])
+        run('downstream', [sys.executable, 'scripts/downstream.py', '--output', str(out / 'downstream')])
+        report['downstream'] = 'PASSED: independent module consumes local candidate archive; not Mooncakes'
         if args.transport:
             run('loopback-transport', ['node', 'scripts/transport-test.cjs'])
             report['transport'] = 'PASSED: scripted loopback peer, not a broker'

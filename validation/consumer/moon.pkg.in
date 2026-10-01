@@ -1,0 +1,4 @@
+import {
+  "sundaysebasidian-byte/moonstomp" @stomp,
+}
+options(is_main: true)

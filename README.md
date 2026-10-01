@@ -31,7 +31,7 @@ export PATH="$MOON_HOME/bin:$PATH"
 python3 scripts/verify.py --output ../moonstomp-verification
 ```
 
-脚本检查固定版本，串行执行检查、构建、JS/wasm-gc 单元测试、离线示例、JS 边界与独立差分，将命令、退出码、日志和源码 SHA256 保存到新建的输出目录。输出必须在源码目录外，每次使用新目录。脚本不会安装软件或连接真实 broker。
+脚本检查固定版本，串行执行检查、构建、JS/wasm-gc 单元测试、离线示例、JS 边界、独立差分和独立下游候选包消费，将命令、退出码、日志和源码 SHA256 保存到新建的输出目录。输出必须在源码目录外，每次使用新目录。脚本不会安装软件或连接真实 broker。
 
 如运行环境允许临时回环端口，追加 `--transport` 验证自造 peer 的连接、receipt、超时、EOF、握手错误及容量清理。这仍然不是 broker 互操作：
 
@@ -58,6 +58,8 @@ decoder.end()
 无 I/O 的 codec 只检查帧语法；必需 header 和命令时序由 Client 校验。decoder/feed 同一批中后续出现非法输入时整批报错，先前事件不会作为部分成功返回，调用者应关闭运输。出站 API 校验错误不会将核心 Client 自动毒化；TCP 便利适配器采取关闭策略。
 
 独立应用安装到 Mooncakes 的流程目前未验证，包尚未发布；本源码包不要求 `moon add`。库发布后才应增加经过实测的 registry 安装例，不能把当前不存在的包写成可安装依赖。
+
+现在可实跑独立模块消费 `moon package` 导出的本地候选 ZIP：`python3 scripts/downstream.py --output ../moonstomp-downstream`。它在新工程中以本地路径依赖进行 JS/Wasm-GC check/build/test/run，包含媒体任务、传感器读数和账目批次三个不同场景的完整输入、公开 API、输出与断言。复用价值和范围审查见 [docs/reuse-review.zh-CN.md](docs/reuse-review.zh-CN.md)。这仅验证本地候选消费，不等于 Mooncakes 消费、真实 broker 或第三方采用。
 
 ## 三个完整场景
 
