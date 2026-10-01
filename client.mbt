@@ -78,6 +78,8 @@ pub fn Client::fail(self : Client) -> Unit {
   self.receipts.clear()
   self.deliveries.clear()
   self.clock = None
+  self.disconnect_receipt = None
+  self.decoder.discard()
 }
 
 ///|

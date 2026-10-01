@@ -1,0 +1,5 @@
+{
+  "passed": true,
+  "tests": 6,
+  "scope": "scripted loopback TCP lifecycle, not broker interoperability"
+}

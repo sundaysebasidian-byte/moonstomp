@@ -201,7 +201,7 @@ pub fn Decoder::feed(
 /// Signal EOF: distinguishes a clean boundary from a truncated frame/CR heartbeat.
 pub fn Decoder::end(self : Decoder) -> Unit raise ProtocolError {
   if self.failed || self.phase != 0 || self.line.length() != 0 {
-    self.failed = true
+    self.discard()
     raise Invalid("truncated or poisoned stream")
   }
 }
@@ -214,3 +214,15 @@ pub extend WireEvent with Eq::{equal, not_equal}
 
 ///|
 pub extend Limits with @debug.Debug::{to_repr}
+
+///|
+/// Reset owned buffers on transport failure and prevent further parsing.
+fn Decoder::discard(self : Decoder) -> Unit {
+  self.failed = true
+  self.line.clear()
+  self.headers.clear()
+  self.body.clear()
+  self.command = ""
+  self.phase = 0
+  self.length = -1
+}

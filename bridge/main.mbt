@@ -1,4 +1,5 @@
 // Stable explicit JS boundary: no reliance on generated object field names.
+
 ///|
 extern "js" fn expose(
   create : () -> @stomp.Client,
@@ -7,11 +8,12 @@ extern "js" fn expose(
   receive : (@stomp.Client, Bytes, Int64) -> Array[String],
   tick : (@stomp.Client, Int64) -> Bytes,
   close : (@stomp.Client) -> Unit,
+  eof : (@stomp.Client) -> Bool,
   parse : (Bytes) -> Array[String],
 ) -> Unit =
-  #| (create,state,send,receive,tick,close,parse) => {
+  #| (create,state,send,receive,tick,close,eof,parse) => {
   #| const wrap = f => (...args) => { try { return f(...args); } catch(e) { throw new Error('MoonSTOMP protocol error'); } };
-  #| globalThis.MoonSTOMP = {create, state, send:wrap((c,cmd,h,b,n) => send(c,cmd,JSON.stringify(h),b,n)), receive:wrap(receive), tick:wrap(tick), close, parse:wrap(parse)};
+  #| globalThis.MoonSTOMP = {create, state, send:wrap((c,cmd,h,b,n) => send(c,cmd,JSON.stringify(h),b,n)), receive:wrap(receive), tick:wrap(tick), close, eof, parse:wrap(parse)};
   #| }
 
 ///|
@@ -67,6 +69,14 @@ fn main {
     },
     (c, now) => c.tick(now) catch { _ => abort("tick") },
     c => c.fail(),
+    c => {
+      try {
+        c.end()
+        true
+      } catch {
+        _ => false
+      }
+    },
     bytes => {
       let d = @stomp.Decoder::new() catch { _ => abort("decoder") }
       let events = d.feed(bytes) catch { _ => abort("decode") }

@@ -146,3 +146,27 @@ test "disconnect without receipt closes immediately and invalid clocks/config fa
   )
   assert_eq(c.state(), Closed)
 }
+
+///|
+test "transport failure and truncated EOF drop decoder buffers" {
+  let c = active()
+  ignore(
+    c.receive(b"MESSAGE\nsubscription:s\ncontent-length:100\n\npartial", 0),
+  )
+  assert_eq(c.decoder.body.length(), 7)
+  c.fail()
+  assert_eq(c.decoder.body.length(), 0)
+  assert_eq(c.decoder.headers.length(), 0)
+  assert_true(c.decoder.failed)
+  let d = Decoder::new()
+  ignore(d.feed(b"SEND\n\npartial"))
+  assert_true(
+    try {
+      d.end()
+      false
+    } catch {
+      _ => true
+    },
+  )
+  assert_eq(d.body.length(), 0)
+}

@@ -2,4 +2,5 @@ import {
   "moonbitlang/core/json",
   "sundaysebasidian-byte/moonstomp" @stomp,
 }
-options("is-main": true)
+
+pkgtype(kind: "executable")
