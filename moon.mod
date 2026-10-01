@@ -6,6 +6,8 @@ license = "MIT"
 
 readme = "README.md"
 
+repository = "https://github.com/sundaysebasidian-byte/moonstomp"
+
 preferred_target = "js"
 
 description = "Bounded incremental STOMP 1.2 codec and transport-independent client"

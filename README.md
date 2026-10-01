@@ -2,7 +2,7 @@
 
 MoonBit 实现的 STOMP 1.2 增量字节流编解码与传输分层客户端。适合将 MoonBit 程序接入任务队列、事件通道或现有 STOMP broker。核心协议不依赖 socket、系统时钟或 Node；Node TCP 适配器仅负责连接、读写、事件等待和关闭。
 
-当前为本地可审阅候选，版本 `0.1.0`。已实跑 Apache Artemis 2.57.0 无凭据回环互操作：三个场景和五项补充检查通过；事务 ACK 在该 broker 不受支持，NACK 按丢弃处理。结果只适用于已测版本和配置，不是所有 broker 的兼容认证。没有公开仓库、远端 CI 或 Mooncakes 发布。
+首版版本 `0.1.0`，按 MIT 发布。已实跑 Apache Artemis 2.57.0 无凭据回环互操作：三个场景和五项补充检查通过；事务 ACK 在该 broker 不受支持，NACK 按丢弃处理。结果只适用于已测版本和配置，不是所有 broker 的兼容认证。源码地址为 https://github.com/sundaysebasidian-byte/moonstomp ，发布状态、远端 CI 和正式包安装证据以对应提交的发布记录为准。
 
 ## 支持范围
 
@@ -57,7 +57,7 @@ decoder.end()
 
 无 I/O 的 codec 只检查帧语法；必需 header 和命令时序由 Client 校验。decoder/feed 同一批中后续出现非法输入时整批报错，先前事件不会作为部分成功返回，调用者应关闭运输。出站 API 校验错误不会将核心 Client 自动毒化；TCP 便利适配器采取关闭策略。
 
-独立应用安装到 Mooncakes 的流程目前未验证，包尚未发布；本源码包不要求 `moon add`。库发布后才应增加经过实测的 registry 安装例，不能把当前不存在的包写成可安装依赖。
+正式 Mooncakes 包名为 `sundaysebasidian-byte/moonstomp`。本源码不要求 registry 拉取；首发准备时 registry 安装尚未验证。发布后可在独立工程运行 `moon add sundaysebasidian-byte/moonstomp@0.1.0`，在 `moon.pkg` 导入该包为 `@stomp`，具体发布后安装证据会记录实际版本与解析路径。
 
 现在可实跑独立模块消费 `moon package` 导出的本地候选 ZIP：`python3 scripts/downstream.py --output ../moonstomp-downstream`。它在新工程中以本地路径依赖进行 JS/Wasm-GC check/build/test/run，包含媒体任务、传感器读数和账目批次三个不同场景的完整输入、公开 API、输出与断言。复用价值和范围审查见 [docs/reuse-review.zh-CN.md](docs/reuse-review.zh-CN.md)。这仅验证本地候选消费，不等于 Mooncakes 消费、真实 broker 或第三方采用。
 
@@ -112,7 +112,7 @@ TCP 默认缓存最多 1024 个业务/回执事件且 JSON 估算总量不超过
 
 本地脚本覆盖正常、错误、边界、资源上限、所有三段切分点与 200 组多段切分、1 MiB 正文、假时钟、状态机、公开 API、连接清理。独立参考 `@stomp/stompjs 7.2.0`：401 个有效用例、1201 次参考分段解析比较；四项严格性差异保留在报告中。差分不会证明真实 broker 互操作或替代它。
 
-GitHub Actions 配置见 [.github/workflows/ci.yml](.github/workflows/ci.yml)，覆盖 check/build/test/示例/差分/回环 TCP。当前远端 CI 未运行。通过、失败、未测的中文验收矩阵见 [docs/acceptance.zh-CN.md](docs/acceptance.zh-CN.md)。
+GitHub Actions 配置见 [.github/workflows/ci.yml](.github/workflows/ci.yml)，覆盖 check/build/test/示例/差分/回环 TCP。首发准备时远端 CI 待执行，不能用本地通过替代它。通过、失败、未测的中文验收矩阵见 [docs/acceptance.zh-CN.md](docs/acceptance.zh-CN.md)。
 
 本地交付复核与已修复的生命周期边界见 [docs/delivery-review.zh-CN.md](docs/delivery-review.zh-CN.md)。真实 broker 已测范围有限，特别是该版本不支持事务 ACK；不能宣称完整兼容或比赛验收通过。
 

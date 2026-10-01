@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Serial verification. Does not install tools or connect to a real broker."""
+"""Serial verification; real loopback broker only with explicit archive/Java options."""
 import argparse
 from datetime import datetime, timezone
 import hashlib
