@@ -1,4 +1,5 @@
 // Offline walkthrough: supplied server frames illustrate API usage, not broker proof.
+
 ///|
 fn run() -> Unit raise @stomp.ProtocolError {
   let c = @stomp.Client::new()
