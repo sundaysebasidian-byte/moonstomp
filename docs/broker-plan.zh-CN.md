@@ -23,4 +23,6 @@ python3 scripts/broker-run.py --output ../broker-evidence \
   --java-home /absolute/path/java17/Contents/Home
 ```
 
-没有公网 broker 测试。实际 profile 与限制见 broker-interop.zh-CN.md；公开仓库、远端 CI、Mooncakes 发布及人工申报仍未完成。
+没有公网 broker 测试。实际 profile 与限制见 broker-interop.zh-CN.md；公开仓库、准确首发提交远端 CI、Mooncakes 发布与独立 registry 安装已完成，见 publication.zh-CN.md；人工申报未完成。
+
+正式首发 0.1.0、对应远端 CI 与独立 registry 消费证据见 [publication.zh-CN.md](publication.zh-CN.md)，本地候选消费与正式安装各自保留记录。

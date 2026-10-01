@@ -31,4 +31,6 @@ python3 scripts/downstream.py --output ../moonstomp-downstream
 
 README/Proposal 已将“生态填补”收窄为有限检索与可复用协议能力：目的地是不透明字符串，业务 payload/处理逻辑由消费者选择；现在只有 JS TCP 适配器，其他运输仅可对接 sans-I/O 核心，不能声称已支持 TLS/WebSocket 等。价值证据是上述本地候选消费成功，不是用户采用数量、性能认证、Mooncakes 安装或 broker 兼容认证。
 
-更新：独立下游模拟仍按上述有限范围解读；另在真实 Artemis 2.57.0 实跑生产消费、ACK/NACK、SEND 事务、心跳与错误。该 broker 的 NACK 丢弃、事务 ACK 不回滚，不能把账目批次的模拟事务确认当作 Artemis 已验证能力。剩余缺口：其他 broker/事务 ACK 真实支持的互操作、远端 CI、公开仓库、正式 Mooncakes 发布和独立 registry 安装、本人最终申报与承诺。旧九月十提交条款不自动视为十月门槛，保留有效历史但不凑数。消费者结果以 `verification/downstream/downstream.json` 为据，独立真实测试以 `verification/broker/broker-tests.json` 为据。
+更新：独立下游模拟仍按上述有限范围解读；另在真实 Artemis 2.57.0 实跑生产消费、ACK/NACK、SEND 事务、心跳与错误。该 broker 的 NACK 丢弃、事务 ACK 不回滚，不能把账目批次的模拟事务确认当作 Artemis 已验证能力。剩余缺口：其他 broker/事务 ACK 真实支持的互操作、本人最终申报与承诺。旧九月十提交条款不自动视为十月门槛，保留有效历史但不凑数。消费者结果以 `verification/downstream/downstream.json` 为据，独立真实测试以 `verification/broker/broker-tests.json` 为据。
+
+正式首发 0.1.0、对应远端 CI 与独立 registry 消费证据见 [publication.zh-CN.md](publication.zh-CN.md)，本地候选消费与正式安装各自保留记录。

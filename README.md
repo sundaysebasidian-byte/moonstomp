@@ -57,7 +57,26 @@ decoder.end()
 
 无 I/O 的 codec 只检查帧语法；必需 header 和命令时序由 Client 校验。decoder/feed 同一批中后续出现非法输入时整批报错，先前事件不会作为部分成功返回，调用者应关闭运输。出站 API 校验错误不会将核心 Client 自动毒化；TCP 便利适配器采取关闭策略。
 
-正式 Mooncakes 包名为 `sundaysebasidian-byte/moonstomp`。本源码不要求 registry 拉取；首发准备时 registry 安装尚未验证。发布后可在独立工程运行 `moon add sundaysebasidian-byte/moonstomp@0.1.0`，在 `moon.pkg` 导入该包为 `@stomp`，具体发布后安装证据会记录实际版本与解析路径。
+正式 Mooncakes 包为 [sundaysebasidian-byte/moonstomp@0.1.0](https://mooncakes.io/docs/sundaysebasidian-byte/moonstomp)。已在全新缓存的独立工程实跑下载安装，两个后端各三个场景通过，全部 49 个安装文件与发布 ZIP 摘要一致。在你的 MoonBit 工程运行 `moon add sundaysebasidian-byte/moonstomp@0.1.0`，在 `moon.pkg` 导入该包为 `@stomp` 即可使用；本源码自身不要求 registry 拉取。
+
+完整消费例可从仓库根目录复制到新工程（JSON manifest 兼容格式会有弃用提示，已记录）：
+
+```sh
+mkdir ../moonstomp-consumer
+cp validation/consumer/main.mbt.in ../moonstomp-consumer/main.mbt
+cp validation/consumer/moon.pkg.in ../moonstomp-consumer/moon.pkg
+cat > ../moonstomp-consumer/moon.mod.json <<'JSON'
+{"name":"independent/moonstomp-registry-consumer","version":"0.1.0","license":"MIT"}
+JSON
+cd ../moonstomp-consumer
+moon add sundaysebasidian-byte/moonstomp@0.1.0
+moon check --target js -j 1
+moon build --target js -j 1
+moon test --target js --package independent/moonstomp-registry-consumer -j 1
+moon run . --target js -j 1
+```
+
+将最后四条的 `js` 换成 `wasm-gc` 可复验另一个已测后端。三个场景为媒体任务、传感器读数和账目批次；这里的服务器帧是明确的离线 fixture，账目场景的事务 ACK 回滚不能视为真实 Artemis 已支持。
 
 现在可实跑独立模块消费 `moon package` 导出的本地候选 ZIP：`python3 scripts/downstream.py --output ../moonstomp-downstream`。它在新工程中以本地路径依赖进行 JS/Wasm-GC check/build/test/run，包含媒体任务、传感器读数和账目批次三个不同场景的完整输入、公开 API、输出与断言。复用价值和范围审查见 [docs/reuse-review.zh-CN.md](docs/reuse-review.zh-CN.md)。这仅验证本地候选消费，不等于 Mooncakes 消费、真实 broker 或第三方采用。
 
@@ -112,7 +131,7 @@ TCP 默认缓存最多 1024 个业务/回执事件且 JSON 估算总量不超过
 
 本地脚本覆盖正常、错误、边界、资源上限、所有三段切分点与 200 组多段切分、1 MiB 正文、假时钟、状态机、公开 API、连接清理。独立参考 `@stomp/stompjs 7.2.0`：401 个有效用例、1201 次参考分段解析比较；四项严格性差异保留在报告中。差分不会证明真实 broker 互操作或替代它。
 
-GitHub Actions 配置见 [.github/workflows/ci.yml](.github/workflows/ci.yml)，覆盖 check/build/test/示例/差分/回环 TCP。首发准备时远端 CI 待执行，不能用本地通过替代它。通过、失败、未测的中文验收矩阵见 [docs/acceptance.zh-CN.md](docs/acceptance.zh-CN.md)。
+GitHub Actions 配置见 [.github/workflows/ci.yml](.github/workflows/ci.yml)，覆盖 check/build/test/示例/差分/回环 TCP。首发提交 `16343c8b8cc5704984335acb2837ab85c9a5f096` 的 [远端 CI 已成功](https://github.com/sundaysebasidian-byte/moonstomp/actions/runs/36832378116)。准确发布提交、registry 摘要、安装原始输出和范围见 [发布证据](docs/publication.zh-CN.md)，通过、失败、未测的中文验收矩阵见 [docs/acceptance.zh-CN.md](docs/acceptance.zh-CN.md)。
 
 本地交付复核与已修复的生命周期边界见 [docs/delivery-review.zh-CN.md](docs/delivery-review.zh-CN.md)。真实 broker 已测范围有限，特别是该版本不支持事务 ACK；不能宣称完整兼容或比赛验收通过。
 

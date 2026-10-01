@@ -1,0 +1,3 @@
+media-worker: bytes=12, ACK=1, NACK=1, pending=0
+sensor-feed: readings=2, values=25/26, duplicate-first, heartbeat=LF
+ledger-batch: staged=2, abort-restored=2, commit-pending=0, receipts=2
