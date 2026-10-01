@@ -170,3 +170,18 @@ test "transport failure and truncated EOF drop decoder buffers" {
   )
   assert_eq(d.body.length(), 0)
 }
+
+///|
+test "clock regression during negotiation is fatal" {
+  let c = Client::new()
+  ignore(c.send(connect("localhost"), 100))
+  assert_true(
+    try {
+      ignore(c.receive(b"CONNECTED\nversion:1.2\n\n\x00", 99))
+      false
+    } catch {
+      _ => true
+    },
+  )
+  assert_eq(c.state(), Closed)
+}

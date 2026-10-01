@@ -204,6 +204,7 @@ pub fn Decoder::end(self : Decoder) -> Unit raise ProtocolError {
     self.discard()
     raise Invalid("truncated or poisoned stream")
   }
+  self.discard()
 }
 
 ///|
@@ -225,4 +226,18 @@ fn Decoder::discard(self : Decoder) -> Unit {
   self.command = ""
   self.phase = 0
   self.length = -1
+}
+
+///|
+/// Public configuration constructor; limits are bytes, counts and events per feed.
+pub fn Limits::new(
+  max_line? : Int = 8192,
+  max_headers? : Int = 128,
+  max_body? : Int = 1048576,
+  max_events? : Int = 1024,
+) -> Limits raise ProtocolError {
+  if max_line < 1 || max_headers < 0 || max_body < 0 || max_events < 1 {
+    raise Invalid("invalid decoder limits")
+  }
+  { max_line, max_headers, max_body, max_events, }
 }

@@ -36,6 +36,7 @@ pub struct Client {
   deliveries : Array[Delivery]
   mut state : State
   mut clock : HeartbeatClock?
+  mut last_now : Int64
   mut cx : Int
   mut cy : Int
   mut disconnect_receipt : String?
@@ -59,6 +60,7 @@ pub fn Client::new(
     deliveries: [],
     state: Fresh,
     clock: None,
+    last_now: 0,
     cx: 0,
     cy: 0,
     disconnect_receipt: None,
@@ -169,9 +171,7 @@ pub fn Client::send(
   f : Frame,
   now : Int64,
 ) -> Bytes raise ProtocolError {
-  if now < 0 {
-    raise Invalid("negative clock")
-  }
+  self.advance(now)
   match self.clock {
     Some(c) => c.advance(now)
     None => ()
@@ -393,7 +393,8 @@ pub fn Client::receive(
   now : Int64,
 ) -> Array[ClientEvent] raise ProtocolError {
   errdefer self.fail()
-  if now < 0 || self.state == Closed || self.state == Fresh {
+  self.advance(now)
+  if self.state == Closed || self.state == Fresh {
     raise Invalid("receive in invalid state")
   }
   match self.clock {
@@ -422,6 +423,7 @@ pub fn Client::tick(self : Client, now : Int64) -> Bytes raise ProtocolError {
   if self.state != Active {
     return b""
   }
+  self.advance(now)
   match self.clock {
     Some(c) => {
       let (due, dead) = c.poll(now)
@@ -467,3 +469,12 @@ pub extend ClientEvent with @debug.Debug::{to_repr}
 
 ///|
 pub extend ClientEvent with Eq::{equal, not_equal}
+
+///|
+/// Validate caller-supplied time throughout negotiation as well as active heartbeats.
+fn Client::advance(self : Client, now : Int64) -> Unit raise ProtocolError {
+  if now < self.last_now {
+    raise Invalid("clock moved backwards")
+  }
+  self.last_now = now
+}
