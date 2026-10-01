@@ -10,7 +10,7 @@ MoonBit 实现的 STOMP 1.2 增量字节流编解码与传输分层客户端。�
 - `content-length` 按 octet 计数；二进制正文允许 NUL 和非 UTF-8 字节。编码非空正文自动补长度；接收必须包含最终 NUL。非法转义、长度、UTF-8、正文和超限输入报错。
 - STOMP 1.2 的 CONNECT/STOMP、CONNECTED、SEND、SUBSCRIBE、UNSUBSCRIBE、ACK/NACK、BEGIN/COMMIT/ABORT、RECEIPT、ERROR、DISCONNECT。
 - 仅协商 `1.2`；心跳间隔取双方最大值，0 禁用，任意收到的字节刷新存活时间；调用者提供单调毫秒时钟，默认接收容差 100 ms。
-- `auto`、`client`、`client-individual` ACK 模式；累计 ACK/NACK 限同一订阅，事务确认提交前暂存，ABORT 恢复可确认状态。未知/重复 ID 与事务重叠会拒绝。
+- `auto`、`client`、`client-individual` ACK 模式；累计 ACK/NACK 限同一订阅，事务确认提交前暂存，ABORT 恢复可确认状态。未知/重复 ID 与事务重叠会拒绝。UNSUBSCRIBE 后仍可确认旧消息，但旧消息未结清时不能复用同一订阅 ID。
 - receipt 关联；发送 DISCONNECT 后禁止再发帧，等待其 receipt 后关闭；EOF、ERROR、协议异常和运输故障清理本地状态。
 
 不支持 STOMP 1.0/1.1、WebSocket、TLS、自定义未知命令、自动重连、持久化 outbox、业务重试或 exactly-once 保证。destination 是不透明字符串；队列命名、NACK 重投递、持久化和服务端事务语义取决于 broker。底层连接必须是可靠、有序的双向字节流。通用 Frame 可携带 CONNECT 凭据 header，TCP `connect()` 便利入口仅实现无凭据连接；不会读取系统凭据。
@@ -95,12 +95,16 @@ node examples/3-transactions.cjs
 
 默认单行 8192 字节（包含 CR，不含 LF）、128 个 header、1 MiB 正文、每次 feed 1024 事件。可通过 `Limits::new()` 设置；事件数上限按一次 feed 计算，调用者须选择合适的分块与上限。Client 出站 header 名值 UTF-8 合计不超过 2047 字节（转义后仍受 8192 行预算），最多 128 header、1 MiB 正文；默认各 256 个活跃订阅/事务/待 receipt、1024 个待确认消息。
 
-TCP 默认缓存最多 1024 个事件且 JSON 估算总量不超过 4 MiB，最多 256 个等待者，写缓冲最多 2 MiB。超限会拒绝或关闭；不无限排队。每个 Client 对应一次连接，不复用已关闭实例。CPU 测试脚本始终 `-j 1`。
+TCP 默认缓存最多 1024 个业务/回执事件且 JSON 估算总量不超过 4 MiB，最多 256 个等待者，写缓冲最多 2 MiB。心跳已由核心更新存活时间，仅交付给当前匹配等待者，未观察的心跳不积压进业务队列。超限会拒绝或关闭；不无限排队。每个 Client 对应一次连接，不复用已关闭实例。CPU 测试脚本始终 `-j 1`。
+
+`receipt(command, headers, body, id)` 自行设置 receipt header：传入 header 不能再包含 receipt，body 须为 Buffer/Uint8Array。等待者已满、参数类型/结构无效、重复 receipt header 或同 ID 的旧回执尚未消费时，拒绝调用且不发送命令；先消费旧回执再复用 ID。`waitFor(predicate, timeout)` 的 predicate 须为函数，timeout 和 tickMs 不超过 Node 定时器的 2147483647 ms 范围。这些便利方法的预校验拒绝保留健康连接；后续核心协议校验、发送或运输故障仍采取关闭策略。
 
 ## 验证与许可
 
 本地脚本覆盖正常、错误、边界、资源上限、所有三段切分点与 200 组多段切分、1 MiB 正文、假时钟、状态机、公开 API、连接清理。独立参考 `@stomp/stompjs 7.2.0`：401 个有效用例、1201 次参考分段解析比较；四项严格性差异保留在报告中。差分不会证明真实 broker 互操作或替代它。
 
 GitHub Actions 配置见 [.github/workflows/ci.yml](.github/workflows/ci.yml)，覆盖 check/build/test/示例/差分/回环 TCP。当前远端 CI 未运行。通过、失败、未测的中文验收矩阵见 [docs/acceptance.zh-CN.md](docs/acceptance.zh-CN.md)。
+
+本地交付复核与已修复的生命周期边界见 [docs/delivery-review.zh-CN.md](docs/delivery-review.zh-CN.md)。真实 broker 未测仍是交付的关键限制，不能据本地检查宣称完整兼容或比赛验收通过。
 
 原创核心 MIT；参考测试文件 Apache-2.0，规范 CC BY 3.0，来源、范围和许可见 [docs/reference.zh-CN.md](docs/reference.zh-CN.md)。AI 辅助事实与需要参赛者理解的技术问题见 [AI_USAGE.md](AI_USAGE.md)。[Proposal.md](Proposal.md) 是技术参考，不是符合人工撰写要求的最终申报书。

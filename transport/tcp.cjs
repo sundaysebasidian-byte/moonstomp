@@ -6,7 +6,7 @@ require('../_build/js/debug/build/bridge/bridge.js');
 const protocol = globalThis.MoonSTOMP;
 class TcpClient {
   constructor({host = '127.0.0.1', port = 61613, tickMs = 25, maxQueue = 1024, maxWaiters = 256, maxQueueBytes = 4*1024*1024} = {}) {
-    if (!Number.isInteger(port) || port < 1 || port > 65535 || !Number.isInteger(tickMs) || tickMs < 1 || !Number.isInteger(maxQueue) || maxQueue < 1 || !Number.isInteger(maxWaiters) || maxWaiters < 1 || !Number.isInteger(maxQueueBytes) || maxQueueBytes < 1) throw new Error('invalid TCP configuration');
+    if (!Number.isInteger(port) || port < 1 || port > 65535 || !Number.isInteger(tickMs) || tickMs < 1 || tickMs > 2147483647 || !Number.isInteger(maxQueue) || maxQueue < 1 || !Number.isInteger(maxWaiters) || maxWaiters < 1 || !Number.isInteger(maxQueueBytes) || maxQueueBytes < 1) throw new Error('invalid TCP configuration');
     this.options = {host, port};
     this.core = protocol.create(); this.queue = []; this.waiters = []; this.maxQueue = maxQueue; this.maxWaiters = maxWaiters; this.maxQueueBytes = maxQueueBytes; this.queueBytes = 0;
     this.origin = performance.now(); this.socket = null; this.timer = null; this.error = null; this.tickMs = tickMs;
@@ -25,13 +25,16 @@ class TcpClient {
     const i = this.waiters.findIndex(w => w.predicate(event));
     if (i >= 0) { const w = this.waiters.splice(i,1)[0]; clearTimeout(w.timer); w.resolve(event); }
     else {
+      // Liveness is already updated by MoonBit. Unobserved beats are transient.
+      if (event.event === 'heartbeat') return;
       const size = Buffer.byteLength(JSON.stringify(event));
       if (this.queue.length >= this.maxQueue || this.queueBytes + size > this.maxQueueBytes) throw new Error('event queue limit');
       this.queue.push(event); this.queueBytes += size;
     }
   }
   waitFor(predicate, timeout = 5000) {
-    if (!Number.isFinite(timeout) || timeout < 1) return Promise.reject(new Error('invalid timeout'));
+    if (typeof predicate !== 'function') return Promise.reject(new Error('invalid event predicate'));
+    if (!Number.isFinite(timeout) || timeout < 1 || timeout > 2147483647) return Promise.reject(new Error('invalid timeout'));
     const i = this.queue.findIndex(predicate);
     if (i >= 0) {
       const event = this.queue.splice(i, 1)[0];
@@ -90,6 +93,12 @@ class TcpClient {
     return this;
   }
   async receipt(command, headers = [], body = Buffer.alloc(0), id = 'r-' + (++TcpClient.sequence)) {
+    if (typeof id !== 'string' || !id.length || !Array.isArray(headers) || headers.some(h => !Array.isArray(h) || h.length !== 2 || h.some(v => typeof v !== 'string')) || !(body instanceof Uint8Array)) throw new Error('invalid receipt arguments');
+    if (headers.some(h => h[0] === 'receipt')) throw new Error('receipt() controls the receipt header');
+    if (this.error || this.state() !== 'active') throw this.error || new Error('connection is not active');
+    // Registering a failed waiter must never send an unobservable command.
+    if (this.waiters.length >= this.maxWaiters) throw new Error('waiter limit');
+    if (this.queue.some(e => e.event === 'receipt' && e.id === id)) throw new Error('unconsumed receipt id');
     const wait = this.waitFor(e => e.event === 'receipt' && e.id === id);
     wait.catch(() => {});
     this.send(command, [...headers,['receipt',id]], body);

@@ -99,6 +99,34 @@ test "ACK after unsubscribe retains original cumulative semantics" {
 }
 
 ///|
+test "subscription id cannot be reused across unsettled delivery generations" {
+  let c = active()
+  sub(c, "s", "client")
+  message(c, "s", "old-a")
+  message(c, "s", "old-b")
+  ignore(c.send(unsubscribe("s"), 0))
+  assert_true(
+    try {
+      ignore(c.send(subscribe("s", "new-tasks", ack="client-individual"), 0))
+      false
+    } catch {
+      _ => true
+    },
+  )
+  assert_eq(c.state(), Active)
+  assert_eq(c.pending_deliveries(), 2)
+  ignore(c.send(acknowledge("old-b"), 0))
+  assert_eq(c.pending_deliveries(), 0)
+  ignore(c.send(subscribe("s", "new-tasks", ack="client-individual"), 0))
+  message(c, "s", "new-a")
+  message(c, "s", "new-b")
+  ignore(c.send(acknowledge("new-b"), 0))
+  assert_eq(c.pending_deliveries(), 1)
+  ignore(c.send(acknowledge("new-a"), 0))
+  assert_eq(c.pending_deliveries(), 0)
+}
+
+///|
 test "disconnect without receipt closes immediately and invalid clocks/config fail" {
   let c = active()
   ignore(c.send(Frame::new("DISCONNECT", []), 0))

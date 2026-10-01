@@ -12,6 +12,8 @@ MoonSTOMP 核心、测试、Node glue、文档和验证脚本由用户指定需�
 4. 心跳为何取 MAX，0 如何禁用；单调毫秒时钟、任意数据刷新和容差如何测试。
 5. `client` 累计 ACK 和 `client-individual` 的区别；事务确认在 COMMIT/ABORT 时如何调整本地状态；receipt 与业务成功的区别。
 6. sans-I/O 核心与 socket glue 的分工；写入失败、EOF、容量超限为什么清理会话、waiter、timer 和缓冲。
-7. 为什么 32 项单元测试和 401 例独立差分仍不能宣称 broker 兼容；待批准的真实互操作怎样补证。
+7. 为什么 33 项单元测试和 401 例独立差分仍不能宣称 broker 兼容；待批准的真实互操作怎样补证。
+
+交付优化复查另外修复了订阅 ID 复用与未确认旧消息混淆、回执等待者满仍发送命令、旧队列回执误判以及无人消费的心跳积压。每项均保留有行为意义的断言；运输字节容量 fixture 曾因匹配现有等待者而误触发，调整为不匹配该等待者的 receipt 后重跑，容量上限和失败断言未降低。详见 docs/delivery-review.zh-CN.md。
 
 可从 `moon run examples/offline --target js -j 1` 开始，修改一条长度/ACK/心跳用例观察报错，核对 scripts/verify.py 的原始日志。理解未完成时不要将技术参考直接提交为人工申报。

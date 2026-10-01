@@ -31,9 +31,18 @@ async function listen(handler) {
     await c.disconnect();
     assert.equal(c.state(),'closed');assert.equal(c.timer,null);assert.equal(c.socket.destroyed,true);tests++;
   } finally {c.stop();await peer.close();}
-  const overflow=await listen(s=>s.once('data',()=>{s.write('CONNECTED\nversion:1.2\n\n\0');setTimeout(()=>{if(!s.destroyed)s.write('\n\n');},10);}));
+  const overflow=await listen(s=>{
+    let buffer='';s.on('data',bytes=>{
+      buffer+=bytes.toString();
+      while(buffer.includes('\0')) {
+        const at=buffer.indexOf('\0'),frame=buffer.slice(0,at);buffer=buffer.slice(at+1);
+        if(frame.startsWith('CONNECT\n'))s.write('CONNECTED\nversion:1.2\n\n\0');
+        if(frame.startsWith('SUBSCRIBE\n'))s.write('MESSAGE\nsubscription:s\nmessage-id:a\ndestination:tasks\n\na\0MESSAGE\nsubscription:s\nmessage-id:b\ndestination:tasks\n\nb\0');
+      }
+    });
+  });
   const q=new TcpClient({port:overflow.port,maxQueue:1});
-  try {await q.connect({heartbeat:'0,0'});await assert.rejects(q.waitFor(e=>e.event==='message'),/event queue limit/);assert.equal(q.state(),'closed');assert.equal(q.timer,null);tests++;}
+  try {await q.connect({heartbeat:'0,0'});q.send('SUBSCRIBE',[['id','s'],['destination','tasks']]);await assert.rejects(q.waitFor(e=>e.event==='receipt'),/event queue limit/);assert.equal(q.state(),'closed');assert.equal(q.timer,null);tests++;}
   finally{q.stop();await overflow.close();}
   const eof=await listen(s=>s.once('data',()=>s.end('CONNECTED\nversion:1.2\n\n\0MESS')));
   const e=new TcpClient({port:eof.port});
@@ -50,7 +59,66 @@ async function listen(handler) {
   const limits=new TcpClient({maxWaiters:1,maxQueueBytes:25});
   const waiter=limits.waitFor(e=>e.event==='message',1000);waiter.catch(()=>{});
   await assert.rejects(limits.waitFor(e=>e.event==='receipt'),/waiter limit/);
-  assert.throws(()=>limits.deliver({event:'heartbeat',padding:'too much padding'}),/event queue limit/);
+  assert.throws(()=>limits.deliver({event:'receipt',padding:'too much padding'}),/event queue limit/);
   limits.stop();await assert.rejects(waiter,/closed/);assert.equal(limits.queueBytes,0);tests++;
-  console.log(JSON.stringify({passed:true,tests,scope:'scripted loopback TCP lifecycle, not broker interoperability'},null,2));
+  const guardPeer=await listen(s=>{
+    let buffer='';
+    s.on('data',b=>{
+      buffer+=b.toString();
+      while(buffer.includes('\0')) {
+        const at=buffer.indexOf('\0'), frame=buffer.slice(0,at);buffer=buffer.slice(at+1);
+        if(frame.startsWith('CONNECT\n'))s.write('CONNECTED\nversion:1.2\n\n\0');
+        else {const id=frame.match(/\nreceipt:([^\n]+)/)?.[1];if(id)s.write('RECEIPT\nreceipt-id:'+id+'\n\n\0');}
+      }
+    });
+  });
+  const guarded=new TcpClient({port:guardPeer.port,maxWaiters:1});let arrivalTimer;
+  try {
+    await guarded.connect({heartbeat:'0,0'});
+    let writes=0;const originalWrite=guarded.write.bind(guarded);
+    guarded.write=bytes=>{writes++;originalWrite(bytes);};
+    const occupied=guarded.waitFor(()=>false,20);occupied.catch(()=>{});
+    await assert.rejects(guarded.receipt('SEND',[['destination','tasks']]),/waiter limit/);
+    await assert.rejects(guarded.receipt('SEND',[['receipt','caller-id']]),/controls the receipt header/);
+    await assert.rejects(guarded.receipt('SEND',null),/invalid receipt arguments/);
+    assert.equal(writes,0);assert.equal(guarded.state(),'active');
+    await assert.rejects(occupied,/event timeout/);
+    const originalDeliver=guarded.deliver.bind(guarded);
+    const arrived=new Promise((resolve,reject)=>{
+      arrivalTimer=setTimeout(()=>reject(new Error('manual receipt arrival timeout')),1000);
+      guarded.deliver=event=>{originalDeliver(event);if(event.event==='receipt'&&event.id==='stale'){clearTimeout(arrivalTimer);resolve();}};
+    });
+    guarded.send('SEND',[['destination','tasks'],['receipt','stale']]);
+    await arrived;assert.equal(guarded.queue.length,1);
+    await assert.rejects(guarded.receipt('SEND',[['destination','tasks']],Buffer.alloc(0),'stale'),/unconsumed receipt id/);
+    assert.equal(writes,1);assert.equal(guarded.state(),'active');
+    const previous=await guarded.waitFor(event=>event.event==='receipt'&&event.id==='stale');assert.equal(previous.id,'stale');
+    await guarded.receipt('SEND',[['destination','tasks']],Buffer.alloc(0),'stale');
+    assert.equal(writes,2);await guarded.disconnect();assert.equal(guarded.timer,null);tests++;
+  } finally {clearTimeout(arrivalTimer);guarded.stop();await guardPeer.close();}
+  assert.throws(()=>new TcpClient({tickMs:2147483648}),/invalid TCP configuration/);
+  const invalid=new TcpClient();
+  await assert.rejects(invalid.waitFor(null,10),/invalid event predicate/);
+  await assert.rejects(invalid.waitFor(()=>true,2147483648),/invalid timeout/);
+  assert.equal(invalid.waiters.length,0);invalid.stop();tests++;
+  const beats=await listen(s=>{
+    let buffer='';s.on('data',bytes=>{
+      buffer+=bytes.toString();
+      while(buffer.includes('\0')) {
+        const at=buffer.indexOf('\0'),frame=buffer.slice(0,at);buffer=buffer.slice(at+1);
+        if(frame.startsWith('CONNECT\n'))s.write('CONNECTED\nversion:1.2\n\n\0');
+        if(frame.startsWith('SUBSCRIBE\n'))s.write('\n'.repeat(32)+'MESSAGE\nsubscription:s\nmessage-id:a\ndestination:tasks\n\nv\0');
+      }
+    });
+  });
+  const hb=new TcpClient({port:beats.port,maxQueue:1});
+  try {
+    await hb.connect({heartbeat:'0,0'});
+    const observed=hb.waitFor(event=>event.event==='heartbeat');
+    const message=hb.waitFor(event=>event.event==='message');
+    hb.send('SUBSCRIBE',[['id','s'],['destination','tasks']]);
+    assert.equal((await observed).event,'heartbeat');assert.deepEqual((await message).frame.body,[118]);
+    assert.equal(hb.queue.length,0);assert.equal(hb.queueBytes,0);assert.equal(hb.state(),'active');tests++;
+  } finally {hb.stop();await beats.close();}
+  console.log(JSON.stringify({passed:true,tests,scope:'scripted loopback TCP lifecycle and API bounds, not broker interoperability'},null,2));
 })().catch(e=>{console.error(e);process.exitCode=1;});

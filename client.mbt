@@ -228,6 +228,11 @@ pub fn Client::send(
       if self.subscription_mode(id) != None {
         raise Invalid("duplicate subscription")
       }
+      for delivery in self.deliveries {
+        if delivery.subscription == id {
+          raise Invalid("subscription id has unsettled deliveries")
+        }
+      }
       if self.subscriptions.length() >= self.capacity {
         raise Invalid("subscription capacity")
       }
