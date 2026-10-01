@@ -1,0 +1,23 @@
+{
+  "broker": "Apache Artemis 2.57.0",
+  "host": "127.0.0.1",
+  "port": 61613,
+  "stages": [
+    {
+      "name": "extended",
+      "command": [
+        "node",
+        "scripts/broker-test.cjs"
+      ],
+      "exit_code": 1,
+      "status": "FAILED"
+    }
+  ],
+  "overall": "FAILED",
+  "pid": 17536,
+  "java_version": "openjdk version \"17.0.20\" 2026-07-21\nOpenJDK Runtime Environment Temurin-17.0.20+8 (build 17.0.20+8)\nOpenJDK 64-Bit Server VM Temurin-17.0.20+8 (build 17.0.20+8, mixed mode, sharing)\n",
+  "error": "extended failed",
+  "broker_exit_code": 143,
+  "port_closed": true,
+  "cleanup": "broker process stopped; temporary instance retained only for evidence and next bounded run"
+}

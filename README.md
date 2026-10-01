@@ -2,7 +2,7 @@
 
 MoonBit 实现的 STOMP 1.2 增量字节流编解码与传输分层客户端。适合将 MoonBit 程序接入任务队列、事件通道或现有 STOMP broker。核心协议不依赖 socket、系统时钟或 Node；Node TCP 适配器仅负责连接、读写、事件等待和关闭。
 
-当前为本地可审阅候选，版本 `0.1.0`。真实 broker 互操作尚未测试；不可将单元测试、参考差分或自造回环 peer 当作 broker 兼容性证明。没有公开仓库、远端 CI 或 Mooncakes 发布。
+当前为本地可审阅候选，版本 `0.1.0`。已实跑 Apache Artemis 2.57.0 无凭据回环互操作：三个场景和五项补充检查通过；事务 ACK 在该 broker 不受支持，NACK 按丢弃处理。结果只适用于已测版本和配置，不是所有 broker 的兼容认证。没有公开仓库、远端 CI 或 Mooncakes 发布。
 
 ## 支持范围
 
@@ -31,7 +31,7 @@ export PATH="$MOON_HOME/bin:$PATH"
 python3 scripts/verify.py --output ../moonstomp-verification
 ```
 
-脚本检查固定版本，串行执行检查、构建、JS/wasm-gc 单元测试、离线示例、JS 边界、独立差分和独立下游候选包消费，将命令、退出码、日志和源码 SHA256 保存到新建的输出目录。输出必须在源码目录外，每次使用新目录。脚本不会安装软件或连接真实 broker。
+脚本检查固定版本，串行执行检查、构建、JS/wasm-gc 单元测试、离线示例、JS 边界、独立差分和独立下游候选包消费，将命令、退出码、日志和源码 SHA256 保存到新建的输出目录。输出必须在源码目录外，每次使用新目录。脚本不会下载软件；默认流程不启动或连接真实 broker，额外指定官方发行包/校验文件和 Java 参数时才运行本地 broker。
 
 如运行环境允许临时回环端口，追加 `--transport` 验证自造 peer 的连接、receipt、超时、EOF、握手错误及容量清理。这仍然不是 broker 互操作：
 
@@ -73,7 +73,7 @@ moon run examples/offline --target js -j 1
 2. **ACK/NACK 可靠处理**：使用 `client-individual` → 成功任务 ACK → 失败任务 NACK → 等待处理 receipt。对应 `examples/2-reliable.cjs`。NACK 后的重投递或死信策略由 broker 决定，样例不承诺必然重试。
 3. **事务 commit/abort**：BEGIN → 暂存 SEND → ABORT 后观察未投递 → 另一次 BEGIN/SEND → COMMIT 后收到发布内容。对应 `examples/3-transactions.cjs`；单元测试另外覆盖事务 ACK/NACK 的暂存、回滚及重叠拒绝。
 
-真实 broker 例要求你已运行一个支持 STOMP 1.2、无凭据的本地 broker。默认 `127.0.0.1:61613`；仅接受 `127.0.0.1` 或 `::1`，不会向公网发送测试。下面三条目前**未跑真实 broker**：
+真实 broker 例要求你已运行一个支持 STOMP 1.2、无凭据的本地 broker。默认 `127.0.0.1:61613`；仅接受 `127.0.0.1` 或 `::1`，不会向公网发送测试。下面三条已在 Artemis 2.57.0 的已记录配置实跑通过：
 
 ```sh
 moon build --target js -j 1
@@ -82,7 +82,16 @@ node examples/2-reliable.cjs
 node examples/3-transactions.cjs
 ```
 
-端口可用 `STOMP_PORT` 指定。库自身没有安装 broker 的脚本。待批准安装方案与限制见 [docs/broker-plan.zh-CN.md](docs/broker-plan.zh-CN.md)。
+端口可用 `STOMP_PORT` 指定。复现 runner 使用已经下载的官方发行包和既有 Java 17，自动创建仅回环、无持久化/Web/JMX 的临时实例，运行三例和补充检查，结束停止并删除临时 runtime，不修改全局环境。本次只在 macOS arm64 实跑；runner 的监听/内存审计依赖本机 lsof/ps，其他平台未验证：
+
+```sh
+python3 scripts/verify.py --output ../moonstomp-with-artemis --transport \
+  --broker-archive /absolute/path/apache-artemis-2.57.0-bin.tar.gz \
+  --broker-checksum /absolute/path/apache-artemis-2.57.0-bin.tar.gz.sha512 \
+  --broker-java-home /absolute/path/java17/Contents/Home
+```
+
+runner 会校验官方 SHA512 和已锁定摘要；不会下载软件或连接公网 broker。官方下载信息、审批与执行记录见 [docs/broker-plan.zh-CN.md](docs/broker-plan.zh-CN.md)，已测 profile 与限制见 [docs/broker-interop.zh-CN.md](docs/broker-interop.zh-CN.md)。
 
 ## 分层与资源上限
 
@@ -105,6 +114,6 @@ TCP 默认缓存最多 1024 个业务/回执事件且 JSON 估算总量不超过
 
 GitHub Actions 配置见 [.github/workflows/ci.yml](.github/workflows/ci.yml)，覆盖 check/build/test/示例/差分/回环 TCP。当前远端 CI 未运行。通过、失败、未测的中文验收矩阵见 [docs/acceptance.zh-CN.md](docs/acceptance.zh-CN.md)。
 
-本地交付复核与已修复的生命周期边界见 [docs/delivery-review.zh-CN.md](docs/delivery-review.zh-CN.md)。真实 broker 未测仍是交付的关键限制，不能据本地检查宣称完整兼容或比赛验收通过。
+本地交付复核与已修复的生命周期边界见 [docs/delivery-review.zh-CN.md](docs/delivery-review.zh-CN.md)。真实 broker 已测范围有限，特别是该版本不支持事务 ACK；不能宣称完整兼容或比赛验收通过。
 
 原创核心 MIT；参考测试文件 Apache-2.0，规范 CC BY 3.0，来源、范围和许可见 [docs/reference.zh-CN.md](docs/reference.zh-CN.md)。AI 辅助事实与需要参赛者理解的技术问题见 [AI_USAGE.md](AI_USAGE.md)。[Proposal.md](Proposal.md) 是技术参考，不是符合人工撰写要求的最终申报书。

@@ -1,0 +1,15 @@
+{
+  "passed": false,
+  "results": [
+    {
+      "name": "fragmented-binary-headers",
+      "status": "PASSED",
+      "details": {
+        "binary_octets": 5,
+        "write_fragments": 60,
+        "unicode_escapes_spaces_and_first_duplicate": true
+      }
+    }
+  ],
+  "error": "event timeout"
+}

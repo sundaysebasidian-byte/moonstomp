@@ -1,16 +1,16 @@
 # MoonSTOMP 中文验收矩阵
 
-记录日期：2026-10-01。状态仅描述本地候选的实际证据，不能据此宣布比赛验收通过。未发布、未报名、未替参赛者签署承诺。真实 broker 互操作是尚未满足的重要质量条件。
+记录日期：2026-10-01。状态仅描述本地候选的实际证据，不能据此宣布比赛验收通过。未发布、未报名、未替参赛者签署承诺。真实 Artemis 2.57.0 的限定 profile 已测；其他 broker 和真实事务 ACK 支持仍有缺口。
 
 ## 九项终验要求
 
 | 要求 | 当前状态 | 证据与限制 |
 | --- | --- | --- |
 | 1. 公开代码仓库 | **未完成，待用户批准** | 独立本地 Git，真实阶段提交；无 remote、无 push。交付内提供 Git bundle 和提交清单，不能替代公共仓库。 |
-| 2. 主要实现为 MoonBit，源码清晰 | **本地通过（限定范围）** | 核心帧、编解码、心跳和 Client 状态机均为 MoonBit；Node 仅桥接/TCP，第三方 JS 仅测试参考。README 明示不支持 TLS、WebSocket、重连和旧协议。真实 broker 兼容性未测。 |
+| 2. 主要实现为 MoonBit，源码清晰 | **本地通过（限定范围）** | 核心帧、编解码、心跳和 Client 状态机均为 MoonBit；Node 仅桥接/TCP，第三方 JS 仅测试参考。README 明示不支持 TLS、WebSocket、重连和旧协议。真实 Artemis 2.57.0 的八项例/检查通过；事务 ACK 不受该 broker 支持。 |
 | 3. README 目标、安装、用法可复现 | **本地通过；registry 安装未测** | 固定既有 SDK 从源码运行，外部 API 黑盒测试和三个完整离线场景通过；独立模块实际消费 `moon package` 候选 ZIP、JS/Wasm-GC 各三场景 check/build/test/run 通过。没有把本地路径依赖当成 Mooncakes 安装。 |
-| 4. CI 包含 check/build/test | **配置已完成，远端未测** | `.github/workflows/ci.yml` 调用 `scripts/verify.py`，本地同流程串行执行；没有公共仓库，GitHub Actions 实际运行未测。安装步骤仅为未来 CI 配置，本机未新装工具。 |
-| 5. 可运行示例 | **离线与独立下游三场景通过；三个 broker 场景未测** | 原协议操作演示之外，独立消费者完整执行媒体任务、传感器读数、账目批次，输入/API/输出/断言见 `reuse-review.zh-CN.md`。真实 broker 例尚未连接 broker；自造回环 peer 不算 broker。 |
+| 4. CI 包含 check/build/test | **配置已完成，远端未测** | `.github/workflows/ci.yml` 调用 `scripts/verify.py`，本地同流程串行执行；没有公共仓库，GitHub Actions 实际运行未测。本机复用既有 SDK 与 Java，另经用户批准在任务临时目录运行官方 Artemis；远端 CI 没有运行 broker。 |
+| 5. 可运行示例 | **离线、独立下游和三个真实 broker 场景通过** | 独立消费者完整执行媒体任务、传感器读数、账目批次，输入/API/输出/断言见 `reuse-review.zh-CN.md`；原三个例另在实际 Artemis 实跑通过。自造 peer 证据仍与真实 broker 分开。 |
 | 6. 核心正常、错误、边界与资源测试 | **本地通过；非完整一致性认证** | JS 33/33、Wasm-GC 核心 33/33；覆盖分段/连帧/重复 header/非法转义与长度/NUL 正文/假时钟/状态与容量，以及未结清订阅 ID 复用的累计确认边界。最终 ZIP 的原始日志和 SHA256 对应最终源码。有限用例不能证明所有输入。 |
 | 7. Mooncakes 发布 | **未完成，待用户批准** | 未发布、未创建 registry 远程依赖。发布后还须在独立消费项目实测安装。 |
 | 8. OSI 开源许可 | **声明完成** | 原创代码 MIT；测试参考 @stomp/stompjs 为 Apache-2.0，保留原包许可；外部来源和规范许可记录于 `docs/reference.zh-CN.md`。 |
@@ -21,7 +21,7 @@
 | 条件 | 当前事实 |
 | --- | --- |
 | 初始化工程与生态价值 | 已完成独立 MoonBit 模块、协议/运输分层、MIT 和技术事实参考。站内搜索未观察到直接同类，不能推断整个生态完全无同类。 |
-| 至少三个完整使用场景 | 已提供且离线运行通过；新增独立下游三个不同业务场景，本地候选包消费通过，非第三方实际采用。真实 broker 场景尚未验证。 |
+| 至少三个完整使用场景 | 已提供且离线运行通过；独立下游三个不同业务场景、本地候选包消费通过，非第三方实际采用；原三个真实 broker 场景已在 Artemis 实跑通过。 |
 | 有效研发历史 | 保留按模型、编码、解析、测试、会话、桥接、示例和消费验证推进的非空提交，清单及 bundle 在交付中。旧九月十提交条款是否适用于十月未最终确认，不将其自动列为十月硬门槛，不凑数。 |
 | 人工申报书 | **未完成，必须由用户本人最终撰写**。`Proposal.md` 仅 AI 辅助技术参考；不代写并冒充人工申报、不代签诚信承诺。 |
 | 身份与表单 | 未提交，身份证、银行卡、电话、学籍和协议由用户本人处理。 |
@@ -33,12 +33,14 @@
 - **通过但限定用途**：9 项运输生命周期/API 边界测试，其中回环连接采用脚本 peer；覆盖 receipt、等待、EOF、错误、容量、定时器清理、失败回执调用不发送、旧回执防误判和心跳不积压。不能当成真实 broker 互操作。
 - **通过但限定消费来源**：独立下游模块从实际 `moon package` 候选 ZIP 以本地路径依赖消费，JS/Wasm-GC 各三项场景测试、可执行输出与公开 API 编译通过；原始日志在 `verification/downstream/`。本地候选消费不等于 registry 消费。
 - **历史失败已修复**：外部示例枚举匹配、测试语法/参考边界与生命周期等缺陷按实际日志修正实现；没有降低测试标准。旧证据文件为阶段历史，以交付 `verification/` 的最终完整流程为准。
-- **未测/未完成**：真实 broker 的三个例、真实 broker 心跳/事务 ACK/错误互操作、远端 CI、公开仓库、Mooncakes 发布及发布后独立安装；TLS/WebSocket/重连等为明确不支持项。
+- **真实 broker 通过**：官方 SHA512 已核的 Artemis 2.57.0，三个完整示例 + 五项补充检查：分段 binary/header/重复首值、NACK 丢弃策略、累计 ACK、实际心跳、真实 ERROR。命令、退出码、实际字节、配置、监听、RSS 采样与停止/清理在 `verification/broker/`。
+- **broker 限制已确认**：事务 ACK 不支持；该版本源码对 transaction ACK 告警后仍非事务确认，运行探针观察 ABORT 后未恢复。此项不是“事务 ACK 通过”，是能力限制。NACK 的不重投递策略也不推广到所有 broker。
+- **未测/未完成**：其他 broker、支持事务 ACK 的真实互操作、认证/TLS/WebSocket/持久化配置、远端 CI、公开仓库、Mooncakes 发布及发布后独立安装；库的 TLS/WebSocket/重连等为明确不支持项。
 
-## 真实 broker 最小缺口
+## 真实 broker 实测与剩余缺口
 
-需要用户批准后获取官方 Apache ActiveMQ Artemis 2.57.0 二进制约 46.6 MiB（Java 17+；若无现有 Java 还需另行批准），在本任务临时目录和仅回环监听下运行。官方地址、资源预算、退出清理和当前未验证的配置细节见 `docs/broker-plan.zh-CN.md`。当前没有下载、安装或运行 broker，也没有向公网发送测试。
+用户已明确批准本地测试；官方 48,869,723 字节发行包经官方和锁定 SHA512 双校验，复用 Java 17.0.20，只有 127.0.0.1:61613 STOMP 监听，无持久化/Web/JMX，堆上限 256 MiB，处理器限制 2。三例、五项补充检查和事务 ACK 限制探针均记录；结束停止、确认端口释放并删除临时 runtime。没有向公网 broker 发测试。复现与限制见 `broker-plan.zh-CN.md`、`broker-interop.zh-CN.md`。
 
-最终交付 ZIP 包含 `moonstomp/` 源码、`verification/` 原始命令日志与 JSON、`history/` Git bundle/提交清单、顶层交付清单。`verification.json` 记录工具版本、退出码、源码 SHA256 和未测项。源码及历史不包含 SDK、凭据、构建缓存或个人表单。
+最终交付 ZIP 包含 `moonstomp/` 源码、`verification/` 原始命令日志与 JSON、`history/` Git bundle/提交清单、顶层交付清单。`verification.json` 记录工具版本、退出码、源码 SHA256 和未测项。源码及历史不包含 SDK、用户凭据、构建缓存或个人表单；broker 创建命令中的 local-test-only 是自造且未用于客户端登录的测试占位值。
 
 本次交付优化的具体缺陷、修复与测试边界见 delivery-review.zh-CN.md。仍为可审阅、可复现的本地交付，不等于所有终验条件已完成。

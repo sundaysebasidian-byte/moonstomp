@@ -26,7 +26,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True, help='New directory outside source tree')
     parser.add_argument('--transport', action='store_true', help='Run scripted numeric-loopback TCP tests; no broker')
+    parser.add_argument('--broker-archive', type=Path, help='Optional already downloaded official Artemis 2.57.0 tar.gz')
+    parser.add_argument('--broker-checksum', type=Path, help='Official SHA512 file for the archive')
+    parser.add_argument('--broker-java-home', type=Path, help='Existing Java 17 home for the optional local broker')
     args = parser.parse_args()
+    broker_args = [args.broker_archive, args.broker_checksum, args.broker_java_home]
+    if any(broker_args) and not all(broker_args):
+        parser.error('provide all three broker arguments or none')
     out = args.output.resolve()
     if out == ROOT or ROOT in out.parents:
         parser.error('--output must be outside the source tree')
@@ -41,7 +47,7 @@ def main():
     report = {'started_utc': started, 'platform': platform.platform(), 'machine': platform.machine(),
               'python': sys.version, 'moon_bin': moon, 'moon_home': env.get('MOON_HOME'),
               'source_sha256': inventory(), 'stages': [], 'overall': 'FAILED',
-              'transport': 'NOT TESTED', 'real_broker': 'NOT TESTED: installation not authorized',
+              'transport': 'NOT TESTED', 'real_broker': 'NOT RUN IN THIS INVOCATION: optional local broker arguments required',
               'remote_ci': 'NOT TESTED', 'mooncakes_publication': 'NOT DONE'}
     if (ROOT / '.git').exists():
         report['git_head'] = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
@@ -88,9 +94,17 @@ def main():
         if args.transport:
             run('loopback-transport', ['node', 'scripts/transport-test.cjs'])
             report['transport'] = 'PASSED: scripted loopback peer, not a broker'
+        if all(broker_args):
+            run('real-broker', [sys.executable, 'scripts/broker-run.py',
+                '--archive', str(args.broker_archive.resolve()),
+                '--sha512', str(args.broker_checksum.resolve()),
+                '--java-home', str(args.broker_java_home.resolve()),
+                '--output', str(out / 'broker')])
+            report['real_broker'] = 'PASSED_ARTEMIS_2_57_PROFILE: 3 examples + 5 extended cases; transaction ACK unsupported'
         if inventory() != report['source_sha256']:
             raise RuntimeError('verification unexpectedly changed source files')
-        report['overall'] = 'PASSED_WITH_UNTESTED_BROKER_AND_REMOTE_CI'
+        report['overall'] = ('PASSED_WITH_ARTEMIS_PROFILE_LIMITATION_AND_UNTESTED_REMOTE_CI'
+            if all(broker_args) else 'PASSED_WITH_BROKER_NOT_RUN_AND_UNTESTED_REMOTE_CI')
     except Exception as error:
         report['error'] = str(error)
     finally:

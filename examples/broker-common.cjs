@@ -14,4 +14,4 @@ async function open(name, ack='auto') {
 }
 function message(c) { return c.waitFor(e=>e.event==='message'); }
 function run(fn) { fn().catch(e=>{ console.error(e.message); process.exitCode=1; }); }
-module.exports={assert,header,open,message,run};
+module.exports={assert,header,options,open,message,run};
