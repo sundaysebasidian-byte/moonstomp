@@ -1,10 +1,14 @@
 # MoonSTOMP
 
+本仓库源码版本为 **0.1.2**；正式 Mooncakes 安装版本仍为 **0.1.1**。0.1.2 的源码改进、验证和 CI 状态见 [源码同步记录](docs/source-sync-0.1.2.zh-CN.md)。0.1.2 尚未发布到 Mooncakes，也没有新增版本 tag；请按下方源码流程运行，registry 安装固定使用 0.1.1。
+
 MoonBit 实现的 STOMP 1.2 增量字节流编解码与传输分层客户端。适合将 MoonBit 程序接入任务队列、事件通道或现有 STOMP broker。核心协议不依赖 socket、系统时钟或 Node；Node TCP 适配器仅负责连接、读写、事件等待和关闭。
 
-本版源码版本 `0.1.1`，按 MIT 发布；0.1.0 历史版本保留。已实跑 Apache Artemis 2.57.0 无凭据回环互操作：三个场景和五项补充检查通过；事务 ACK 在该 broker 不受支持，NACK 按丢弃处理。结果只适用于已测版本和配置，不是所有 broker 的兼容认证。源码地址为 https://github.com/sundaysebasidian-byte/moonstomp ，发布状态、远端 CI 和正式包安装证据以对应提交的发布记录为准。
+源码版本 `0.1.2`、MIT；Mooncakes 已发布的 0.1.0/0.1.1 历史版本保留。已实跑 Apache Artemis 2.57.0 无凭据回环互操作：三个场景和五项补充检查通过；事务 ACK 在该 broker 不受支持，NACK 按丢弃处理。结果只适用于已测版本和配置，不是所有 broker 的兼容认证。源码地址为 https://github.com/sundaysebasidian-byte/moonstomp ，发布状态、远端 CI 和正式包安装证据以对应提交的发布记录为准。
 
-0.1.1 修复自动 content-length 计入最终 header 预算，以及带 receipt 的退订保留在途消息至回执到来；0.1.0 未包含这两项修复。[边界与失败行为](docs/boundaries.zh-CN.md) 区分核心、JS 运输、后端、容量、时钟和已知未测项。本轮公开和发布已获明确批准且完成，准确 CI、正式包与独立安装状态见 [0.1.1 发布记录](docs/publication-0.1.1.zh-CN.md)，不覆盖 0.1.0。
+0.1.1 修复自动 content-length 计入最终 header 预算，以及带 receipt 的退订保留在途消息至回执到来；0.1.0 未包含这两项修复。[边界与失败行为](docs/boundaries.zh-CN.md) 区分核心、JS 运输、后端、容量、时钟和已知未测项。此前 0.1.1 公开和发布已获明确批准且完成，准确 CI、正式包与独立安装状态见 [0.1.1 发布记录](docs/publication-0.1.1.zh-CN.md)，不覆盖 0.1.0。
+
+2026-10-03 新增有界解析/分段回归与真正增量的外部参考比较，核心两后端各 44/44；实际候选包消费各 6/6。运行功能未变，真实 broker 本轮未重跑，保留原提交和时间。详见 [本轮质量复核](docs/overnight-review-20261003.zh-CN.md)。
 
 ## 支持范围
 
@@ -19,7 +23,7 @@ MoonBit 实现的 STOMP 1.2 增量字节流编解码与传输分层客户端。�
 
 ## 从源码运行
 
-解压源码包并进入 `moonstomp/`。使用已经安装的可信 SDK，不需要 npm 安装或 registry 拉取。固定工具版本见 [toolchain.lock.json](toolchain.lock.json)：
+从本仓库获取源码并进入含 moon.mod 的项目根目录。0.1.0/0.1.1 tag 保留对应正式历史。使用已经安装的可信 SDK，不需要 npm 安装或 registry 拉取。固定工具版本见 [toolchain.lock.json](toolchain.lock.json)：
 
 - `moonc v0.10.14+7d59c7ec9 (2026-09-18)`
 - `moon 0.1.20260920 (914d7da 2026-09-20)`
@@ -59,13 +63,13 @@ decoder.end()
 
 无 I/O 的 codec 只检查帧语法；必需 header 和命令时序由 Client 校验。decoder/feed 同一批中后续出现非法输入时整批报错，先前事件不会作为部分成功返回，调用者应关闭运输。出站 API 校验错误不会将核心 Client 自动毒化；TCP 便利适配器采取关闭策略。
 
-Mooncakes 包名为 [sundaysebasidian-byte/moonstomp](https://mooncakes.io/docs/sundaysebasidian-byte/moonstomp)，本版安装固定 `0.1.1`；0.1.1 已正式发布并在全新 registry 缓存验证：两个后端各 5/5（原三个业务场景加两项修复回归），53 个安装文件与正式 ZIP 摘要一致，详见 [版本证据](docs/publication-0.1.1.zh-CN.md)。0.1.0 的 49 文件/两个后端各三个场景证据保留为历史，不能代替 0.1.1 安装验证。在工程中运行 `moon add sundaysebasidian-byte/moonstomp@0.1.1`，在 `moon.pkg` 导入该包为 `@stomp`；本源码自身不要求 registry 拉取。
+Mooncakes 包名为 [sundaysebasidian-byte/moonstomp](https://mooncakes.io/docs/sundaysebasidian-byte/moonstomp)，正式版本安装固定 `0.1.1`；0.1.1 已正式发布并在全新 registry 缓存验证：两个后端各 5/5（原三个业务场景加两项修复回归），53 个安装文件与正式 ZIP 摘要一致，详见 [版本证据](docs/publication-0.1.1.zh-CN.md)。0.1.0 的 49 文件/两个后端各三个场景证据保留为历史，不能代替 0.1.1 安装验证。在工程中运行 `moon add sundaysebasidian-byte/moonstomp@0.1.1`，在 `moon.pkg` 导入该包为 `@stomp`；本源码自身不要求 registry 拉取。
 
-完整消费例可从仓库根目录复制到新工程（JSON manifest 兼容格式会有弃用提示，已记录）：
+0.1.1 五项正式消费例保留于 validation/registry-0.1.1，字节与先前真实 registry 验证输入一致；候选六项回归仅用于 0.1.2。正式消费例可从源码或候选包根目录复制到新工程（JSON manifest 兼容格式会有弃用提示，已记录）：
 
 ```sh
 mkdir ../moonstomp-consumer
-cp validation/consumer/main.mbt.in ../moonstomp-consumer/main.mbt
+cp validation/registry-0.1.1/main.mbt.in ../moonstomp-consumer/main.mbt
 cp validation/consumer/moon.pkg.in ../moonstomp-consumer/moon.pkg
 cat > ../moonstomp-consumer/moon.mod.json <<'JSON'
 {"name":"independent/moonstomp-registry-consumer","version":"0.1.0","license":"MIT"}
@@ -81,6 +85,14 @@ moon run . --target js -j 1
 将最后四条的 `js` 换成 `wasm-gc` 可复验另一个已测后端。三个场景为媒体任务、传感器读数和账目批次；这里的服务器帧是明确的离线 fixture，账目场景的事务 ACK 回滚不能视为真实 Artemis 已支持。
 
 现在可实跑独立模块消费 `moon package` 导出的本地候选 ZIP：`python3 scripts/downstream.py --output ../moonstomp-downstream`。它在新工程中以本地路径依赖进行 JS/Wasm-GC check/build/test/run，包含媒体任务、传感器读数和账目批次三个不同场景的完整输入、公开 API、输出与断言。复用价值和范围审查见 [docs/reuse-review.zh-CN.md](docs/reuse-review.zh-CN.md)。这仅验证本地候选消费，不等于 Mooncakes 消费、真实 broker 或第三方采用。
+
+## Node 适配器从候选包使用
+
+安装 MoonBit 包不会自动生成 Node 适配器依赖的 `bridge.js`。候选 ZIP 解压到独立可写目录后，使用固定可信 SDK 运行 `moon build --target js --deny-warn -j 1`，再在该目录运行 Node 例或 `require('./transport/tcp.cjs')`。本版不分发预构建 JS；仅 `moon add` 然后直接 require 未构建的依赖目录会缺少 bridge。不要修改共享 SDK 或只读依赖缓存。
+
+`python3 scripts/downstream.py --output ../new-candidate-consumer --transport` 对真正的候选 ZIP 解包，完成 JS/Wasm-GC 外部模块各 6 项测试、编译该包的 JS bridge、运行包内适配器与 4 项回环边界测试。六项为三个业务场景、两项 0.1.1 回归和一项 0.1.2 单调时钟回归；这些是本地候选消费，不是 0.1.2 registry 消费。
+
+`connect()` 的 CONNECTED 及 `receipt()` 的特定回执由内部等待者优先处理，宽泛 `waitFor(() => true)` 不再抢走控制事件；其他普通等待者仍按注册顺序取首个匹配项。使用回执方法应读取其返回值，普通事件循环接收其余事件。host 必须是非空字符串，在创建连接前检查。
 
 ## 三个完整场景
 
@@ -112,7 +124,7 @@ python3 scripts/verify.py --output ../moonstomp-with-artemis --transport \
   --broker-java-home /absolute/path/java17/Contents/Home
 ```
 
-runner 会校验官方 SHA512 和已锁定摘要；不会下载软件或连接公网 broker。官方下载信息、审批与执行记录见 [docs/broker-plan.zh-CN.md](docs/broker-plan.zh-CN.md)，已测 profile 与限制见 [docs/broker-interop.zh-CN.md](docs/broker-interop.zh-CN.md)。
+runner 会校验官方 SHA512 和已锁定摘要；不会下载软件或连接公网 broker。官方下载信息与复现步骤见 [docs/broker-plan.zh-CN.md](docs/broker-plan.zh-CN.md)，已测 profile 与限制见 [docs/broker-interop.zh-CN.md](docs/broker-interop.zh-CN.md)。
 
 ## 分层与资源上限
 
@@ -129,7 +141,7 @@ runner 会校验官方 SHA512 和已锁定摘要；不会下载软件或连接�
 
 TCP 默认缓存最多 1024 个业务/回执事件且 JSON 估算总量不超过 4 MiB，最多 256 个等待者，写缓冲最多 2 MiB。心跳已由核心更新存活时间，仅交付给当前匹配等待者，未观察的心跳不积压进业务队列。超限会拒绝或关闭；不无限排队。每个 Client 对应一次连接，不复用已关闭实例。CPU 测试脚本始终 `-j 1`。
 
-JSON 队列预算不等于 raw body 预算，1 MiB 高 octet 正文及元数据可能超过 4 MiB 排队估算；应预先注册业务等待者。`waitFor` 超时不撤销已发送意图，服务端结果可能不确定；predicate 须同步、快速、无副作用，异步回调不支持。详细失败/关闭和诊断边界见 [边界文档](docs/boundaries.zh-CN.md)。
+JSON 队列预算不等于 raw body 预算，1 MiB 高 octet 正文及元数据可能超过 4 MiB 排队估算；应预先注册业务等待者。`waitFor` 超时不撤销已发送意图，服务端结果可能不确定；predicate 必须同步返回 Boolean、快速且无副作用；async/generator 函数在注册时拒绝，普通函数返回 Promise/非 Boolean 也报错。已有队列匹配报错返回 rejected Promise 且保留队列；实际接收路径匹配报错仍关闭连接。详细失败/关闭和诊断边界见 [边界文档](docs/boundaries.zh-CN.md)。
 
 `receipt(command, headers, body, id)` 自行设置 receipt header：传入 header 不能再包含 receipt，body 须为 Buffer/Uint8Array。等待者已满、参数类型/结构无效、重复 receipt header 或同 ID 的旧回执尚未消费时，拒绝调用且不发送命令；先消费旧回执再复用 ID。`waitFor(predicate, timeout)` 的 predicate 须为函数，timeout 和 tickMs 不超过 Node 定时器的 2147483647 ms 范围。这些便利方法的预校验拒绝保留健康连接；后续核心协议校验、发送或运输故障仍采取关闭策略。
 

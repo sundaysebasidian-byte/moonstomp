@@ -455,10 +455,14 @@ pub fn Client::receive(
 /// Returns LF only when needed; timeout closes client and raises a protocol error.
 pub fn Client::tick(self : Client, now : Int64) -> Bytes raise ProtocolError {
   errdefer self.fail()
-  if self.state != Active {
+  // A terminal poll is inert; every live-state poll still advances caller time.
+  if self.state == Closed {
     return b""
   }
   self.advance(now)
+  if self.state != Active {
+    return b""
+  }
   match self.clock {
     Some(c) => {
       let (due, dead) = c.poll(now)

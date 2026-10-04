@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -20,7 +21,9 @@ def digest(path):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', required=True, type=Path)
-    out = parser.parse_args().output.resolve()
+    parser.add_argument('--transport', action='store_true', help='Optional loopback tests of the adapter built from the actual candidate archive')
+    args = parser.parse_args()
+    out = args.output.resolve()
     if out == ROOT or ROOT in out.parents:
         parser.error('--output must be a new directory outside source')
     out.mkdir(parents=True, exist_ok=False)
@@ -75,6 +78,18 @@ def main():
             run('consumer-build-'+target, [moon,'build','--target',target,'--deny-warn','-j','1'], consumer)
             run('consumer-test-'+target, [moon,'test','--target',target,'--package','independent/moonstomp-consumer','--deny-warn','-j','1'], consumer)
             run('consumer-run-'+target, [moon,'run','.','--target',target,'--deny-warn','-j','1'], consumer)
+            counts = re.search(r'Total tests: (\d+), passed: (\d+), failed: (\d+)', (out / ('consumer-test-'+target+'.stdout.txt')).read_text())
+            if not counts or tuple(map(int, counts.groups())) != (6, 6, 0):
+                raise RuntimeError('consumer scenarios/regressions were not all executed')
+            report.setdefault('consumer_tests', {})[target] = {'total':6,'passed':6,'failed':0}
+        # Package installation alone does not generate bridge.js. Build from the
+        # actual extracted package, then exercise that package's adapter boundary.
+        run('candidate-build-bridge-js', [moon,'build','--target','js','--deny-warn','-j','1'], candidate)
+        run('candidate-js-bridge', ['node','scripts/bridge-test.cjs'], candidate)
+        report['node_adapter'] = 'PASSED: generated bridge and loaded adapter from actual candidate archive; no prebuilt JS distributed'
+        if args.transport:
+            run('candidate-loopback-quality', ['node','scripts/transport-quality-test.cjs'], candidate)
+            report['node_adapter_transport'] = 'PASSED: 4 packaged-adapter cases with actual loopback sockets, not a broker'
         if report['candidate_source_sha256'] != {str(p.relative_to(candidate)):digest(p)
                 for p in sorted(candidate.rglob('*')) if p.is_file() and '_build' not in p.relative_to(candidate).parts and '.moon' not in p.relative_to(candidate).parts}:
             raise RuntimeError('candidate source unexpectedly changed')

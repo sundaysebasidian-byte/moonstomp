@@ -1,6 +1,8 @@
 # 支持边界与失败行为
 
-本版源码为 0.1.1，以公开 HEAD `6b126587a1821795e909ea561c46dcf32b160a2a` 为修复基线。用户已明确批准公开/发布本轮修复；0.1.0 历史保持原样。准确新版本 commit、CI、发布和安装状态见 publication-0.1.1.zh-CN.md。
+本仓库源码为 0.1.2，基于正式 0.1.1/f7aa474；正式 Mooncakes 0.1.0/0.1.1 历史保留。源码同步与准确 CI 状态见 source-sync-0.1.2.zh-CN.md；旧版发布/registry 证据不代表 0.1.2 正式发布。
+
+0.1.2 使所有未关闭状态的 tick 校验/推进单调时间（仅 Active 发心跳）；Closed 的 tick 是无效应空输出。Node connect/receipt 的内部控制等待者优先于普通匹配；predicate 必须同步返回 Boolean，async/generator 预先拒绝，已排队事件的匹配错误返回 rejected Promise 不移除队列，实际接收匹配错误仍关闭并清理。非法 host 在连接前拒绝。
 
 ## 协议与后端
 
@@ -39,7 +41,7 @@
 | TCP send/解析/队列/写缓冲失败 | 关闭连接，取消 timer，拒绝等待者并清空队列。bridge 将核心异常统一为 MoonSTOMP protocol error，不提供稳定细分错误码或保留原核心详细字符串。 |
 | receipt 便利入口预检失败 | 参数、重复 header、等待者满或旧队列同 ID 回执拒绝且不发帧，保留健康连接；之后进入核心/运输的错误仍关闭。 |
 | waitFor 超时 | 只删除该等待者，连接仍可存活；已发送命令可能已被服务端处理，core pending receipt 仍等待到来或 fail，不能据超时直接重复业务操作。DISCONNECT 便利入口在成功/失败后都 stop。 |
-| 用户 predicate | 必须是同步、快速、无副作用的匹配函数；异步 predicate 不支持。匹配已有队列时抛错会同步传出，接收路径匹配时抛错会关闭连接；没有回调隔离、重入或线程安全保证。 |
+| 用户 predicate | 必须同步返回 Boolean、快速、无副作用；async/generator 在注册时拒绝，其他非 Boolean/Promise 返回值报错，原生 Promise 拒绝有处理器。已有队列匹配失败返回 rejected Promise 且队列保留，接收路径匹配失败会关闭连接；没有任意回调隔离、重入或线程安全保证。 |
 
 本轮新增回归分别验证：自动长度预算拒绝且不登记 receipt，127+自动/128+显式边界成功；receipt 前 MESSAGE、容量占用、重复退订/ID 复用、旧消息确认；无 receipt/receipt 后未知订阅失败；运输失败清理待退订；Node 分段实际连接在 MESSAGE+receipt 连帧中保持健康。原实现两项失败证据和修复后证据分开保存，不降低断言。
 

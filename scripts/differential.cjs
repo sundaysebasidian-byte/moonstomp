@@ -32,6 +32,39 @@ for(let i=0;i<400;i++) {
 }
 const joined=Buffer.from('SEND\nx:first\nx:second\n\na\0RECEIPT\nreceipt-id:r\n\n\0');
 assert.deepEqual(protocol.parse(joined).map(JSON.parse).map(normal),reference(joined,1)); cases++;
+// Independently serialized server frames also exercise the MoonBit Client's
+// incremental decoder, not only whole-buffer parse against a chunked reference.
+let incrementalCases=0, incrementalRuns=0;
+for(let i=0;i<64;i++) {
+  const body=Uint8Array.from({length:random()%129},()=>random()%256);
+  const f=new FrameImpl({command:'MESSAGE',headers:{destination:'/queue/tasks',subscription:'s','message-id':'m-'+i,'x-label':'中文:'+i+'\nline\rreturn\\slash'},binaryBody:body,escapeHeaderValues:true});
+  let wire=Buffer.from(f.serialize());
+  if(i%2===0) {
+    const boundary=wire.indexOf('\n\n');
+    wire=Buffer.concat([Buffer.from(wire.subarray(0,boundary+2).toString().replace(/\n/g,'\r\n')),wire.subarray(boundary+2)]);
+  }
+  const expected=reference(wire,1);
+  assert.equal(expected.length,1);
+  for(const step of [1,3,17,wire.length]) {
+    const c=protocol.create();
+    try {
+      protocol.send(c,'CONNECT',[['accept-version','1.2'],['host','local']],Buffer.alloc(0),0n);
+      protocol.receive(c,Buffer.from('CONNECTED\nversion:1.2\n\n\0'),0n);
+      protocol.send(c,'SUBSCRIBE',[['id','s'],['destination','/queue/tasks']],Buffer.alloc(0),0n);
+      const actual=[];
+      for(let pos=0;pos<wire.length;pos+=step) {
+        for(const text of protocol.receive(c,wire.subarray(pos,pos+step),0n)) {
+          const event=JSON.parse(text);
+          if(event.event==='message')actual.push(normal(event.frame));
+        }
+      }
+      assert.deepEqual(actual,expected);
+      assert.deepEqual(actual[0].body,Array.from(body));
+      assert.equal(protocol.eof(c),true);incrementalRuns++;
+    } finally {protocol.close(c);}
+  }
+  incrementalCases++;
+}
 // Differences are constrained by the STOMP specification, not by reference laxness.
 const strictVectors=[
  ['header whitespace',Buffer.from('SEND\nx: leading \n\n\0'),'spaces preserved'],
@@ -46,4 +79,4 @@ for(const [name,wire,expected] of strictVectors) {
   else { const ours=normal(JSON.parse(protocol.parse(wire)[0]));assert.equal(ours.headers.x,' leading ');assert.equal(ref[0].headers.x,'leading'); }
   differences.push({name,moonstomp:expected,reference:'accepted/trimmed',basis:'STOMP 1.2 Value Encoding / content-length'});
 }
-console.log(JSON.stringify({reference:'@stomp/stompjs 7.2.0 Apache-2.0',valid_cases:cases,reference_chunk_runs:chunkRuns+1,passed:true,documented_strictness_differences:differences,broker_interop:'NOT TESTED'},null,2));
+console.log(JSON.stringify({reference:'@stomp/stompjs 7.2.0 Apache-2.0',valid_cases:cases,reference_chunk_runs:chunkRuns+1,incremental_client_cases:incrementalCases,incremental_client_partition_runs:incrementalRuns,incremental_reference_chunk_size:1,passed:true,documented_strictness_differences:differences,broker_interop:'NOT TESTED'},null,2));

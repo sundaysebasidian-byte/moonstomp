@@ -1,21 +1,18 @@
 # AI 辅助使用说明
 
-MoonSTOMP 核心、测试、Node glue、文档和验证脚本由用户指定需求后，使用 Codex 辅助设计、生成、调试及整理。不能声明全部手工编写。参考实现仅用于差分，没有将参考 parser 移植成 MoonBit。错误测试保留严格标准；开发曾修复错误的外部 enum 构造、字节 literal、公开 Limits 构造缺失、断连缓冲与握手 timer 清理等问题。
+MoonSTOMP 的 MoonBit 核心、测试、Node 适配器、文档和验证脚本使用 Codex 辅助设计、生成、调试与整理。不能声明全部手工编写。固定参考 @stomp/stompjs 仅用于独立差分测试，没有将其 parser 移植成 MoonBit；来源和许可见 docs/reference.zh-CN.md。
 
-人工职责：核对功能边界、解释设计、审阅源码与测试证据，最终自行写一页申报书并决定是否发布。章程要求“申报书务必人工撰写”；Proposal.md 仅为 AI 辅助技术事实参考。未代填身份/银行卡/电话/学历资料，未签或接受参赛诚信承诺。
+开发过程保留严格的正常/错误/容量断言。曾修复长度预算、订阅 ID 复用、退订回执前在途消息、回执等待者、握手定时器和失败缓冲清理问题。0.1.2 增加所有存活状态的单调时钟检查、内部 CONNECTED/RECEIPT 优先等待、非空 host 与同步 Boolean predicate 合约；空字节 tick 调用曾被测试计数器误当作实际发送，修正为只计非空写入，仍要求被拒绝的命令零发送。
 
-建议参赛者能亲自解释并演示：
+2026-10-03 增加四项有界生成解析测试，以及 64 个外部 MESSAGE、256 次真正增量接收比较。核心两个后端各 44 项；实际 package 消费两后端各 6 项，Node 运输 14 项。有限测试不能证明所有输入或完整协议兼容；真实 Artemis 实测的版本、时间、NACK 策略和事务 ACK 限制另行记录。
 
-1. 为什么 frame 正文用 Bytes，`content-length` 按 octet 而不是字符数；如何让嵌入 NUL 不终止正文。
-2. decoder 的 command/header/body/terminator 四阶段如何在任意 chunk 边界保持状态；为什么致命输入后不可复用。
-3. 重复 header 为什么取首值，为什么 CONNECT/CONNECTED 不转义，以及未知转义和空格应如何处理。
-4. 心跳为何取 MAX，0 如何禁用；单调毫秒时钟、任意数据刷新和容差如何测试。
-5. `client` 累计 ACK 和 `client-individual` 的区别；事务确认在 COMMIT/ABORT 时如何调整本地状态；receipt 与业务成功的区别。
-6. sans-I/O 核心与 socket glue 的分工；写入失败、EOF、容量超限为什么清理会话、waiter、timer 和缓冲。
-7. 为什么 33 项单元测试和 401 例独立差分本身不能宣称 broker 兼容；真实 Artemis profile 中 NACK 丢弃、事务 ACK 不支持的限制如何影响业务。
+维护者及使用者应能解释和演示：
 
-交付优化复查另外修复了订阅 ID 复用与未确认旧消息混淆、回执等待者满仍发送命令、旧队列回执误判以及无人消费的心跳积压。每项均保留有行为意义的断言；运输字节容量 fixture 曾因匹配现有等待者而误触发，调整为不匹配该等待者的 receipt 后重跑，容量上限和失败断言未降低。详见 docs/delivery-review.zh-CN.md。
+1. Bytes、octet 长度与正文中的 NUL；header 四种转义、重复首值和 CONNECT/CONNECTED 例外。
+2. decoder 的四阶段、任意 chunk 边界、poisoning 与错误/EOF 清理。
+3. 双方 MAX 心跳协商、零值禁用、单调时钟和接收容差。
+4. client 累计 ACK 与 client-individual、事务 COMMIT/ABORT 和 receipt 的协议含义。
+5. sans-I/O 核心与 TCP 的职责、容量预算、连接失败和等待者/定时器清理。
+6. 自造 peer、独立参考、实际包消费与真实 broker 各自证明什么，以及未测范围。
 
-可从 `moon run examples/offline --target js -j 1` 开始，修改一条长度/ACK/心跳用例观察报错，核对 scripts/verify.py 的原始日志。理解未完成时不要将技术参考直接提交为人工申报。
-
-本轮边界复核仍由 Codex 辅助完成，实际发现自动长度 header 未计预算及退订回执前丢失在途订阅两项缺陷，先新增回归观察 36 项中 2 项失败，再本地修复并增加清理/运输回归。新增待退订记录受原订阅容量约束；未扩展 broker、TLS、重连等范围。先完成本地候选后，现获用户明确补充授权推进 0.1.1；已发布 0.1.0 的测试记录不代替新版本证据，源码与人工申报仍需用户理解和审阅。
+可运行 examples/offline 并修改长度、ACK 或时钟用例观察错误。代码与技术说明需要本人理解和审阅；竞赛最终申报须本人按官方要求撰写。本文件与 Proposal.md 是 AI 辅助技术资料，不是人工申报书。

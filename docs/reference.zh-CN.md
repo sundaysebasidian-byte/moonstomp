@@ -12,3 +12,5 @@
 样例任务文本、随机字节、ID、destination 为项目自造数据，不含真实个人或业务资料。未引入未经授权的闭源 fixture。
 
 真实互操作另使用官方 Apache Artemis 2.57.0，Apache-2.0，只在临时测试运行，不作为库依赖或二进制随包分发。生成配置保留 ASF 许可头；运行证据同时保留发行包 LICENSE/NOTICE。来源为官方 https://artemis.apache.org/components/artemis/download/ 与固定 2.57.0 官方源码；摘要固定于 broker-run.py。没有复制 broker 的 Java 实现到 MoonBit，源码只用于核行为差异。字节记录为自造数据的实际回环运输观察。
+
+2026-10-03 有界复核另增加 64 个外部序列化 MESSAGE 和 256 次 MoonBit Client 分段接收，对比固定参考的每字节解析。所有实际结果直接逐项比较，未 trim 本库结果或放宽已知严格差异；脚本纳入固定验证流程，真实 broker 此轮未重跑。

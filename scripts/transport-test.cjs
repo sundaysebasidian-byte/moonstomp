@@ -76,7 +76,9 @@ async function listen(handler) {
   try {
     await guarded.connect({heartbeat:'0,0'});
     let writes=0;const originalWrite=guarded.write.bind(guarded);
-    guarded.write=bytes=>{writes++;originalWrite(bytes);};
+    // tick() may poll with empty bytes even when heartbeat negotiation is 0,0.
+    // Count actual nonempty writes, preserving the rejected-command zero-I/O check.
+    guarded.write=bytes=>{if(bytes.length)writes++;originalWrite(bytes);};
     const occupied=guarded.waitFor(()=>false,20);occupied.catch(()=>{});
     await assert.rejects(guarded.receipt('SEND',[['destination','tasks']]),/waiter limit/);
     await assert.rejects(guarded.receipt('SEND',[['receipt','caller-id']]),/controls the receipt header/);

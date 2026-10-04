@@ -1,6 +1,6 @@
 # MoonSTOMP 0.1.1 发布记录
 
-用户已明确补充批准：把经过本地复核的 STOMP 更新公开到原 GitHub，并正式发布 Mooncakes 0.1.1。沿用 MIT，不覆盖 0.1.0、不办理人工申报或接受新条款。
+0.1.1 在原 GitHub 发布源码并正式发布至 Mooncakes；沿用 MIT，保留 0.1.0 历史。
 
 0.1.1 修复自动 content-length 未计入出站 header 数，以及带 receipt 的 UNSUBSCRIBE 提前删除订阅/拒绝在途消息/允许提前复用 ID。先 red 再修实现；核心两个后端各 37 项、10 项 TCP、401/1201 差分、独立本地包消费及原 Artemis profile 已在最终版本本地及准确 CI 复验。边界见 boundaries.zh-CN.md，0.1.0 证据在 publication.zh-CN.md，不能代替本版证据。
 
@@ -24,4 +24,4 @@ registry manifest 端点在未存在的版本路径也可能返回 HTTP 200 并�
 
 公开原始摘录及消费源码在 evidence/publication-0.1.1/；仅去除本机路径，原始日志保留在私有交付。正式包是 tag 的固定源码；随后证据文档提交不重新发布同一 0.1.1 版本。README 的普通示例有三个业务场景；本证据追加的两个补丁回归可从 consumer-main.mbt.in 复现。整个工程 Wasm-GC 仍不支持 JS bridge；上述后端证明的是核心消费。
 
-发布只用正常官方 CLI 现成认证，服务返回 200；未读取/打印/生成 token 或扩大权限，未接受新条款。未代填或提交比赛表单/诚信承诺。
+正常官方 CLI 发布成功，服务返回 200；实际版本与内容以 checksum、版本元数据和独立安装证据核验。

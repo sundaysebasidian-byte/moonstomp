@@ -1,6 +1,6 @@
 # 本地 broker 执行与复现记录
 
-2026-10-01，用户明确授权“可以，测试吧”。仅使用本任务临时目录，没有借用其他任务 Docker/Lima，没有改全局配置。
+2026-10-01 使用临时、仅回环的实例实测；runner 不修改全局环境。
 
 - 官方页：https://artemis.apache.org/components/artemis/download/
 - 官方发行包：https://downloads.apache.org/artemis/artemis/2.57.0/apache-artemis-2.57.0-bin.tar.gz
@@ -23,6 +23,6 @@ python3 scripts/broker-run.py --output ../broker-evidence \
   --java-home /absolute/path/java17/Contents/Home
 ```
 
-没有公网 broker 测试。实际 profile 与限制见 broker-interop.zh-CN.md；公开仓库、准确首发提交远端 CI、Mooncakes 发布与独立 registry 安装已完成，见 publication.zh-CN.md；人工申报未完成。
+没有公网 broker 测试。实际 profile 与限制见 broker-interop.zh-CN.md；公开仓库、准确首发提交远端 CI、Mooncakes 发布与独立 registry 安装已完成，见 publication.zh-CN.md。
 
 正式首发 0.1.0、对应远端 CI 与独立 registry 消费证据见 [publication.zh-CN.md](publication.zh-CN.md)，本地候选消费与正式安装各自保留记录。

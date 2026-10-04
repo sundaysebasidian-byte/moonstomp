@@ -149,7 +149,7 @@ fn main {
 }
 
 ///|
-test "candidate retains 0.1.1 counts automatic length in the public client header budget" {
+test "registry 0.1.1 counts automatic length in the public client header budget" {
   let c = session()
   let headers : Array[(String, String)] = [("destination", "tasks")]
   for i = 0; i < 127; i = i + 1 { headers.push(("x", "v")) }
@@ -167,7 +167,7 @@ test "candidate retains 0.1.1 counts automatic length in the public client heade
 }
 
 ///|
-test "candidate retains 0.1.1 preserves messages before unsubscribe receipt and prevents id reuse" {
+test "registry 0.1.1 preserves messages before unsubscribe receipt and prevents id reuse" {
   let c = session()
   ignore(c.send(@stomp.subscribe("s", "tasks", ack="client-individual"), 0))
   ignore(c.send(@stomp.Frame::new("UNSUBSCRIBE", [("id", "s"), ("receipt", "unsub")]), 0))
@@ -182,14 +182,4 @@ test "candidate retains 0.1.1 preserves messages before unsubscribe receipt and 
   assert_eq(c.pending_deliveries(), 0)
   match c.state() { Active => (); _ => fail("receipt-fenced unsubscribe remains healthy") }
   c.fail()
-}
-
-///|
-test "candidate validates monotonic time during inactive live polling" {
-  let c = @stomp.Client::new()
-  ignore(c.send(@stomp.connect("local"), 100))
-  assert_eq(c.tick(101), b"")
-  assert_true(try { ignore(c.receive(b"CONNECTED\nversion:1.2\n\n\x00", 100)); false } catch { _ => true })
-  match c.state() { Closed => (); _ => fail("clock regression must close") }
-  assert_eq(c.tick(0), b"")
 }

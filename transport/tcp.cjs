@@ -6,7 +6,7 @@ require('../_build/js/debug/build/bridge/bridge.js');
 const protocol = globalThis.MoonSTOMP;
 class TcpClient {
   constructor({host = '127.0.0.1', port = 61613, tickMs = 25, maxQueue = 1024, maxWaiters = 256, maxQueueBytes = 4*1024*1024} = {}) {
-    if (!Number.isInteger(port) || port < 1 || port > 65535 || !Number.isInteger(tickMs) || tickMs < 1 || tickMs > 2147483647 || !Number.isInteger(maxQueue) || maxQueue < 1 || !Number.isInteger(maxWaiters) || maxWaiters < 1 || !Number.isInteger(maxQueueBytes) || maxQueueBytes < 1) throw new Error('invalid TCP configuration');
+    if (typeof host !== 'string' || !host.trim().length || !Number.isInteger(port) || port < 1 || port > 65535 || !Number.isInteger(tickMs) || tickMs < 1 || tickMs > 2147483647 || !Number.isInteger(maxQueue) || maxQueue < 1 || !Number.isInteger(maxWaiters) || maxWaiters < 1 || !Number.isInteger(maxQueueBytes) || maxQueueBytes < 1) throw new Error('invalid TCP configuration');
     this.options = {host, port};
     this.core = protocol.create(); this.queue = []; this.waiters = []; this.maxQueue = maxQueue; this.maxWaiters = maxWaiters; this.maxQueueBytes = maxQueueBytes; this.queueBytes = 0;
     this.origin = performance.now(); this.socket = null; this.timer = null; this.error = null; this.tickMs = tickMs;
@@ -21,8 +21,17 @@ class TcpClient {
     this.queue.length = 0; this.queueBytes = 0;
     if (this.socket && !this.socket.destroyed) this.socket.destroy();
   }
+  _matches(predicate, event) {
+    const result = predicate(event);
+    if (typeof result !== 'boolean') {
+      // Reject accidental async callbacks without leaving an unhandled rejection.
+      if (result instanceof Promise) result.catch(() => {});
+      throw new Error('event predicate must return a synchronous boolean');
+    }
+    return result;
+  }
   deliver(event) {
-    const i = this.waiters.findIndex(w => w.predicate(event));
+    const i = this.waiters.findIndex(w => this._matches(w.predicate, event));
     if (i >= 0) { const w = this.waiters.splice(i,1)[0]; clearTimeout(w.timer); w.resolve(event); }
     else {
       // Liveness is already updated by MoonBit. Unobserved beats are transient.
@@ -33,9 +42,15 @@ class TcpClient {
     }
   }
   waitFor(predicate, timeout = 5000) {
+    return this._waitFor(predicate, timeout, false);
+  }
+  _waitFor(predicate, timeout, control) {
     if (typeof predicate !== 'function') return Promise.reject(new Error('invalid event predicate'));
+    if (['AsyncFunction','AsyncGeneratorFunction','GeneratorFunction'].includes(predicate.constructor?.name)) return Promise.reject(new Error('event predicate must return a synchronous boolean'));
     if (!Number.isFinite(timeout) || timeout < 1 || timeout > 2147483647) return Promise.reject(new Error('invalid timeout'));
-    const i = this.queue.findIndex(predicate);
+    let i;
+    try { i = this.queue.findIndex(event => this._matches(predicate, event)); }
+    catch (e) { return Promise.reject(e); }
     if (i >= 0) {
       const event = this.queue.splice(i, 1)[0];
       this.queueBytes -= Buffer.byteLength(JSON.stringify(event));
@@ -46,7 +61,9 @@ class TcpClient {
     return new Promise((resolve,reject) => {
       const w = {predicate, resolve, reject};
       w.timer = setTimeout(() => { this.waiters = this.waiters.filter(x => x !== w); reject(new Error('event timeout')); }, timeout);
-      this.waiters.push(w);
+      // Dedicated handshake/receipt waits own their control events before generic
+      // waitFor predicates; ordinary waits retain first-matching registration order.
+      if (control) this.waiters.unshift(w); else this.waiters.push(w);
     });
   }
   write(bytes) {
@@ -74,7 +91,7 @@ class TcpClient {
     this.socket.on('error', e => this.stop(e));
     this.socket.on('end', () => this.stop(new Error(protocol.eof(this.core) ? 'peer EOF' : 'truncated STOMP stream')));
     this.socket.on('close', () => this.stop());
-    const connected = this.waitFor(e => e.event === 'connected', 5000);
+    const connected = this._waitFor(e => e.event === 'connected', 5000, true);
     // Consume rejection even when the socket fails before CONNECT is sent.
     connected.catch(() => {});
     this.socket.once('connect', () => {
@@ -99,7 +116,7 @@ class TcpClient {
     // Registering a failed waiter must never send an unobservable command.
     if (this.waiters.length >= this.maxWaiters) throw new Error('waiter limit');
     if (this.queue.some(e => e.event === 'receipt' && e.id === id)) throw new Error('unconsumed receipt id');
-    const wait = this.waitFor(e => e.event === 'receipt' && e.id === id);
+    const wait = this._waitFor(e => e.event === 'receipt' && e.id === id, 5000, true);
     wait.catch(() => {});
     this.send(command, [...headers,['receipt',id]], body);
     return wait;
