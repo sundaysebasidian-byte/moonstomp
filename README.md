@@ -1,10 +1,10 @@
 # MoonSTOMP
 
-本仓库源码版本为 **0.1.2**；正式 Mooncakes 安装版本仍为 **0.1.1**。0.1.2 的源码改进、验证和 CI 状态见 [源码同步记录](docs/source-sync-0.1.2.zh-CN.md)。0.1.2 尚未发布到 Mooncakes，也没有新增版本 tag；请按下方源码流程运行，registry 安装固定使用 0.1.1。
+本仓库版本为 **0.1.2**。源码改进与准确 CI 见 [源码同步记录](docs/source-sync-0.1.2.zh-CN.md)，正式发布回执与独立安装结果见 [0.1.2 发布记录](docs/publication-0.1.2.zh-CN.md)。安装固定使用 `moon add sundaysebasidian-byte/moonstomp@0.1.2`；旧 0.1.0/0.1.1 发布证据保留。
 
 MoonBit 实现的 STOMP 1.2 增量字节流编解码与传输分层客户端。适合将 MoonBit 程序接入任务队列、事件通道或现有 STOMP broker。核心协议不依赖 socket、系统时钟或 Node；Node TCP 适配器仅负责连接、读写、事件等待和关闭。
 
-源码版本 `0.1.2`、MIT；Mooncakes 已发布的 0.1.0/0.1.1 历史版本保留。已实跑 Apache Artemis 2.57.0 无凭据回环互操作：三个场景和五项补充检查通过；事务 ACK 在该 broker 不受支持，NACK 按丢弃处理。结果只适用于已测版本和配置，不是所有 broker 的兼容认证。源码地址为 https://github.com/sundaysebasidian-byte/moonstomp ，发布状态、远端 CI 和正式包安装证据以对应提交的发布记录为准。
+源码版本 `0.1.2`、MIT；Mooncakes 0.1.0/0.1.1 历史版本保留。已实跑 Apache Artemis 2.57.0 无凭据回环互操作：三个场景和五项补充检查通过；事务 ACK 在该 broker 不受支持，NACK 按丢弃处理。结果只适用于已测版本和配置，不是所有 broker 的兼容认证。源码地址为 https://github.com/sundaysebasidian-byte/moonstomp ，发布状态、远端 CI 和正式包安装证据以对应提交的发布记录为准。
 
 0.1.1 修复自动 content-length 计入最终 header 预算，以及带 receipt 的退订保留在途消息至回执到来；0.1.0 未包含这两项修复。[边界与失败行为](docs/boundaries.zh-CN.md) 区分核心、JS 运输、后端、容量、时钟和已知未测项。此前 0.1.1 公开和发布已获明确批准且完成，准确 CI、正式包与独立安装状态见 [0.1.1 发布记录](docs/publication-0.1.1.zh-CN.md)，不覆盖 0.1.0。
 
@@ -63,28 +63,28 @@ decoder.end()
 
 无 I/O 的 codec 只检查帧语法；必需 header 和命令时序由 Client 校验。decoder/feed 同一批中后续出现非法输入时整批报错，先前事件不会作为部分成功返回，调用者应关闭运输。出站 API 校验错误不会将核心 Client 自动毒化；TCP 便利适配器采取关闭策略。
 
-Mooncakes 包名为 [sundaysebasidian-byte/moonstomp](https://mooncakes.io/docs/sundaysebasidian-byte/moonstomp)，正式版本安装固定 `0.1.1`；0.1.1 已正式发布并在全新 registry 缓存验证：两个后端各 5/5（原三个业务场景加两项修复回归），53 个安装文件与正式 ZIP 摘要一致，详见 [版本证据](docs/publication-0.1.1.zh-CN.md)。0.1.0 的 49 文件/两个后端各三个场景证据保留为历史，不能代替 0.1.1 安装验证。在工程中运行 `moon add sundaysebasidian-byte/moonstomp@0.1.1`，在 `moon.pkg` 导入该包为 `@stomp`；本源码自身不要求 registry 拉取。
+Mooncakes 包名为 [sundaysebasidian-byte/moonstomp](https://mooncakes.io/docs/sundaysebasidian-byte/moonstomp)。安装固定 `0.1.2`，并在 `moon.pkg` 导入该包为 `@stomp`。0.1.2 的准确正式状态以 [发布记录](docs/publication-0.1.2.zh-CN.md) 为准；本地 path 候选消费和正式 registry 消费分别验证。旧 0.1.1 的 53 文件/两后端各 5 项与 0.1.0 的 49 文件/各 3 项证据保留，不代表新版安装结果。
 
-0.1.1 五项正式消费例保留于 validation/registry-0.1.1，字节与先前真实 registry 验证输入一致；候选六项回归仅用于 0.1.2。正式消费例可从源码或候选包根目录复制到新工程（JSON manifest 兼容格式会有弃用提示，已记录）：
+当前六项消费模板在 `validation/consumer/`：三个业务场景、两个 0.1.1 边界回归和一个 0.1.2 单调时钟回归。旧 0.1.1 五项模板在 `validation/registry-0.1.1/`，不用于宣称新版验证。完整当前消费例可从源码或候选包根目录复制到新工程：
 
 ```sh
 mkdir ../moonstomp-consumer
-cp validation/registry-0.1.1/main.mbt.in ../moonstomp-consumer/main.mbt
+cp validation/consumer/main.mbt.in ../moonstomp-consumer/main.mbt
 cp validation/consumer/moon.pkg.in ../moonstomp-consumer/moon.pkg
 cat > ../moonstomp-consumer/moon.mod.json <<'JSON'
 {"name":"independent/moonstomp-registry-consumer","version":"0.1.0","license":"MIT"}
 JSON
 cd ../moonstomp-consumer
-moon add sundaysebasidian-byte/moonstomp@0.1.1
+moon add sundaysebasidian-byte/moonstomp@0.1.2
 moon check --target js -j 1
 moon build --target js -j 1
 moon test --target js --package independent/moonstomp-registry-consumer -j 1
 moon run . --target js -j 1
 ```
 
-将最后四条的 `js` 换成 `wasm-gc` 可复验另一个已测后端。三个场景为媒体任务、传感器读数和账目批次；这里的服务器帧是明确的离线 fixture，账目场景的事务 ACK 回滚不能视为真实 Artemis 已支持。
+将最后四条的 `js` 换成 `wasm-gc` 可复验另一个后端。三个场景为媒体任务、传感器读数和账目批次；服务器帧是明确的离线 fixture，事务 ACK 回滚不能当作真实 Artemis 已支持。
 
-现在可实跑独立模块消费 `moon package` 导出的本地候选 ZIP：`python3 scripts/downstream.py --output ../moonstomp-downstream`。它在新工程中以本地路径依赖进行 JS/Wasm-GC check/build/test/run，包含媒体任务、传感器读数和账目批次三个不同场景的完整输入、公开 API、输出与断言。复用价值和范围审查见 [docs/reuse-review.zh-CN.md](docs/reuse-review.zh-CN.md)。这仅验证本地候选消费，不等于 Mooncakes 消费、真实 broker 或第三方采用。
+独立消费本地 `moon package` ZIP 可运行 `python3 scripts/downstream.py --output ../moonstomp-downstream --transport`；该流程包含真实解压包自身的 Node bridge 构建、加载和四项回环边界测试。它仍是本地 path 依赖，不等于正式 registry 安装、真实 broker 或第三方采用。复用范围见 [docs/reuse-review.zh-CN.md](docs/reuse-review.zh-CN.md)。
 
 ## Node 适配器从候选包使用
 

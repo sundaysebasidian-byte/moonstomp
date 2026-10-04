@@ -2,7 +2,7 @@
 
 2026-10-04。源码基于经过本地验证的 b18b0e53391f9a2a632673ea551d8d3aba3dbdd2：核心、公开 API、bridge、TCP、测试、脚本与例子保持其字节内容；整理公开技术文档，保留 AI 披露、真实测试范围和未测项。
 
-本仓库源码版本为 0.1.2；Mooncakes 正式版本仍为 0.1.1。此同步不创建新 tag 或正式 registry 版本。README 的源码流程用于 0.1.2，moon add 安装示例固定为 0.1.1，不把本地 package 消费当作新 registry 安装。
+本仓库源码版本为 0.1.2；Mooncakes 正式版本仍为 0.1.1。本页记录源码同步时的状态。后续 0.1.2 正式发布与新版独立 registry 消费另见 publication-0.1.2.zh-CN.md；不把本页的本地 package 消费当作正式安装。
 
 固定工具链的本地验证包括 check/build、JS/Wasm-GC 核心各 44/44、离线三场景、JS bridge、401/1201 基础差分及 64/256 增量参考、TCP 10+4、实际候选 package 消费各 6/6，以及包内 bridge/四项回环测试。准确代码同步提交 `07beb321297ad85f20b33938b1a70daea09d5d84` 的 [CI 37176727896](https://github.com/sundaysebasidian-byte/moonstomp/actions/runs/37176727896) 已成功，head SHA 匹配。该 Linux 流程执行检查、构建、两后端核心、示例、差分、TCP 和实际 package 消费；没有运行真实 broker。本文后续仅补验证记录，不将旧 CI 描述为另一提交的 CI。
 
