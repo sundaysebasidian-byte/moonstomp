@@ -4,7 +4,7 @@
 
 MoonBit 实现的 STOMP 1.2 增量字节流编解码与传输分层客户端。适合将 MoonBit 程序接入任务队列、事件通道或现有 STOMP broker。核心协议不依赖 socket、系统时钟或 Node；Node TCP 适配器仅负责连接、读写、事件等待和关闭。
 
-源码版本 `0.1.2`、MIT；Mooncakes 0.1.0/0.1.1 历史版本保留。已实跑 Apache Artemis 2.57.0 无凭据回环互操作：三个场景和五项补充检查通过；事务 ACK 在该 broker 不受支持，NACK 按丢弃处理。结果只适用于已测版本和配置，不是所有 broker 的兼容认证。源码地址为 https://github.com/sundaysebasidian-byte/moonstomp ，发布状态、远端 CI 和正式包安装证据以对应提交的发布记录为准。
+源码与 Mooncakes 正式版本 `0.1.2`、MIT；0.1.0/0.1.1 历史版本保留。已实跑 Apache Artemis 2.57.0 无凭据回环互操作：三个场景和五项补充检查通过；事务 ACK 在该 broker 不受支持，NACK 按丢弃处理。结果只适用于已测版本和配置，不是所有 broker 的兼容认证。源码地址为 https://github.com/sundaysebasidian-byte/moonstomp ，发布状态、远端 CI 和正式包安装证据以对应提交的发布记录为准。
 
 0.1.1 修复自动 content-length 计入最终 header 预算，以及带 receipt 的退订保留在途消息至回执到来；0.1.0 未包含这两项修复。[边界与失败行为](docs/boundaries.zh-CN.md) 区分核心、JS 运输、后端、容量、时钟和已知未测项。此前 0.1.1 公开和发布已获明确批准且完成，准确 CI、正式包与独立安装状态见 [0.1.1 发布记录](docs/publication-0.1.1.zh-CN.md)，不覆盖 0.1.0。
 
@@ -27,7 +27,7 @@ MoonBit 实现的 STOMP 1.2 增量字节流编解码与传输分层客户端。�
 
 - `moonc v0.10.14+7d59c7ec9 (2026-09-18)`
 - `moon 0.1.20260920 (914d7da 2026-09-20)`
-- 已验证 Node `v24.18.0`、Python `3.14.6`、macOS arm64；已发布版本另有 Linux CI。真实 broker runner 仅 macOS 实跑，0.1.1 的准确远端 CI 状态见版本发布记录；其他系统与工具版本未实测。
+- 已验证 Node `v24.18.0`、Python `3.14.6`、macOS arm64；已发布版本另有 Linux CI。真实 broker runner 仅 macOS 实跑，0.1.2 的准确远端 CI 状态见版本发布记录；其他系统与工具版本未实测。
 
 ```sh
 # 换成你的现有 SDK 路径；MOON_HOME 可指向本任务独立副本。
@@ -63,7 +63,7 @@ decoder.end()
 
 无 I/O 的 codec 只检查帧语法；必需 header 和命令时序由 Client 校验。decoder/feed 同一批中后续出现非法输入时整批报错，先前事件不会作为部分成功返回，调用者应关闭运输。出站 API 校验错误不会将核心 Client 自动毒化；TCP 便利适配器采取关闭策略。
 
-Mooncakes 包名为 [sundaysebasidian-byte/moonstomp](https://mooncakes.io/docs/sundaysebasidian-byte/moonstomp)。安装固定 `0.1.2`，并在 `moon.pkg` 导入该包为 `@stomp`。0.1.2 的准确正式状态以 [发布记录](docs/publication-0.1.2.zh-CN.md) 为准；本地 path 候选消费和正式 registry 消费分别验证。旧 0.1.1 的 53 文件/两后端各 5 项与 0.1.0 的 49 文件/各 3 项证据保留，不代表新版安装结果。
+Mooncakes 包名为 [sundaysebasidian-byte/moonstomp](https://mooncakes.io/docs/sundaysebasidian-byte/moonstomp)。安装固定 `0.1.2`，并在 `moon.pkg` 导入该包为 `@stomp`。0.1.2 已通过空缓存正式安装，61 文件与发布 ZIP 一致，JS/Wasm-GC 各 6/6，安装包适配器四项回环通过；准确提交和校验和见 [发布记录](docs/publication-0.1.2.zh-CN.md)。旧 0.1.1 的 53 文件/两后端各 5 项与 0.1.0 的 49 文件/各 3 项证据保留，不代表新版安装结果。
 
 当前六项消费模板在 `validation/consumer/`：三个业务场景、两个 0.1.1 边界回归和一个 0.1.2 单调时钟回归。旧 0.1.1 五项模板在 `validation/registry-0.1.1/`，不用于宣称新版验证。完整当前消费例可从源码或候选包根目录复制到新工程：
 

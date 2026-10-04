@@ -1,0 +1,21 @@
+{
+  "started_utc": "2026-10-04T04:37:16.066920+00:00",
+  "finished_utc": "2026-10-04T04:37:19.496692+00:00",
+  "status": "CLI_RETURNED",
+  "git_head": "61e3eca6757b86737da316474f20f2a3ec8813ca",
+  "module": "sundaysebasidian-byte/moonstomp",
+  "version": "0.1.2",
+  "exit_code": 0,
+  "cli_returned_http_200": true,
+  "actual_archive_sha256": "b8a858475528b6a10c03ba3485421c5713535500169d736294c7c392989dda07",
+  "command": [
+    "moon",
+    "publish",
+    "--frozen"
+  ],
+  "ci_url": "https://github.com/sundaysebasidian-byte/moonstomp/actions/runs/37177429538",
+  "single_publish_attempt": true,
+  "new_authentication": false,
+  "registry_version": "0.1.2",
+  "registry_checksum": "b8a858475528b6a10c03ba3485421c5713535500169d736294c7c392989dda07"
+}

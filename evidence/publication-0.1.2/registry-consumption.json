@@ -1,0 +1,152 @@
+{
+  "started_utc": "2026-10-04T04:40:35.159816+00:00",
+  "finished_utc": "2026-10-04T04:40:49.739116+00:00",
+  "status": "PASSED_OFFICIAL_REGISTRY_0_1_2_CONSUMPTION",
+  "package": "sundaysebasidian-byte/moonstomp",
+  "version": "0.1.2",
+  "source": "official Mooncakes registry via fresh isolated index/cache; no path override",
+  "published_source_commit": "61e3eca6757b86737da316474f20f2a3ec8813ca",
+  "broker": "NOT RUN; consumer server frames are explicit offline fixtures",
+  "checked_files": 61,
+  "published_archive_sha256": "b8a858475528b6a10c03ba3485421c5713535500169d736294c7c392989dda07",
+  "js_cases_passed": 6,
+  "wasm_gc_cases_passed": 6,
+  "business_scenarios": 3,
+  "regressions": 3,
+  "node_adapter": "PASSED_BUILT_FROM_WRITABLE_COPY_OF_INSTALLED_OFFICIAL_PACKAGE",
+  "installed_adapter_socket_cases": 4,
+  "installed_source_sha256": {
+    "quality_wbtest.mbt": "2e86e4be0d509e4f8ca529561572ec0cf62ec7685fddc1d6bf1f90e09683cc3c",
+    "moon.pkg": "2f7fa5e32aeda7db8d875c8ccaa2a58a5cc32769edc21ecd7f77cd700afc4fde",
+    "moon.mod": "325f821f5c5b0391ae06ecdfb310a6e6689c6101586fde7e9ad6046688122fb5",
+    "decoder.mbt": "8e70e0cfa787e332932695ceddbf4b1a35fe8acd5ec1251ee278bda33347b05b",
+    "transport/tcp.cjs": "d26eb6b27e89696a3b4027105b64cdcadc42aee6930a7aec6cb8df4cf719a435",
+    "LICENSE": "7f826986b233f872395bc9a7265317f79069f12fa31c55f6e12ef8220738b9dc",
+    "toolchain.lock.json": "daf8b2caa0ee37db434b50dd7f0d6bdedaa41d16d766c5b27b315671a77b2ed1",
+    "bridge/moon.pkg": "b7259fb2e3e73f157b9110d5205521b043783a4551269eb76ad84e25bf2ad393",
+    "bridge/main.mbt": "8ab2192a93147dd6fcdf56e3a7ae24ae4266bc68370865ee017f8e70b3ca475e",
+    "tests/reference/stompjs-7.2.0.umd.cjs": "4004988e61bc0b15c60bc2d495a12ced18933eda1551ee9e2643b5f0754546b1",
+    "tests/reference/LICENSE": "c46641c7a00292f58f73544f661200f940d31622be1137aef70c19da4182ffcc",
+    "tests/reference/package-metadata.json": "57badc1bbec3e78bc5b19388523d42d5ca755518ad70128ed8788fb33a958364",
+    "docs/publication-gate.zh-CN.md": "85c629d42e6c5610b52689b26e2f872f55f12401ed0409c1422a949b6a90de02",
+    "docs/publication.zh-CN.md": "dbfc8879832332e5b2a43de1412cc84e706f76521a2669916cdb392dfb43d9ee",
+    "docs/source-sync-0.1.2.zh-CN.md": "e32a1796430d3ea71fecae278f939c38bfbbf56eb5768a218d7aa2b132f3ef7c",
+    "docs/broker-plan.zh-CN.md": "0ba3b78d593989e0e7fc48c6ac7be293ce330b958a206ded46bdfed7ef1097a9",
+    "docs/reuse-review.zh-CN.md": "bda2ffab9c496beab19d4529b1525bdc503227f5e52cdfdd119b1c69d40f42d6",
+    "docs/acceptance.zh-CN.md": "bf7680aa78be80549ae77339800bd929ceed86b17e8ac1ea13a57bb5d4c4c42b",
+    "docs/boundaries.zh-CN.md": "247aa53d832fa829a277934d69029f1a87c24631162daede636f9a2f0baa014e",
+    "docs/publication-0.1.2.zh-CN.md": "d67e7b1c639d63551963534a375dc806d297517f27c129e8ed48d31e6b68afbb",
+    "docs/reference.zh-CN.md": "382a746b277a4e8db675475ed5023b32cc55dd659f1858e069dd0589436a56eb",
+    "docs/final-review.zh-CN.md": "a3c623fab367d8ba220a3f312f6a52f0af9545f12e6cc03e4ba37ea321dbf615",
+    "docs/overnight-review-20261003.zh-CN.md": "c82f2053fa414019917af74b6dc90c715d62e0815e6d8c75fc5f24167f17a1aa",
+    "docs/broker-interop.zh-CN.md": "0924c3ab05728a849d475827588160d9757c2524780caa80a6331a8d0af215a3",
+    "docs/delivery-review.zh-CN.md": "3e0726054561d9b6032c399867a70f251e5d3432d96a7689f62691b64a412ad4",
+    "docs/publication-0.1.1.zh-CN.md": "e5f4e110f728f9cf7ac44ac4e7cdd727353f077f80b4f1a3a63cf295a4112646",
+    "docs/quality-0.1.2.zh-CN.md": "3406e092fb23ec3c95ad20e6fef8a011fa95124e91268d0a300573eaf6198226",
+    "headers.mbt": "8049d929dff95385955be63fb9188103bb8e93cee699e892dacfde2149f48aa6",
+    "README.md": "3c8993fd2dbe2cade580a4a724ac3cb40ca72ae0b546907c8811b275c54292e9",
+    "api_test.mbt": "9a4c118ce4ceaa523801d1128afe65fd88a07ba09a86dffdd08197b86deed9c8",
+    "client.mbt": "f4ce6367190def8189951a0adec44fad8d2c3f373a9913f58199a598c6cdcb30",
+    "heartbeat_wbtest.mbt": "e1b232d17130ea1c0d64319d18afed2eb46abc5a54156eca11af9214582a7a07",
+    "headers_wbtest.mbt": "c7e9d5af4631b0f0b5a495e0b91883633f1add4e844e280bc459d8d91d210e9b",
+    "examples/2-reliable.cjs": "c5b7c5222c6726664eb9144e22d8db206db6e423d2794577c07e32306175a15c",
+    "examples/broker-common.cjs": "499b5d998585da72406ee5310848e5a0e032757078f38f543c59ee0f80beb596",
+    "examples/3-transactions.cjs": "3fc321c84e2d241143188053afd99db5bfbbfd56f5a2300040407c035e32d360",
+    "examples/1-tasks.cjs": "dcb28128e45e15f8faffd569a8b04e7fe7008fbac19a8ff01791f42cbafa5b78",
+    "examples/offline/moon.pkg": "a9e88f66c69fe5db9d88a6b76098e8537261d8c2543c07c830f1236a14b305f8",
+    "examples/offline/main.mbt": "902b272cd8efab7a6859db800c948936a316b8f050edfdee85242ea0e6561ec4",
+    "decoder_wbtest.mbt": "388fc93da6112995a03b286c007c2bb60b269fba8c00cf0565473ef8768853cd",
+    "scripts/transport-test.cjs": "1eef61bbacc9af7e13499a6a96e0e159dbdda90ef23a5450c01b524e91478188",
+    "scripts/broker-trace.cjs": "8bd918d36f65f71ba17f9970cf2459579b1076ae37ff8ab7575710d32b67ed9c",
+    "scripts/bridge-test.cjs": "e130a1c0a7d8a7a3f648c9f75c141c69613302a4cc65877ab8bdaa84637679f3",
+    "scripts/broker-test.cjs": "74191a0e67576835814069412ed55b4e93bda2240dee2bc25d325d69e19d5080",
+    "scripts/transport-quality-test.cjs": "7ca7764eba971abd9db4c4947472179a7976c045ca5482ee5e2fe2ff7bac62df",
+    "scripts/broker-run.py": "5b0d7b2a5d819b996ae2d7f85ddcbd494cf6d65e16d8a302d93dd733d7bce991",
+    "scripts/verify.py": "49be8ac6a6731f06b69110728eff562989261be3714ec80e34c412094089be6a",
+    "scripts/differential.cjs": "bcb99a043099d685ff39e66ca974f430a8b9f61a2acf3023b5d7d8b4fc73d752",
+    "scripts/downstream.py": "4fb096984957da672268b9f92d2795b59221bea6fa92e0daa9300d947f3ebea5",
+    "frame.mbt": "5f0462ca01e91d2f85676975217d741c6682ddbc24d83d31ff8cb58dfddbb6b6",
+    "api.mbt": "24cb142ff5b32756632582ee993dc1b52e446931fd8c6b04b6cdfd066b29a099",
+    "reliability_wbtest.mbt": "4f9225c6bd975bb0a7e049eb751cbaee8d080701b11976714065feec42eb6ae0",
+    "client_wbtest.mbt": "7110df27ccbddca17564b9cdac84e2d4eeb1c77a619c0c2058ba06b96d745d42",
+    "heartbeat.mbt": "f8e399c98222ca140be98a4f51d4ce45cbb884b357822a8cfdecdeb1f173d6ac",
+    "parser_property_wbtest.mbt": "0f8c8afa10f08e7f5a5456531e8b802a56061ad8b3a71f9f739c6cca9636382a",
+    "adversarial_wbtest.mbt": "b37ad90d48c1427148e1e890cb9d95ddf1c1de655d71fbd7453c9ea9d0933358",
+    "validation/registry-0.1.1/main.mbt.in": "140c4fedd2fc0f7d534b989f78aa7a3fe75220407d06f2707b6c8add8090b939",
+    "validation/consumer/moon.pkg.in": "fb258f76dbde587f00d34c537bbcf6472b10c1d29b593503b7e037bdc9fc86da",
+    "validation/consumer/main.mbt.in": "a55364dd73be8b5ebb0318396f691a753b5b27101e6ffff3a907b1d88656d671",
+    "AI_USAGE.md": "61f059ea91ddfa38a072bae629a7494b53c359830509ee70df508d6798b4531a",
+    "frame_wbtest.mbt": "9a58fadb7b4b06a02d4ae0a6b1046b384a255a6911dc87de9669d4b4c3d7c255"
+  },
+  "stages": [
+    {
+      "name": "registry-add",
+      "exit_code": 0,
+      "status": "PASSED"
+    },
+    {
+      "name": "registry-check-js",
+      "exit_code": 0,
+      "status": "PASSED"
+    },
+    {
+      "name": "registry-build-js",
+      "exit_code": 0,
+      "status": "PASSED"
+    },
+    {
+      "name": "registry-test-js",
+      "exit_code": 0,
+      "status": "PASSED"
+    },
+    {
+      "name": "registry-run-js",
+      "exit_code": 0,
+      "status": "PASSED"
+    },
+    {
+      "name": "registry-check-wasm-gc",
+      "exit_code": 0,
+      "status": "PASSED"
+    },
+    {
+      "name": "registry-build-wasm-gc",
+      "exit_code": 0,
+      "status": "PASSED"
+    },
+    {
+      "name": "registry-test-wasm-gc",
+      "exit_code": 0,
+      "status": "PASSED"
+    },
+    {
+      "name": "registry-run-wasm-gc",
+      "exit_code": 0,
+      "status": "PASSED"
+    },
+    {
+      "name": "installed-package-build-bridge",
+      "exit_code": 0,
+      "status": "PASSED"
+    },
+    {
+      "name": "installed-package-bridge",
+      "exit_code": 0,
+      "status": "PASSED"
+    },
+    {
+      "name": "installed-package-loopback-quality",
+      "exit_code": 0,
+      "status": "PASSED"
+    }
+  ],
+  "manifest": {
+    "name": "independent/moonstomp-registry-consumer",
+    "version": "0.1.2",
+    "deps": {
+      "sundaysebasidian-byte/moonstomp": "0.1.2"
+    },
+    "license": "MIT"
+  },
+  "raw_logs": "Retained in delivery ZIP; this public summary omits local filesystem paths."
+}

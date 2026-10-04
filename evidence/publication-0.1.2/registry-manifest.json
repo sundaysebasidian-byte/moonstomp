@@ -1,0 +1,49 @@
+{
+  "checked_utc": "2026-10-04T04:40:13.183798+00:00",
+  "url": "https://mooncakes.io/api/v0/manifest/sundaysebasidian-byte/moonstomp/0.1.2",
+  "http_status": 200,
+  "response": {
+    "module": "sundaysebasidian-byte/moonstomp",
+    "version": "0.1.2",
+    "yanked": false,
+    "yanked_reason": null,
+    "metadata": {
+      "name": "sundaysebasidian-byte/moonstomp",
+      "version": "0.1.2",
+      "license": "MIT",
+      "readme": "README.md",
+      "repository": "https://github.com/sundaysebasidian-byte/moonstomp",
+      "preferred_target": "js",
+      "description": "Bounded incremental STOMP 1.2 codec and transport-independent client",
+      "keywords": [
+        "stomp",
+        "messaging",
+        "protocol"
+      ],
+      "checksum": "b8a858475528b6a10c03ba3485421c5713535500169d736294c7c392989dda07",
+      "created_at": "2026-10-04T04:37:20.073223+00:00"
+    },
+    "latest_version": "0.1.2",
+    "build_status": "success",
+    "versions": [
+      {
+        "version": "0.1.2",
+        "yanked": false,
+        "yanked_reason": null
+      },
+      {
+        "version": "0.1.1",
+        "yanked": false,
+        "yanked_reason": null
+      },
+      {
+        "version": "0.1.0",
+        "yanked": false,
+        "yanked_reason": null
+      }
+    ],
+    "name": "sundaysebasidian-byte/moonstomp/0.1.2",
+    "downloads": 7,
+    "has_package": false
+  }
+}
