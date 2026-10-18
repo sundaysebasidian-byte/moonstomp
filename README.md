@@ -1,5 +1,7 @@
 # MoonSTOMP
 
+当前审阅分支已完成 2026-10-15 多版本本地验收：JS/Wasm-GC 各 68/68（保留17项多版本测试，另增7项鲁棒性测试），以及真实 Go ↔ Artemis ↔ MoonBit 的 1.0/1.1/1.2 双向通信。完整范围、工具链差异和限制见[本次验收报告](docs/verified-multiversion-20261015.zh-CN.md)。追加的回执body/超时清理修复见[第二轮记录](docs/robustness-round2-20261015.zh-CN.md)。以下原正式发行说明仍描述已发布的 0.1.2（仅1.2）；不能将其与尚未发布的多版本候选混为一谈。
+
 本仓库版本为 **0.1.2**。源码改进与准确 CI 见 [源码同步记录](docs/source-sync-0.1.2.zh-CN.md)，正式发布回执与独立安装结果见 [0.1.2 发布记录](docs/publication-0.1.2.zh-CN.md)。安装固定使用 `moon add sundaysebasidian-byte/moonstomp@0.1.2`；旧 0.1.0/0.1.1 发布证据保留。
 
 MoonBit 实现的 STOMP 1.2 增量字节流编解码与传输分层客户端。适合将 MoonBit 程序接入任务队列、事件通道或现有 STOMP broker。核心协议不依赖 socket、系统时钟或 Node；Node TCP 适配器仅负责连接、读写、事件等待和关闭。

@@ -18,9 +18,18 @@ ROOT = Path(__file__).resolve().parents[1]
 def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
+def validate_archive(bundle):
+    if bundle.testzip() is not None:
+        raise RuntimeError('candidate archive failed ZIP CRC verification')
+    for name in bundle.namelist():
+        p = Path(name)
+        if p.is_absolute() or '..' in p.parts or '.git' in p.parts or '_build' in p.parts:
+            raise RuntimeError('unsafe candidate archive entry')
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', required=True, type=Path)
+    parser.add_argument('--workspace-dependencies', action='store_true', help='Use current MoonBit manifest/workspace format; historical locked SDK uses legacy local dependencies')
     parser.add_argument('--transport', action='store_true', help='Optional loopback tests of the adapter built from the actual candidate archive')
     args = parser.parse_args()
     out = args.output.resolve()
@@ -56,17 +65,21 @@ def main():
         candidate = out / 'candidate'
         candidate.mkdir()
         with zipfile.ZipFile(archive) as bundle:
-            assert bundle.testzip() is None
-            for name in bundle.namelist():
-                p = Path(name)
-                if p.is_absolute() or '..' in p.parts or '.git' in p.parts or '_build' in p.parts:
-                    raise RuntimeError('unsafe candidate archive entry')
+            validate_archive(bundle)
             bundle.extractall(candidate)
         consumer = out / 'consumer'
         consumer.mkdir()
-        manifest = {'name':'independent/moonstomp-consumer', 'version':'0.1.0',
-                    'license':'MIT', 'deps':{'sundaysebasidian-byte/moonstomp':{'path':'../candidate'}}}
-        (consumer / 'moon.mod.json').write_text(json.dumps(manifest, indent=2)+'\n')
+        if args.workspace_dependencies:
+            # Current MoonBit resolves local modules through an explicit workspace.
+            (consumer / 'moon.mod').write_text(
+                'name = "independent/moonstomp-consumer"\nversion = "0.1.0"\nlicense = "MIT"\n'
+                + 'import {\n  ' + json.dumps(module + '@' + version) + ',\n}\n')
+            (consumer / 'moon.work').write_text('members = [".", "../candidate"]\n')
+            report['consumption'] = 'local moon package archive via explicit two-module workspace'
+        else:
+            manifest = {'name':'independent/moonstomp-consumer', 'version':'0.1.0',
+                        'license':'MIT', 'deps':{'sundaysebasidian-byte/moonstomp':{'path':'../candidate'}}}
+            (consumer / 'moon.mod.json').write_text(json.dumps(manifest, indent=2)+'\n')
         for file in ['main.mbt', 'moon.pkg']:
             shutil.copyfile(ROOT / 'validation/consumer' / (file+'.in'), consumer / file)
         report['candidate_archive_sha256'] = digest(archive)
@@ -74,8 +87,8 @@ def main():
             for p in sorted(candidate.rglob('*')) if p.is_file()}
         report['consumer_sha256'] = {p.name:digest(p) for p in sorted(consumer.iterdir()) if p.is_file()}
         for target in ['js', 'wasm-gc']:
-            run('consumer-check-'+target, [moon,'check','--target',target,'--deny-warn','-j','1'], consumer)
-            run('consumer-build-'+target, [moon,'build','--target',target,'--deny-warn','-j','1'], consumer)
+            run('consumer-check-'+target, [moon,'check']+(['.'] if args.workspace_dependencies else [])+['--target',target,'--deny-warn','-j','1'], consumer)
+            run('consumer-build-'+target, [moon,'build']+(['.'] if args.workspace_dependencies else [])+['--target',target,'--deny-warn','-j','1'], consumer)
             run('consumer-test-'+target, [moon,'test','--target',target,'--package','independent/moonstomp-consumer','--deny-warn','-j','1'], consumer)
             run('consumer-run-'+target, [moon,'run','.','--target',target,'--deny-warn','-j','1'], consumer)
             counts = re.search(r'Total tests: (\d+), passed: (\d+), failed: (\d+)', (out / ('consumer-test-'+target+'.stdout.txt')).read_text())
@@ -84,12 +97,13 @@ def main():
             report.setdefault('consumer_tests', {})[target] = {'total':6,'passed':6,'failed':0}
         # Package installation alone does not generate bridge.js. Build from the
         # actual extracted package, then exercise that package's adapter boundary.
-        run('candidate-build-bridge-js', [moon,'build','--target','js','--deny-warn','-j','1'], candidate)
+        run('candidate-build-bridge-js', [moon,'build','bridge','--target','js','--deny-warn','-j','1'], candidate)
         run('candidate-js-bridge', ['node','scripts/bridge-test.cjs'], candidate)
         report['node_adapter'] = 'PASSED: generated bridge and loaded adapter from actual candidate archive; no prebuilt JS distributed'
         if args.transport:
             run('candidate-loopback-quality', ['node','scripts/transport-quality-test.cjs'], candidate)
-            report['node_adapter_transport'] = 'PASSED: 4 packaged-adapter cases with actual loopback sockets, not a broker'
+            run('candidate-control-timeouts', ['node','scripts/transport-timeout-test.cjs'], candidate)
+            report['node_adapter_transport'] = 'PASSED: 4 packaged-adapter boundaries + 6 three-version control-timeout cases with actual loopback sockets, not a broker'
         if report['candidate_source_sha256'] != {str(p.relative_to(candidate)):digest(p)
                 for p in sorted(candidate.rglob('*')) if p.is_file() and '_build' not in p.relative_to(candidate).parts and '.moon' not in p.relative_to(candidate).parts}:
             raise RuntimeError('candidate source unexpectedly changed')

@@ -1,0 +1,122 @@
+{
+  "recorded_utc": "2026-10-15T05:53:10.327685+00:00",
+  "moon": null,
+  "moonc": null,
+  "node": "v24.19.0",
+  "python": "3.12.14",
+  "go_on_default_path": "/usr/bin/go remains board game",
+  "task_go_compiler": "/workspace/moon-review/go-attempt-20261015/sdk/go/bin/go",
+  "task_go_version": "go version go1.26.8 linux/amd64",
+  "java": "openjdk version \"21.0.12.1\" 2026-08-18\nOpenJDK Runtime Environment (build 21.0.12.1+1-1-deb13u1-Debian)\nOpenJDK 64-Bit Server VM (build 21.0.12.1+1-1-deb13u1-Debian, mixed mode, sharing)",
+  "broker_java17": "NOT_AVAILABLE_ON_DEFAULT_PATH; original runner requires Java17; no alternate Java search/download performed",
+  "artemis_archive": "NOT_PRESENT_IN_SCOPED_WORKSPACE; not downloaded this run",
+  "sdk_http_result": "HTTP403_CAUSE_UNKNOWN; headers/stderr/exit22 saved; no installation or alternate route",
+  "checks": [
+    {
+      "name": "node-interop-syntax",
+      "command": [
+        "node",
+        "--check",
+        "scripts/go-broker-interop.cjs"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": "",
+      "scope": "syntax/whitespace only, not core validation"
+    },
+    {
+      "name": "python-harness-syntax",
+      "command": [
+        "python3",
+        "-m",
+        "py_compile",
+        "scripts/build-go-peer.py",
+        "scripts/broker-run.py"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": "",
+      "scope": "syntax/whitespace only, not core validation"
+    },
+    {
+      "name": "python-fixture-syntax",
+      "command": [
+        "python3",
+        "-m",
+        "py_compile",
+        "scripts/prepare_reader_fixtures.py"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": "",
+      "scope": "syntax/whitespace only, not core validation"
+    },
+    {
+      "name": "stomp-whitespace",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": "",
+      "scope": "syntax/whitespace only, not core validation"
+    },
+    {
+      "name": "ods-whitespace",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": "",
+      "scope": "syntax/whitespace only, not core validation"
+    }
+  ],
+  "new_stomp_tests_written": 17,
+  "new_stomp_tests_executed": 0,
+  "moonbit_core_validation": "BLOCKED_NOT_COMPILED_NOT_EXECUTED",
+  "go_peer_build": "BUILT (official Go1.26.8, upstream pinned c155a2d); CLI guards only, no broker",
+  "go_broker_moonbit_interop": "NOT_RUN",
+  "ods_fixed_producer_semantics": "Observed and asserted on two isolated LibreOfficeDev outputs; no MoonODS reader involved",
+  "ods_negative_controls": "12 deterministic files; MoonODS execution NOT_RUN",
+  "ods_reader_edit_write": "NOT_IMPLEMENTED",
+  "ods_mbtexcel_consumer": "NOT_IMPLEMENTED",
+  "stable_libreoffice": "NOT_TESTED; only Dev26.8 alpha",
+  "prior_archive_sha256": "c9f7f5f8988b790b767f3745c5d75ae4e042ecc2dbf128c3b90ebb5e6cb6bc76",
+  "remote_actions": "No push, Actions, Mooncakes publication, application submission, terms acceptance, or credential creation",
+  "previous_review_commit": "1218cca20956a9ed11f247222945d649d48842a4",
+  "final_source_sha256": {
+    "AI_USAGE.md": "40039bfdf61e0e614875ad7a4ae4cc20d22a636ccdb7f23dac97d97b63546f82",
+    "Proposal.md": "46fb3728c4d49c9bf56454b5204d6d02126a9ac2b5ec0c02c192effbd1401398",
+    "README.md": "49950d0094602d3bc53b9d422029ef83f3337e031175c26a787e184186cdf335",
+    "adversarial_wbtest.mbt": "b37ad90d48c1427148e1e890cb9d95ddf1c1de655d71fbd7453c9ea9d0933358",
+    "api.mbt": "966cd847f976273d8c55234f71816b6ed97dceb3eb53ae71a40aeba00857c5cc",
+    "api_test.mbt": "9a4c118ce4ceaa523801d1128afe65fd88a07ba09a86dffdd08197b86deed9c8",
+    "client.mbt": "610d0b999965d41ca55c9c6f033912382f422085fff98628db1d03e43348a7c7",
+    "client_wbtest.mbt": "7110df27ccbddca17564b9cdac84e2d4eeb1c77a619c0c2058ba06b96d745d42",
+    "decoder.mbt": "46134b0abc0120cbf5013b2a0f39030489b30c3ec1184cd961e1aacb4a3d1f7b",
+    "decoder_wbtest.mbt": "388fc93da6112995a03b286c007c2bb60b269fba8c00cf0565473ef8768853cd",
+    "docs/review-followup-20261015.zh-CN.md": "aadc142d4fafc37c508f142fac0f4591b4653caade9d36f72fe6ab4877e9b0d7",
+    "frame.mbt": "5f0462ca01e91d2f85676975217d741c6682ddbc24d83d31ff8cb58dfddbb6b6",
+    "frame_wbtest.mbt": "9a58fadb7b4b06a02d4ae0a6b1046b384a255a6911dc87de9669d4b4c3d7c255",
+    "headers.mbt": "79e2cd613ca836c86c4ae3f15aa3a014fb32aa0ddb598dd093003a10490ba8d4",
+    "headers_wbtest.mbt": "c7e9d5af4631b0f0b5a495e0b91883633f1add4e844e280bc459d8d91d210e9b",
+    "heartbeat.mbt": "f8e399c98222ca140be98a4f51d4ce45cbb884b357822a8cfdecdeb1f173d6ac",
+    "heartbeat_wbtest.mbt": "e1b232d17130ea1c0d64319d18afed2eb46abc5a54156eca11af9214582a7a07",
+    "moon.mod": "325f821f5c5b0391ae06ecdfb310a6e6689c6101586fde7e9ad6046688122fb5",
+    "parser_property_wbtest.mbt": "0f8c8afa10f08e7f5a5456531e8b802a56061ad8b3a71f9f739c6cca9636382a",
+    "quality_wbtest.mbt": "2e86e4be0d509e4f8ca529561572ec0cf62ec7685fddc1d6bf1f90e09683cc3c",
+    "reliability_wbtest.mbt": "4f9225c6bd975bb0a7e049eb751cbaee8d080701b11976714065feec42eb6ae0",
+    "scripts/broker-run.py": "84d42bf592d491a0b1b0f6e2b7fe11224d15ea3d1c5c11134827add92b494721",
+    "scripts/build-go-peer.py": "e1a2d450800c592328654f752e464f8e85a068f601ee28646cc1ff34a10862c6",
+    "scripts/go-broker-interop.cjs": "8658a6edf858bae8fe1a1956f872ae33e51acf25f80a4079e1d5141c0d6be453",
+    "tests/interop/go-peer/main.go": "b999730d59a4b0751f056fd614710b510cc9b9ccc4371b6537fdc8bf02a11bc1",
+    "version.mbt": "1f38deff15ffcfd05a59d75d9ad4904823a446d14d3c52a1610a7df52701b6eb",
+    "version_wbtest.mbt": "96060a02a3d634f85e320c108e1a82b9d86579f8cb120ce50fa6433aaeb50b64"
+  },
+  "independent_review": "Reported protocol/harness/oracle issues fixed; final read-only review found no new blocker. This is not MoonBit/runtime validation."
+}

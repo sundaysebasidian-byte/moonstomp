@@ -1,0 +1,17 @@
+{
+  "scope": "CLI help and input guard only; no broker or MoonBit connection",
+  "binary_sha256": "74c7d83b3a3f331cccd45fe34f10bd0a5fa9196b9758a9184e240482333c0326",
+  "results": [
+    {
+      "name": "help",
+      "exit_code": 0,
+      "scope_status": "PASS_CLI_GUARD_ONLY"
+    },
+    {
+      "name": "invalid-before-network",
+      "exit_code": 1,
+      "scope_status": "PASS_CLI_GUARD_ONLY"
+    }
+  ],
+  "broker_execution": "NOT_RUN"
+}

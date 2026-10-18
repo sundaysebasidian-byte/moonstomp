@@ -16,3 +16,8 @@ MoonSTOMP 的 MoonBit 核心、测试、Node 适配器、文档和验证脚本�
 6. 自造 peer、独立参考、实际包消费与真实 broker 各自证明什么，以及未测范围。
 
 可运行 examples/offline 并修改长度、ACK 或时钟用例观察错误。代码与技术说明需要本人理解和审阅；竞赛最终申报须本人按官方要求撰写。本文件与 Proposal.md 是 AI 辅助技术资料，不是人工申报书。
+
+
+2026-10-14：Codex接续原仓库的独立review分支。新增/修正STOMP多版本源码草案与针对测试，ODS只核生态、修正发行状态并记录reader/mbtexcel最小方案。包含独立只读源码审查及所发现问题的修正。官方SDK脚本HTTP403、moon/moonc缺失，新增MoonBit源码未编译或执行；不声称完成运行验证、ODS reader或跨格式消费。未push/dispatch/publish/重申；技术底稿不能冒充本人撰写的最终申报。
+
+2026-10-15：Codex接续原review分支并经独立只读审查。STOMP修混合offer并写真实go-stomp/broker测试glue；ODS只准备独立LODev外部样本、固定oracle和负控制，不冒称reader或跨格式实现。SDK官方请求仍403，17项MoonBit测试未执行；保留真实失败、静态与fixture结果各自范围。原恢复包和提交历史保留。

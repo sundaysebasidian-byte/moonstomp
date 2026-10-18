@@ -1,5 +1,10 @@
 ///|
 pub fn escape_header(value : String) -> String raise ProtocolError {
+  escape_versioned(value, V12)
+}
+
+///|
+fn escape_versioned(value : String, version : Version) -> String raise ProtocolError {
   let chars : Array[Char] = []
   for c in value {
     match c {
@@ -9,8 +14,12 @@ pub fn escape_header(value : String) -> String raise ProtocolError {
         chars.push('\\')
       }
       '\r' => {
-        chars.push('\\')
-        chars.push('r')
+        if version == V12 {
+          chars.push('\\')
+          chars.push('r')
+        } else {
+          chars.push('\r')
+        }
       }
       '\n' => {
         chars.push('\\')
@@ -28,13 +37,18 @@ pub fn escape_header(value : String) -> String raise ProtocolError {
 
 ///|
 pub fn unescape_header(value : String) -> String raise ProtocolError {
+  unescape_versioned(value, V12)
+}
+
+///|
+fn unescape_versioned(value : String, version : Version) -> String raise ProtocolError {
   let chars : Array[Char] = []
   let mut escaped = false
   for c in value {
     if escaped {
       chars.push(
         match c {
-          'r' => '\r'
+          'r' => if version == V12 { '\r' } else { raise Invalid("undefined 1.1 header escape") }
           'n' => '\n'
           'c' => ':'
           '\\' => '\\'
@@ -45,7 +59,7 @@ pub fn unescape_header(value : String) -> String raise ProtocolError {
     } else if c == '\\' {
       escaped = true
     } else {
-      if c == '\u0000' || c == '\r' || c == '\n' || c == ':' {
+      if c == '\u0000' || (c == '\r' && version == V12) || c == '\n' || c == ':' {
         raise Invalid("raw delimiter in header")
       }
       chars.push(c)
@@ -58,9 +72,9 @@ pub fn unescape_header(value : String) -> String raise ProtocolError {
 }
 
 ///|
-fn raw_header(s : String, key : Bool) -> String raise ProtocolError {
+fn raw_header(s : String, key : Bool, version? : Version = V12) -> String raise ProtocolError {
   for c in s {
-    if c == '\u0000' || c == '\n' || c == '\r' || (key && c == ':') {
+    if c == '\u0000' || c == '\n' || (c == '\r' && version == V12) || (key && c == ':') {
       raise Invalid("invalid CONNECT header")
     }
   }
@@ -70,6 +84,15 @@ fn raw_header(s : String, key : Bool) -> String raise ProtocolError {
 ///|
 /// Emits LF and a content-length for every nonempty body (including binary NUL).
 pub fn encode(frame : Frame) -> Bytes raise ProtocolError {
+  encode_versioned(frame, V12)
+}
+
+///|
+/// Emits LF in all versions. 1.0 headers are literal; 1.1 CR is data, never a \r escape.
+pub fn encode_versioned(frame : Frame, version : Version) -> Bytes raise ProtocolError {
+  if version == V10 && (frame.command == "NACK" || frame.command == "STOMP") {
+    raise Invalid("command unavailable in STOMP 1.0")
+  }
   if !valid_command(frame.command) {
     raise Invalid("unknown command")
   }
@@ -81,15 +104,15 @@ pub fn encode(frame : Frame) -> Bytes raise ProtocolError {
     if pair.0.length() == 0 {
       raise Invalid("empty header name")
     }
-    let key = if unescaped(frame.command) {
-      raw_header(pair.0, true)
+    let key = if version == V10 || unescaped(frame.command) {
+      raw_header(pair.0, true, version~)
     } else {
-      escape_header(pair.0)
+      escape_versioned(pair.0, version)
     }
-    let value = if unescaped(frame.command) {
-      raw_header(pair.1, false)
+    let value = if version == V10 || unescaped(frame.command) {
+      raw_header(pair.1, false, version~)
     } else {
-      escape_header(pair.1)
+      escape_versioned(pair.1, version)
     }
     text = text + key + ":" + value + "\n"
   }

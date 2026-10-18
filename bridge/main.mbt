@@ -4,6 +4,7 @@
 extern "js" fn expose(
   create : () -> @stomp.Client,
   state : (@stomp.Client) -> String,
+  version : (@stomp.Client) -> String,
   send : (@stomp.Client, String, String, Bytes, Int64) -> Bytes,
   receive : (@stomp.Client, Bytes, Int64) -> Array[String],
   tick : (@stomp.Client, Int64) -> Bytes,
@@ -11,9 +12,9 @@ extern "js" fn expose(
   eof : (@stomp.Client) -> Bool,
   parse : (Bytes) -> Array[String],
 ) -> Unit =
-  #| (create,state,send,receive,tick,close,eof,parse) => {
+  #| (create,state,version,send,receive,tick,close,eof,parse) => {
   #| const wrap = f => (...args) => { try { return f(...args); } catch(e) { throw new Error('MoonSTOMP protocol error'); } };
-  #| globalThis.MoonSTOMP = {create, state, send:wrap((c,cmd,h,b,n) => send(c,cmd,JSON.stringify(h),b,n)), receive:wrap(receive), tick:wrap(tick), close, eof, parse:wrap(parse)};
+  #| globalThis.MoonSTOMP = {create, state, version, send:wrap((c,cmd,h,b,n) => send(c,cmd,JSON.stringify(h),b,n)), receive:wrap(receive), tick:wrap(tick), close, eof, parse:wrap(parse)};
   #| }
 
 ///|
@@ -43,6 +44,10 @@ fn main {
         Disconnecting => "disconnecting"
         Closed => "closed"
       }
+    },
+    c => match c.version() {
+      Some(version) => version.wire()
+      None => ""
     },
     (c, command, headers, body, now) => {
       c.send(@stomp.Frame::new(command, decode_headers(headers), body~), now) catch {

@@ -13,6 +13,7 @@ class TcpClient {
   }
   now() { return BigInt(Math.floor(performance.now() - this.origin)); }
   state() { return protocol.state(this.core); }
+  version() { return protocol.version(this.core); }
   stop(error = null) {
     if (error && !this.error) this.error = error;
     clearInterval(this.timer); this.timer = null;
@@ -75,7 +76,9 @@ class TcpClient {
     try { this.write(protocol.send(this.core, command, headers, body, this.now())); }
     catch (e) { this.stop(e); throw e; }
   }
-  async connect({virtualHost = 'localhost', heartbeat = '1000,1000'} = {}) {
+  async connect({virtualHost = 'localhost', versions = ['1.2'], heartbeat = versions.length === 1 && versions[0] === '1.0' ? '0,0' : '1000,1000'} = {}) {
+    if (!Array.isArray(versions) || !versions.length || versions.length > 3 || new Set(versions).size !== versions.length || versions.some(v => !['1.0','1.1','1.2'].includes(v))) throw new Error('invalid offered STOMP versions');
+    versions = versions.slice();
     if (this.socket) throw new Error('connect once per client');
     this.socket = net.createConnection(this.options);
     this.socket.on('data', chunk => {
@@ -95,7 +98,7 @@ class TcpClient {
     // Consume rejection even when the socket fails before CONNECT is sent.
     connected.catch(() => {});
     this.socket.once('connect', () => {
-      try { this.send('CONNECT', [['accept-version','1.2'],['host',virtualHost],['heart-beat',heartbeat]]); }
+      try { this.send('CONNECT', versions.length === 1 && versions[0] === '1.0' && heartbeat === '0,0' ? [] : [['accept-version',versions.join(',')],['host',virtualHost],['heart-beat',heartbeat]]); }
       catch(e) { this.stop(e); }
     });
     try { await connected; }
@@ -118,8 +121,15 @@ class TcpClient {
     if (this.queue.some(e => e.event === 'receipt' && e.id === id)) throw new Error('unconsumed receipt id');
     const wait = this._waitFor(e => e.event === 'receipt' && e.id === id, 5000, true);
     wait.catch(() => {});
-    this.send(command, [...headers,['receipt',id]], body);
-    return wait;
+    try {
+      this.send(command, [...headers,['receipt',id]], body);
+      return await wait;
+    } catch (error) {
+      // A control timeout leaves the broker outcome unknown. Retire this
+      // session, including its pending receipt IDs; never retry implicitly.
+      this.stop(error);
+      throw error;
+    }
   }
   async disconnect() {
     try { await this.receipt('DISCONNECT'); }
