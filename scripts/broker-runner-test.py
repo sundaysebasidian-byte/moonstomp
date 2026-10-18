@@ -36,6 +36,14 @@ class Guards(unittest.TestCase):
             with self.subTest(host=host), self.assertRaises(RuntimeError):
                 runner.validate_configuration(BROKER.replace('127.0.0.1', host), self.bootstrap)
 
+    def test_selected_port_guards(self):
+        runner.validate_configuration(BROKER.replace('61613', '62613'), self.bootstrap, 62613)
+        runner.validate_listeners(LISTENER.replace('61613', '62613'), 62613)
+        with self.assertRaises(RuntimeError):
+            runner.validate_configuration(BROKER, self.bootstrap, 62613)
+        with self.assertRaises(RuntimeError):
+            runner.validate_listeners(LISTENER, 62613)
+
     def test_multiple_or_missing_acceptors_rejected(self):
         extra = '<acceptor>tcp://0.0.0.0:61616?protocols=CORE</acceptor>'
         for xml in [BROKER.replace('</acceptors>', extra + '</acceptors>'), BROKER.replace('acceptor name="stomp"', 'other name="stomp"').replace('</acceptor>', '</other>')]:

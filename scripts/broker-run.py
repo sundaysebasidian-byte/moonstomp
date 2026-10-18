@@ -17,13 +17,13 @@ import xml.etree.ElementTree as ET
 ROOT=Path(__file__).resolve().parents[1]
 PINNED_SHA512='47d2193b4707bde8c856ee0f7ee623e87722559b8503aaef6ee015496499774a8c9b9492933cc0a52873e95dce73ff825222422996d2a8768a4936b015415e8c'
 
-def validate_configuration(broker_text, bootstrap_path):
+def validate_configuration(broker_text, bootstrap_path, port=61613):
     """Fail closed even under python -O; no listener starts before this check."""
     tree = ET.fromstring(broker_text)
     ns = {'c': 'urn:activemq:core'}
     acceptors = tree.findall('.//c:acceptor', ns)
     if (len(acceptors) != 1 or not acceptors[0].text or
-            not acceptors[0].text.startswith('tcp://127.0.0.1:61613?protocols=STOMP;')):
+            not acceptors[0].text.startswith(f'tcp://127.0.0.1:{port}?protocols=STOMP;')):
         raise RuntimeError('broker must have exactly one numeric-loopback STOMP acceptor')
     for tag in ['persistence-enabled', 'security-enabled', 'jmx-management-enabled']:
         setting = tree.find('.//c:' + tag, ns)
@@ -32,10 +32,10 @@ def validate_configuration(broker_text, bootstrap_path):
     if ET.parse(bootstrap_path).getroot().findall('.//{http://activemq.apache.org/schema}web'):
         raise RuntimeError('broker web listener must be disabled')
 
-def validate_listeners(listeners):
+def validate_listeners(listeners, port=61613):
     rows = [line.split() for line in listeners.splitlines() if 'LISTEN' in line]
-    if len(rows) != 1 or len(rows[0]) < 2 or rows[0][-2:] != ['127.0.0.1:61613', '(LISTEN)']:
-        raise RuntimeError('actual broker listeners must be only 127.0.0.1:61613')
+    if len(rows) != 1 or len(rows[0]) < 2 or rows[0][-2:] != [f'127.0.0.1:{port}', '(LISTEN)']:
+        raise RuntimeError(f'actual broker listeners must be only 127.0.0.1:{port}')
 
 def validate_extended(result):
     if result.get('passed') is not True or result.get('compatible_cases') != 5:
@@ -47,8 +47,10 @@ def main():
     parser.add_argument('--sha512',type=Path,required=True)
     parser.add_argument('--java-home',type=Path,required=True)
     parser.add_argument('--output',type=Path,required=True)
+    parser.add_argument('--port',type=int,default=61613,help='Unused numeric-loopback test port; never stop an existing listener')
     parser.add_argument('--go-peer',type=Path,help='Optional prebuilt pinned real Go client peer; enables three-version bidirectional broker checks')
     args=parser.parse_args()
+    if not 1 <= args.port <= 65535:parser.error('--port must be between 1 and 65535')
     out=args.output.resolve()
     if out==ROOT or ROOT in out.parents:parser.error('output must be new and outside source')
     out.mkdir(parents=True,exist_ok=False)
@@ -56,7 +58,7 @@ def main():
     env['JAVA_HOME']=str(args.java_home.resolve())
     env['JAVA_ARGS']='-Xms64m -Xmx256m -XX:ActiveProcessorCount=2 -Djava.net.preferIPv4Stack=true -Dlog4j2.disableJmx=true --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED'
     report={'started_utc':datetime.now(timezone.utc).isoformat(),'broker':'Apache Artemis 2.57.0',
-      'host':'127.0.0.1','port':61613,'persistence':False,'credentials_required':False,
+      'host':'127.0.0.1','port':args.port,'persistence':False,'credentials_required':False,
       'heap_max_mib':256,'active_processor_count':2,'stages':[],'overall':'FAILED',
       'transactional_ack':'NOT SUPPORTED BY THIS BROKER','other_brokers':'NOT TESTED',
       'go_stomp_interop':'NOT RUN: supply --go-peer after building the pinned peer'}
@@ -87,19 +89,19 @@ def main():
         home=temporary/'apache-artemis-2.57.0'
         instance=temporary/'instance'
         # Refuse to share or stop any preexisting listener.
-        reservation=socket.socket();reservation.bind(('127.0.0.1',61613));reservation.close()
+        reservation=socket.socket();reservation.bind(('127.0.0.1',args.port));reservation.close()
         run('create-instance',[str(home/'bin/artemis'),'create',str(instance),'--silent','--allow-anonymous',
             '--disable-persistence','--no-web','--no-autotune','--no-amqp-acceptor','--no-mqtt-acceptor',
             '--no-hornetq-acceptor','--host','127.0.0.1','--name','MoonSTOMP-local-interop',
             '--user','local-test','--password','local-test-only','--java-memory','256M'])
         broker=instance/'etc/broker.xml'
         text=broker.read_text()
-        text=re.sub(r'<acceptors>.*?</acceptors>', '<acceptors><acceptor name="stomp">tcp://127.0.0.1:61613?protocols=STOMP;useEpoll=false;nioRemotingThreads=2;connectionTtl=10000</acceptor></acceptors>',text,flags=re.S)
+        text=re.sub(r'<acceptors>.*?</acceptors>', f'<acceptors><acceptor name="stomp">tcp://127.0.0.1:{args.port}?protocols=STOMP;useEpoll=false;nioRemotingThreads=2;connectionTtl=10000</acceptor></acceptors>',text,flags=re.S)
         text=text.replace('<name>MoonSTOMP-local-interop</name>','<name>MoonSTOMP-local-interop</name><security-enabled>false</security-enabled><jmx-management-enabled>false</jmx-management-enabled><thread-pool-max-size>4</thread-pool-max-size><scheduled-thread-pool-max-size>2</scheduled-thread-pool-max-size><global-max-size>32M</global-max-size>')
         text=re.sub(r'(<address-setting match="[^"]+">)',r'\1<default-address-routing-type>ANYCAST</default-address-routing-type><default-queue-routing-type>ANYCAST</default-queue-routing-type>',text)
         broker.write_text(text)
         bootstrap=instance/'etc/bootstrap.xml'
-        validate_configuration(text, bootstrap)
+        validate_configuration(text, bootstrap, args.port)
         shutil.copyfile(broker,out/'broker.xml');shutil.copyfile(bootstrap,out/'bootstrap.xml')
         for filename in ['LICENSE','NOTICE']:shutil.copyfile(home/filename,out/('ARTEMIS-'+filename))
         report['config_sha256']=hashlib.sha256(broker.read_bytes()).hexdigest()
@@ -110,16 +112,16 @@ def main():
             for attempt in range(100):
                 if process.poll() is not None:raise RuntimeError('broker exited during startup')
                 try:
-                    with socket.create_connection(('127.0.0.1',61613),timeout=.1):break
+                    with socket.create_connection(('127.0.0.1',args.port),timeout=.1):break
                 except OSError:time.sleep(.1)
             else:raise RuntimeError('broker startup timed out')
             lsof = shutil.which('lsof')
             if not lsof: raise RuntimeError('lsof is required to verify loopback-only broker listeners')
             listeners=run('listeners',[lsof,'-nP','-a','-p',str(process.pid),'-iTCP','-sTCP:LISTEN']).stdout.decode()
-            validate_listeners(listeners)
+            validate_listeners(listeners, args.port)
             for script in ['examples/1-tasks.cjs','examples/2-reliable.cjs','examples/3-transactions.cjs','scripts/broker-test.cjs']:
                 name=Path(script).stem;child_env=dict(env)
-                child_env['STOMP_HOST']='127.0.0.1';child_env['STOMP_PORT']='61613'
+                child_env['STOMP_HOST']='127.0.0.1';child_env['STOMP_PORT']=str(args.port)
                 child_env['NODE_OPTIONS']='--require='+str(ROOT/'scripts/broker-trace.cjs')
                 child_env['MOONSTOMP_TRACE_FILE']=str(out/(name+'.wire.jsonl'))
                 print('RUN real broker',name,flush=True)
@@ -127,7 +129,7 @@ def main():
             if args.go_peer:
                 report['go_stomp_interop']='FAILED_PRECHECK_OR_EXECUTION'
                 interop_env=dict(env)
-                interop_env.update(STOMP_HOST='127.0.0.1',STOMP_PORT='61613',MOONSTOMP_GO_PEER=str(args.go_peer.resolve()),MOONSTOMP_INTEROP_OUTPUT=str(out/'go-interop'))
+                interop_env.update(STOMP_HOST='127.0.0.1',STOMP_PORT=str(args.port),MOONSTOMP_GO_PEER=str(args.go_peer.resolve()),MOONSTOMP_INTEROP_OUTPUT=str(out/'go-interop'))
                 interop_env['NODE_OPTIONS']='--require='+str(ROOT/'scripts/broker-trace.cjs')
                 interop_env['MOONSTOMP_TRACE_FILE']=str(out/'go-interop.moon-wire.jsonl')
                 run('go-broker-interop',['node','scripts/go-broker-interop.cjs'],child_env=interop_env,timeout=100)
@@ -145,7 +147,7 @@ def main():
             except subprocess.TimeoutExpired:process.kill();process.wait(timeout=5)
             report['broker_exit_code']=process.returncode
             try:
-                with socket.create_connection(('127.0.0.1',61613),timeout=.2):report['port_closed']=False
+                with socket.create_connection(('127.0.0.1',args.port),timeout=.2):report['port_closed']=False
             except OSError:report['port_closed']=True
         shutil.rmtree(temporary)
         report['temporary_runtime_removed']=True

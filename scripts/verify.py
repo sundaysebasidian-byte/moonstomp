@@ -31,6 +31,7 @@ def main():
     parser.add_argument('--broker-archive', type=Path, help='Optional already downloaded official Artemis 2.57.0 tar.gz')
     parser.add_argument('--broker-checksum', type=Path, help='Official SHA512 file for the archive')
     parser.add_argument('--broker-java-home', type=Path, help='Existing Java 17+ home for the optional local broker')
+    parser.add_argument('--broker-port', type=int, default=61613, help='Unused loopback port for the optional local broker')
     args = parser.parse_args()
     broker_args = [args.broker_archive, args.broker_checksum, args.broker_java_home]
     if any(broker_args) and not all(broker_args):
@@ -122,7 +123,7 @@ def main():
                 '--archive', str(args.broker_archive.resolve()),
                 '--sha512', str(args.broker_checksum.resolve()),
                 '--java-home', str(args.broker_java_home.resolve()),
-                '--output', str(out / 'broker')]
+                '--output', str(out / 'broker'), '--port', str(args.broker_port)]
             if args.go_peer:
                 broker_command += ['--go-peer', str(args.go_peer.resolve())]
             run('real-broker', broker_command)
