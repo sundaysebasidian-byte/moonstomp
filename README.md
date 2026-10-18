@@ -1,6 +1,63 @@
 # MoonSTOMP
 
-当前审阅分支已完成 2026-10-15 多版本本地验收：JS/Wasm-GC 各 68/68（保留17项多版本测试，另增7项鲁棒性测试），以及真实 Go ↔ Artemis ↔ MoonBit 的 1.0/1.1/1.2 双向通信。完整范围、工具链差异和限制见[本次验收报告](docs/verified-multiversion-20261015.zh-CN.md)。追加的回执body/超时清理修复见[第二轮记录](docs/robustness-round2-20261015.zh-CN.md)。以下原正式发行说明仍描述已发布的 0.1.2（仅1.2）；不能将其与尚未发布的多版本候选混为一谈。
+## 状态一览（2026-10-18 整改后；先读这里）
+
+本仓库同时含有**已发布的 0.1.2（仅 STOMP 1.2）**和**尚未发布的多版本候选（STOMP 1.0 / 1.1 / 1.2）**。`moon.mod` 仍写 0.1.2，候选没有新版本号。二者不要混读。
+
+### 已实现 / 已验证 / 拟实现 / 不支持
+
+| 功能 | 0.1.2 正式包 | 本分支候选（未发布） | 验证（含类型） | 
+|---|---|---|---|
+| STOMP 1.2 codec、会话、ACK/NACK、事务、receipt、心跳 | 已实现并发布 | 保留，默认 API 行为不变 | 0.1.2：先前发行记录（含 Linux 远端 CI、注册表安装）；候选：本地 68/68 |
+| STOMP 1.0 / 1.1 协商与线格式 | **不支持** | 已实现：`Version` V10/V11/V12、`connect_versions`、`subscribe_versioned`、`acknowledge_message`、`encode_versioned`、`Decoder::new(version=…)` | 本地单测（含在 68/68）+ 离线示例 `examples/versions`（本轮实跑）；真实 broker 互通见下 |
+| 按版本区分 ACK 头（1.0 `message-id`；1.1 `message-id`+`subscription`；1.2 `id`） | 否 | 已实现 | 离线示例输出逐版本显示；Go↔Artemis↔MoonBit 记录核对 |
+| 版本边界拒绝（1.0 无 NACK、1.0 无 `client-individual`、1.1/1.2 订阅必须有 id、1.0 无心跳协商、broker 回复未提供的版本） | 不适用 | 已实现 | 离线示例逐条打印拒绝原因（本轮实跑） |
+| Node TCP 适配器 `connect({versions})` | 仅 1.2 | 已实现，匿名连接 | 自造 peer 回环（先前记录），本轮未重跑 |
+| 真实 broker 互通 | 仅 Artemis 2.57.0 的 1.2 | Go（go-stomp 固定提交 `c155a2d…`）↔ Artemis 2.57.0 ↔ MoonBit，1.0/1.1/1.2 双向 | **先前记录**：Linux x86_64、`moonc v0.10.15`、Go 1.26.8、Java 21；见[验收报告](docs/verified-multiversion-20261015.zh-CN.md)。**本轮未重跑**（未准备 Artemis/Go peer 环境，未尝试） |
+| 登录凭据（login/passcode）的 Node 便利连接 | 不支持 | 不支持（通用 `Frame` 可携带认证头，但无凭据测试） | — |
+| TLS、WebSocket、自动重连、持久 outbox、业务重试、exactly-once | 不支持 | 不支持 | — |
+| 多 broker 交叉验证（RabbitMQ、ActiveMQ 等） | 无 | 无 | 未做 |
+
+**拟实现（尚未开始，不是已有能力，也不构成承诺）**：①Node 便利连接支持 login/passcode；②再选一种 broker（如 RabbitMQ STOMP 插件）做互通；③基于 `node:tls` 的 TLS 适配；④带退避的重连辅助。WebSocket、服务端实现、持久 outbox 暂不计划。
+
+### 验证结果分开列（候选）
+
+| 层面 | 结果 |
+|---|---|
+| 本地，锁定工具链（`moon 0.1.20260920 (914d7da)`、`moonc v0.10.14+7d59c7ec9`、Node v24.18.0，macOS arm64） | `moon test --target js` 与 `moon test --target wasm-gc --package sundaysebasidian-byte/moonstomp` 各 **68/68**；`examples/versions` 在 js / wasm-gc / native 均退出 0 且输出一致（本轮实跑） |
+| 远端 CI | 候选**未运行**（未推送）。0.1.2 的旧 CI 记录见其发布记录 |
+| 注册表 | 候选未发布，不适用。0.1.2 已先前核对，本轮用 `moon add …@0.1.2` 安装查看确认其为仅 1.2（无 V10/V11/connect_versions） |
+| 真实 broker | 见上表“先前记录”，本轮未重跑 |
+
+wasm-gc 的整包测试必须带 `--package sundaysebasidian-byte/moonstomp`：不带时会编译到 Node 专用 `bridge`，报 `extern "js" is unsupported in wasm-gc backend`，这是命令用法而不是测试失败。
+
+### 与 go-stomp 的对照（仅依据本仓库已有记录）
+
+go-stomp（https://github.com/go-stomp/stomp）是成熟的 Go 客户端，支持 STOMP 1.0/1.1/1.2。本项目目前**不是**它的等价物：go-stomp 是带自己 I/O 的完整客户端库，MoonSTOMP 是无 I/O 的编解码+会话核心加一个 Node TCP 适配器。本项目在互通测试中使用 go-stomp 的公共 API 作为真实对端（不是自写替代协议实现），并发现：go-stomp 写入端对所有版本统一转义，因此 1.0 特殊头和 1.1 字面 CR 的规范差异只能由 MoonBit 字节测试覆盖，不能由跨客户端测试证明。据其公开说明 go-stomp 还提供经 `net.Conn` 的 TLS 连接和服务端包，本项目没有对应功能；这部分未在本轮逐项核对，以上也不是对 go-stomp 的全面审计。
+
+### 多版本离线示例（本轮实跑）
+
+```sh
+moon run examples/versions --target js
+```
+
+服务端帧由示例提供，不是 broker 证据。三个版本各走一次 订阅→MESSAGE→ACK→带 receipt 的 SEND→RECEIPT→DISCONNECT→Closed。关键输出：
+
+```text
+[1.2] ACK      -> ACK\nid:a1\n\n\0
+[1.1] ACK      -> ACK\nmessage-id:m1\nsubscription:s1\n\n\0
+[1.0] ACK      -> ACK\nmessage-id:m1\n\n\0
+rejected  NACK under 1.0: NACK unavailable in STOMP 1.0
+rejected  client-individual under 1.0: invalid versioned acknowledgement mode
+rejected  1.1/1.2 subscription without id: subscription id required
+rejected  heart-beat offered with 1.0 only: STOMP 1.0 has no heartbeat negotiation
+rejected  unsupported version 2.0: unsupported STOMP version
+rejected  server answers with a version not offered: invalid version negotiation or CONNECTED EOL
+```
+
+---
+
+以下为**已发布 0.1.2 版本（仅 STOMP 1.2）**的原说明；其中“不支持 1.0/1.1”只针对 0.1.2，候选见上表。
 
 本仓库版本为 **0.1.2**。源码改进与准确 CI 见 [源码同步记录](docs/source-sync-0.1.2.zh-CN.md)，正式发布回执与独立安装结果见 [0.1.2 发布记录](docs/publication-0.1.2.zh-CN.md)。安装固定使用 `moon add sundaysebasidian-byte/moonstomp@0.1.2`；旧 0.1.0/0.1.1 发布证据保留。
 
@@ -12,7 +69,7 @@ MoonBit 实现的 STOMP 1.2 增量字节流编解码与传输分层客户端。�
 
 2026-10-03 新增有界解析/分段回归与真正增量的外部参考比较，核心两后端各 44/44；实际候选包消费各 6/6。运行功能未变，真实 broker 本轮未重跑，保留原提交和时间。详见 [本轮质量复核](docs/overnight-review-20261003.zh-CN.md)。
 
-## 支持范围
+## 0.1.2 支持范围（仅 STOMP 1.2）
 
 - LF/CRLF，逐字节及任意分段输入、连帧与心跳；UTF-8 header，四种转义、重复 header 保留且取首值，首尾空格保留。
 - `content-length` 按 octet 计数；二进制正文允许 NUL 和非 UTF-8 字节。编码非空正文自动补长度；接收必须包含最终 NUL。非法转义、长度、UTF-8、正文和超限输入报错。
@@ -21,7 +78,7 @@ MoonBit 实现的 STOMP 1.2 增量字节流编解码与传输分层客户端。�
 - `auto`、`client`、`client-individual` ACK 模式；累计 ACK/NACK 限同一订阅，事务确认提交前暂存，ABORT 恢复可确认状态。未知/重复 ID 与事务重叠会拒绝。UNSUBSCRIBE 后仍可确认旧消息，但旧消息未结清时不能复用同一订阅 ID。
 - receipt 关联；发送 DISCONNECT 后禁止再发帧，等待其 receipt 后关闭；EOF、ERROR、协议异常和运输故障清理本地状态。
 
-不支持 STOMP 1.0/1.1、WebSocket、TLS、自定义未知命令、自动重连、持久化 outbox、业务重试或 exactly-once 保证。destination 是不透明字符串；队列命名、NACK 重投递、持久化和服务端事务语义取决于 broker。底层连接必须是可靠、有序的双向字节流。通用 Frame 可携带 CONNECT 凭据 header，TCP `connect()` 便利入口仅实现无凭据连接；不会读取系统凭据。
+0.1.2 不支持 STOMP 1.0/1.1（候选已实现，见顶部状态表）；不支持 WebSocket、TLS、自定义未知命令、自动重连、持久化 outbox、业务重试或 exactly-once 保证。destination 是不透明字符串；队列命名、NACK 重投递、持久化和服务端事务语义取决于 broker。底层连接必须是可靠、有序的双向字节流。通用 Frame 可携带 CONNECT 凭据 header，TCP `connect()` 便利入口仅实现无凭据连接；不会读取系统凭据。
 
 ## 从源码运行
 

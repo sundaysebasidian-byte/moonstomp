@@ -1,9 +1,45 @@
-# MoonSTOMP 客观技术事实（AI辅助，非最终申报）
+# MoonSTOMP 客观技术事实（AI 辅助，非最终申报书；2026-10-18 重写）
 
-原创 MoonBit STOMP 1.2 增量 codec、会话与假时钟核心，Node TCP 适配器。正文 Bytes、header 转义/重复首值、content-length/NUL、订阅与 ACK/NACK、receipt、事务 SEND/确认及断连。协议与运输分层，主要核心为 MoonBit，MIT，AI 辅助范围见 AI_USAGE。
+本文只列事实，按状态分栏，申报时请逐项对应，不要把“已实现”和“拟实现”混写。申报书须由申请人人工撰写并按当期官方模板，本文不是申报书。
 
-正式 0.1.0/0.1.1 已公开且有准确 CI 和全新官方安装证据；本仓库提供 0.1.2 源码，正式 Mooncakes 仍为 0.1.1，不将旧版本 CI 或安装结果当作新源码结果。新增协商期时钟检查、内部控制回执匹配及同步 Boolean predicate 约束，仍无 TLS/WebSocket/重连。
+## 项目是什么
 
-可复用场景：媒体二进制任务单条 ACK/NACK、传感器连帧/auto ACK/假时钟、批次 SEND COMMIT/ABORT。独立模块消费采用公开 API，不证明第三方采用。实际 Artemis 2.57.0 的 NACK 丢弃、事务 ACK 不随 ABORT 恢复；离线账目契约不能当作其真实回滚能力。
+MoonBit 实现的 STOMP 无 I/O 编解码与客户端会话核心（帧、header 转义、`content-length`/NUL、订阅、ACK/NACK、事务、receipt、心跳、断连），外加一个 Node TCP 适配器。核心不依赖 socket、系统时钟或 Node；MIT；AI 辅助范围见 AI_USAGE.md。
 
-本文件仅为 AI 辅助的项目技术事实，不能作为本人撰写的竞赛最终申报书；实际源码、测试与 CI 状态见 README 和 docs/source-sync-0.1.2.zh-CN.md。
+## 已发布（0.1.2，Mooncakes）
+
+仅 STOMP 1.2。0.1.0 / 0.1.1 / 0.1.2 有各自的发布记录。真实 broker 互通仅限 Apache Artemis 2.57.0 的 1.2 场景。
+
+## 已实现、未发布（本分支候选）
+
+STOMP 1.0 / 1.1 / 1.2 协商与线格式、按版本区分的 ACK 头与边界拒绝（见 README 状态表）。默认 1.2 API 行为保持。
+
+## 已验证（区分类型）
+
+- 本地（本轮，2026-10-18，macOS arm64，`moon 0.1.20260920`、`moonc v0.10.14+7d59c7ec9`、Node v24.18.0）：JS 与 Wasm GC 各 68/68；离线多版本示例 `examples/versions` 在 js / wasm-gc / native 一致通过。
+- 真实 broker（**先前记录，本轮未重跑**；Linux x86_64、`moonc v0.10.15`、Go 1.26.8、Java 21）：Go（go-stomp 固定提交 `c155a2d699bb5bc1b2547a4382b3cdd7f4403648`）↔ Artemis 2.57.0 ↔ MoonBit，1.0/1.1/1.2 双向，二进制正文 `[65,0,255,13,10]`，订阅/发送/确认/退订/断开回执。
+- 独立参考：`@stomp/stompjs 7.2.0` 差分（401 个合法帧、1201 个参考分段解析）；它不是 broker 互通。
+- 远端 CI：候选未运行。注册表：候选未发布。
+
+## 未验证 / 已知限制
+
+- 仅一种 broker（Artemis 2.57.0）、一种配置；无 RabbitMQ、ActiveMQ 等交叉验证。
+- Artemis 2.57.0 的事务 ACK 在事务外执行，ABORT 不恢复交付；NACK 行为依 broker 策略。
+- 1.0 特殊 header 与 1.1 字面 CR 的规范语义由 MoonBit 字节测试覆盖；go-stomp 写入端统一转义，跨客户端测试无法证明这两点。
+- Node 便利连接只做匿名连接；通用 Frame 可携带认证头，但没有凭据测试。
+- 候选在锁定 SDK 的 JS / Wasm GC 本地结果已有；其他平台、其他 SDK 版本未测。
+
+## 拟实现（尚未开始，不是已有能力，也不是承诺）
+
+1. Node 便利连接支持 login/passcode。
+2. 再选一种 broker（如 RabbitMQ STOMP 插件）做互通测试并写入对照表。
+3. 基于 `node:tls` 的 TLS 适配。
+4. 带退避的重连辅助。
+
+## 明确不做
+
+WebSocket、STOMP 服务端实现、持久化 outbox、业务重试、exactly-once 保证。
+
+## 与 go-stomp 的关系
+
+go-stomp 是成熟的 Go 客户端并支持 1.0/1.1/1.2；本项目是无 I/O 核心加 Node 适配器，不是其功能等价物。互通测试以 go-stomp 公共 API 作真实对端，不是自写替代实现。完整对照见 README。

@@ -1,0 +1,5 @@
+import {
+  "sundaysebasidian-byte/moonstomp" @stomp,
+}
+
+pkgtype(kind: "executable")
