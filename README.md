@@ -12,8 +12,8 @@
 | STOMP 1.0 / 1.1 协商与线格式 | **不支持** | 已实现：`Version` V10/V11/V12、`connect_versions`、`subscribe_versioned`、`acknowledge_message`、`encode_versioned`、`Decoder::new(version=…)` | 本地单测（含在 68/68）+ 离线示例 `examples/versions`（本轮实跑）；真实 broker 互通见下 |
 | 按版本区分 ACK 头（1.0 `message-id`；1.1 `message-id`+`subscription`；1.2 `id`） | 否 | 已实现 | 离线示例输出逐版本显示；Go↔Artemis↔MoonBit 记录核对 |
 | 版本边界拒绝（1.0 无 NACK、1.0 无 `client-individual`、1.1/1.2 订阅必须有 id、1.0 无心跳协商、broker 回复未提供的版本） | 不适用 | 已实现 | 离线示例逐条打印拒绝原因（本轮实跑） |
-| Node TCP 适配器 `connect({versions})` | 仅 1.2 | 已实现，匿名连接 | 自造 peer 回环（先前记录），本轮未重跑 |
-| 真实 broker 互通 | 仅 Artemis 2.57.0 的 1.2 | Go（go-stomp 固定提交 `c155a2d…`）↔ Artemis 2.57.0 ↔ MoonBit，1.0/1.1/1.2 双向 | **先前记录**：Linux x86_64、`moonc v0.10.15`、Go 1.26.8、Java 21；见[验收报告](docs/verified-multiversion-20261015.zh-CN.md)。**本轮未重跑**（未准备 Artemis/Go peer 环境，未尝试） |
+| Node TCP 适配器 `connect({versions})` | 仅 1.2 | 已实现，匿名连接 | 自造 peer 回环 10 项生命周期 + 4 项边界 + 6 项三版本超时控制（2026-10-18 本轮 `verify.py --transport` 实跑通过；不是 broker 互通） |
+| 真实 broker 互通 | 仅 Artemis 2.57.0 的 1.2 | Go（go-stomp 固定提交 `c155a2d…`）↔ Artemis 2.57.0 ↔ MoonBit，1.0/1.1/1.2 双向 | **本轮实跑（2026-10-18）**：macOS arm64、`moonc v0.10.14+7d59c7ec9`（锁定）、Java 17（Temurin 17.0.20）、Go 1.27.1、Artemis 2.57.0（官方 SHA512 已核）、端口 62613。1.0/1.1/1.2 三个版本双向消息交换均通过，另有 3 例 + 5 项扩展。**先前记录（Linux x86_64、`moonc v0.10.15`、Go 1.26.8、Java 21，2026-10-15）**见[旧验收报告](docs/verified-multiversion-20261015.zh-CN.md)，两者环境不同，本轮结果不是旧记录的复述，旧记录也不证明本轮环境 |
 | 登录凭据（login/passcode）的 Node 便利连接 | 不支持 | 不支持（通用 `Frame` 可携带认证头，但无凭据测试） | — |
 | TLS、WebSocket、自动重连、持久 outbox、业务重试、exactly-once | 不支持 | 不支持 | — |
 | 多 broker 交叉验证（RabbitMQ、ActiveMQ 等） | 无 | 无 | 未做 |
@@ -24,16 +24,32 @@
 
 | 层面 | 结果 |
 |---|---|
-| 本地，锁定工具链（`moon 0.1.20260920 (914d7da)`、`moonc v0.10.14+7d59c7ec9`、Node v24.18.0，macOS arm64） | `moon test --target js` 与 `moon test --target wasm-gc --package sundaysebasidian-byte/moonstomp` 各 **68/68**；`examples/versions` 在 js / wasm-gc / native 均退出 0 且输出一致（本轮实跑） |
+| 本地，锁定工具链（`moon 0.1.20260920 (914d7da)`、`moonc v0.10.14+7d59c7ec9`、Node v24.18.0，macOS arm64） | `moon test --target js` 与 `moon test --target wasm-gc --package sundaysebasidian-byte/moonstomp` 各 **68/68**；`examples/versions` 的输出与 `examples/versions/expected_output.txt` 逐字节比对，js / wasm-gc 已接入 `verify.py` 的 `versions-example` 阶段（该阶段另要求 6 条 `rejected`、3 条 `negotiated version`，并带变异自检）；native 目标另在本轮单独实跑，输出与 golden 逐字节一致，但不在脚本默认目标内 |
 | 远端 CI | 候选**未运行**（未推送）。0.1.2 的旧 CI 记录见其发布记录 |
 | 注册表 | 候选未发布，不适用。0.1.2 已先前核对，本轮用 `moon add …@0.1.2` 安装查看确认其为仅 1.2（无 V10/V11/connect_versions） |
-| 真实 broker | 见上表“先前记录”，本轮未重跑 |
+| 真实 broker（Go go-stomp `c155a2d…` ↔ Artemis 2.57.0 ↔ MoonBit） | **本轮实跑通过**：`verify.py` 18 个阶段全部 PASSED（含 `versions-example`、`real-broker`，总状态 `PASSED_WITH_ARTEMIS_PROFILE_LIMITATION_AND_UNTESTED_REMOTE_CI`）。限制：事务 ACK 在该 Artemis profile 下为 `CONFIRMED_BROKER_LIMITATION`；未测 TLS、认证、其他 broker |
 
 wasm-gc 的整包测试必须带 `--package sundaysebasidian-byte/moonstomp`：不带时会编译到 Node 专用 `bridge`，报 `extern "js" is unsupported in wasm-gc backend`，这是命令用法而不是测试失败。
 
-### 与 go-stomp 的对照（仅依据本仓库已有记录）
+### 与 go-stomp 的对照（依据固定源码 `c155a2d699bb5bc1b2547a4382b3cdd7f4403648` 逐项核对，2026-10-18）
 
-go-stomp（https://github.com/go-stomp/stomp）是成熟的 Go 客户端，支持 STOMP 1.0/1.1/1.2。本项目目前**不是**它的等价物：go-stomp 是带自己 I/O 的完整客户端库，MoonSTOMP 是无 I/O 的编解码+会话核心加一个 Node TCP 适配器。本项目在互通测试中使用 go-stomp 的公共 API 作为真实对端（不是自写替代协议实现），并发现：go-stomp 写入端对所有版本统一转义，因此 1.0 特殊头和 1.1 字面 CR 的规范差异只能由 MoonBit 字节测试覆盖，不能由跨客户端测试证明。据其公开说明 go-stomp 还提供经 `net.Conn` 的 TLS 连接和服务端包，本项目没有对应功能；这部分未在本轮逐项核对，以上也不是对 go-stomp 的全面审计。
+go-stomp（https://github.com/go-stomp/stomp）是成熟的 Go 客户端。本项目**不是**其功能等价物：go-stomp 带自己的 I/O 与 goroutine 读写循环，MoonSTOMP 是无 I/O 的编解码+会话核心加一个 Node TCP 适配器。以下为对该固定提交源码的核对结果（不是对 go-stomp 的全面审计，也不含其测试覆盖率评价）：
+
+| 项目 | go-stomp（固定提交） | MoonSTOMP 候选 |
+|---|---|---|
+| 协议版本 | README 声明 1.0/1.1/1.2；`Conn.Version()` 暴露协商结果 | 1.0/1.1/1.2，`Version` V10/V11/V12 |
+| 连接方式 | `Dial`/`DialWithContext` 拨号；`Connect`/`ConnectWithContext` 接受任意 `io.ReadWriteCloser`（可自行传入 `tls.Conn`） | Node `net` TCP 适配器；核心接受任意字节流 |
+| TLS | 库内**没有** `crypto/tls` 代码，不提供 TLS 选项；只能由调用者自备已建立的加密连接传入 `Connect` | 无 TLS；仅计划（未开始） |
+| 登录凭据 | 有 `ConnOpt.Login` 连接选项 | Node 便利连接仅匿名；通用 `Frame` 可带认证头，无凭据测试 |
+| 命令 | Send、Subscribe、Ack、Nack、Begin/Commit/Abort、Disconnect | 同类命令；按版本区分 ACK 头与边界拒绝 |
+| 心跳 | 连接选项 + 读写超时与宽限倍数 | 核心含心跳协商与单调时间；1.0 offer 心跳被拒绝 |
+| 自动重连 | 源码中**没有**重连逻辑 | 无 |
+| 读缓冲 | `frame.Reader` 默认缓冲 4096 字节，可由 `ConnOpt.ReadBufferSize` 调整 | 默认单行 8192、128 个 header、1 MiB 正文、每次 feed 1024 事件，可经 `Limits::new()` 调整 |
+| STOMP 服务端 | 含 `server` 包（队列、主题）；该服务端对 1.0 CONNECT 返回 `unsupported version`（源码注释“don't want to handle V1.0 at the moment”） | 明确不做 |
+| 转义行为 | 写入端对所有版本统一转义 | 按版本区分；1.0 特殊 header 与 1.1 字面 CR 的规范语义仅由 MoonBit 字节测试覆盖，跨客户端测试无法证明这两点 |
+| 运行时 | Go | MoonBit JS / Wasm GC（单测）；TCP 适配器仅 Node |
+
+本项目在互通测试中使用 go-stomp 的公共 API 作为真实对端（`scripts/build-go-peer.py` 构建，核对固定提交），不是自写替代协议实现。
 
 ### 多版本离线示例（本轮实跑）
 
@@ -181,6 +197,17 @@ python3 scripts/verify.py --output ../moonstomp-with-artemis --transport \
   --broker-archive /absolute/path/apache-artemis-2.57.0-bin.tar.gz \
   --broker-checksum /absolute/path/apache-artemis-2.57.0-bin.tar.gz.sha512 \
   --broker-java-home /absolute/path/java17/Contents/Home
+```
+
+默认端口 61613 已被占用时，用 `--broker-port` 选择一个空闲回环端口（配置校验、监听校验、客户端与 wire trace 使用同一端口；`broker-run.py` 对应参数为 `--port`）。再加 `--go-peer` 即同时运行 Go ↔ Artemis ↔ MoonBit 三版本互通。2026-10-18 本轮实跑所用命令（`MOON_HOME` 指向锁定 SDK，`go-peer` 由 `scripts/build-go-peer.py` 用 Go 1.27.1 构建）：
+
+```sh
+python3 scripts/verify.py --output /new/empty/dir --transport \
+  --broker-archive /absolute/path/apache-artemis-2.57.0-bin.tar.gz \
+  --broker-checksum /absolute/path/apache-artemis-2.57.0-bin.tar.gz.sha512 \
+  --broker-java-home /Library/Java/JavaVirtualMachines/temurin-17.jdk/Contents/Home \
+  --broker-port 62613 \
+  --go-peer /absolute/path/go-peer
 ```
 
 runner 会校验官方 SHA512 和已锁定摘要；不会下载软件或连接公网 broker。官方下载信息与复现步骤见 [docs/broker-plan.zh-CN.md](docs/broker-plan.zh-CN.md)，已测 profile 与限制见 [docs/broker-interop.zh-CN.md](docs/broker-interop.zh-CN.md)。

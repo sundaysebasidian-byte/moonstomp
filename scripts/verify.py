@@ -104,6 +104,7 @@ def main():
         run('test-js', [moon, 'test', '--target', 'js', '-j', '1'])
         run('test-wasm-gc', [moon, 'test', '--target', 'wasm-gc', '--package', 'sundaysebasidian-byte/moonstomp', '-j', '1'])
         run('offline-example', [moon, 'run', 'examples/offline', '--target', 'js', '-j', '1'])
+        run('versions-example', [sys.executable, '-E', 'scripts/versions-example-test.py'])
         run('js-bridge', ['node', 'scripts/bridge-test.cjs'])
         run('differential', ['node', 'scripts/differential.cjs'])
         consumer_command = [sys.executable, 'scripts/downstream.py', '--output', str(out / 'downstream')]

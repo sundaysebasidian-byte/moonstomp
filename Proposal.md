@@ -16,14 +16,15 @@ STOMP 1.0 / 1.1 / 1.2 协商与线格式、按版本区分的 ACK 头与边界�
 
 ## 已验证（区分类型）
 
-- 本地（本轮，2026-10-18，macOS arm64，`moon 0.1.20260920`、`moonc v0.10.14+7d59c7ec9`、Node v24.18.0）：JS 与 Wasm GC 各 68/68；离线多版本示例 `examples/versions` 在 js / wasm-gc / native 一致通过。
-- 真实 broker（**先前记录，本轮未重跑**；Linux x86_64、`moonc v0.10.15`、Go 1.26.8、Java 21）：Go（go-stomp 固定提交 `c155a2d699bb5bc1b2547a4382b3cdd7f4403648`）↔ Artemis 2.57.0 ↔ MoonBit，1.0/1.1/1.2 双向，二进制正文 `[65,0,255,13,10]`，订阅/发送/确认/退订/断开回执。
+- 本地（本轮，2026-10-18，macOS arm64，`moon 0.1.20260920`、`moonc v0.10.14+7d59c7ec9`、Node v24.18.0）：JS 与 Wasm GC 各 68/68；`scripts/verify.py` 18 个阶段全部 PASSED，其中 `versions-example` 把 `examples/versions` 的 js / wasm-gc 输出与 golden 文件逐字节比对（native 另行实跑一致）；自造 peer 回环 10+4+6 项（不是 broker 互通）。
+- 真实 broker（**本轮实跑**，macOS arm64、Java 17.0.20、Go 1.27.1、端口 62613、锁定 SDK）：Go（go-stomp 固定提交 `c155a2d699bb5bc1b2547a4382b3cdd7f4403648`，peer sha256 `0b69c4fc…`）↔ Artemis 2.57.0（官方 SHA512 已核）↔ MoonBit，1.0/1.1/1.2 均双向通过，二进制正文 `[65,0,255,13,10]`，各版 ACK 头核对，订阅/发送/确认/退订/断开回执；另有 3 个示例与 5 项扩展场景。
+- 真实 broker（**先前记录，2026-10-15，非本轮**；Linux x86_64、`moonc v0.10.15`、Go 1.26.8、Java 21）：同一路径同样通过。两次环境不同，互不替代。
 - 独立参考：`@stomp/stompjs 7.2.0` 差分（401 个合法帧、1201 个参考分段解析）；它不是 broker 互通。
 - 远端 CI：候选未运行。注册表：候选未发布。
 
 ## 未验证 / 已知限制
 
-- 仅一种 broker（Artemis 2.57.0）、一种配置；无 RabbitMQ、ActiveMQ 等交叉验证。
+- 仅一种 broker（Artemis 2.57.0）、一种配置；无 RabbitMQ、ActiveMQ 等交叉验证；未测 TLS、认证 broker。
 - Artemis 2.57.0 的事务 ACK 在事务外执行，ABORT 不恢复交付；NACK 行为依 broker 策略。
 - 1.0 特殊 header 与 1.1 字面 CR 的规范语义由 MoonBit 字节测试覆盖；go-stomp 写入端统一转义，跨客户端测试无法证明这两点。
 - Node 便利连接只做匿名连接；通用 Frame 可携带认证头，但没有凭据测试。
@@ -42,4 +43,4 @@ WebSocket、STOMP 服务端实现、持久化 outbox、业务重试、exactly-on
 
 ## 与 go-stomp 的关系
 
-go-stomp 是成熟的 Go 客户端并支持 1.0/1.1/1.2；本项目是无 I/O 核心加 Node 适配器，不是其功能等价物。互通测试以 go-stomp 公共 API 作真实对端，不是自写替代实现。完整对照见 README。
+go-stomp 是成熟的 Go 客户端并支持 1.0/1.1/1.2；本项目是无 I/O 核心加 Node 适配器，不是其功能等价物。按固定提交 `c155a2d…` 源码核对：库内无 TLS 代码（只能把调用者建立的加密连接传给 `Connect`）、无自动重连、含登录选项和心跳选项，另带 STOMP 服务端包（该服务端不处理 1.0）；本项目均无服务端，TLS、重连、凭据便利连接尚未实现。互通测试以 go-stomp 公共 API 作真实对端，不是自写替代实现。逐项对照表见 README。
