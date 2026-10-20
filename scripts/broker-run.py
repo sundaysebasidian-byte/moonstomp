@@ -126,6 +126,10 @@ def main():
                 child_env['MOONSTOMP_TRACE_FILE']=str(out/(name+'.wire.jsonl'))
                 print('RUN real broker',name,flush=True)
                 run(name,['node',script],child_env=child_env)
+            cli_env=dict(env);cli_env['STOMP_HOST']='127.0.0.1';cli_env['STOMP_PORT']=str(args.port)
+            print('RUN real broker cli',flush=True)
+            run('cli-real-broker',['node','scripts/cli-broker-test.cjs'],child_env=cli_env,timeout=120)
+            report['cli']=json.loads((out/'cli-real-broker.stdout.txt').read_text())
             if args.go_peer:
                 report['go_stomp_interop']='FAILED_PRECHECK_OR_EXECUTION'
                 interop_env=dict(env)

@@ -1,0 +1,5 @@
+1.0  hello 1.0 acked with message-id
+1.1  hello 1.1 acked with subscription+message-id
+1.2  hello 1.2 acked with id
+offer 1.1,1.2 -> broker picks 1.2
+PASS versions

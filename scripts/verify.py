@@ -105,6 +105,8 @@ def main():
         run('test-wasm-gc', [moon, 'test', '--target', 'wasm-gc', '--package', 'sundaysebasidian-byte/moonstomp', '-j', '1'])
         run('offline-example', [moon, 'run', 'examples/offline', '--target', 'js', '-j', '1'])
         run('versions-example', [sys.executable, '-E', 'scripts/versions-example-test.py'])
+        run('demos-and-cli', [sys.executable, '-E', 'scripts/usability-test.py'])
+        report['demos_and_cli'] = 'PASSED: 6 demos (golden output) + CLI send/subscribe cases against the built-in demo broker; test peer, not broker interoperability evidence'
         run('js-bridge', ['node', 'scripts/bridge-test.cjs'])
         run('differential', ['node', 'scripts/differential.cjs'])
         consumer_command = [sys.executable, 'scripts/downstream.py', '--output', str(out / 'downstream')]
@@ -129,7 +131,7 @@ def main():
                 broker_command += ['--go-peer', str(args.go_peer.resolve())]
             run('real-broker', broker_command)
             report['go_stomp_interop'] = json.loads((out / 'broker/broker-tests.json').read_text())['go_stomp_interop']
-            report['real_broker'] = 'PASSED_ARTEMIS_2_57_PROFILE: 3 examples + 5 extended cases; transaction ACK unsupported'
+            report['real_broker'] = 'PASSED_ARTEMIS_2_57_PROFILE: 3 examples + 5 extended cases + 5 CLI cases; transaction ACK unsupported'
         if inventory() != report['source_sha256']:
             raise RuntimeError('verification unexpectedly changed source files')
         report['overall'] = ('PASSED_WITH_ARTEMIS_PROFILE_LIMITATION_AND_UNTESTED_REMOTE_CI'
