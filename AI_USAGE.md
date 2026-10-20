@@ -21,3 +21,5 @@ MoonSTOMP 的 MoonBit 核心、测试、Node 适配器、文档和验证脚本�
 2026-10-14：Codex接续原仓库的独立review分支。新增/修正STOMP多版本源码草案与针对测试，ODS只核生态、修正发行状态并记录reader/mbtexcel最小方案。包含独立只读源码审查及所发现问题的修正。官方SDK脚本HTTP403、moon/moonc缺失，新增MoonBit源码未编译或执行；不声称完成运行验证、ODS reader或跨格式消费。未push/dispatch/publish/重申；技术底稿不能冒充本人撰写的最终申报。
 
 2026-10-15：Codex接续原review分支并经独立只读审查。STOMP修混合offer并写真实go-stomp/broker测试glue；ODS只准备独立LODev外部样本、固定oracle和负控制，不冒称reader或跨格式实现。SDK官方请求仍403，17项MoonBit测试未执行；保留真实失败、静态与fixture结果各自范围。原恢复包和提交历史保留。
+
+2026-10-20：Claude 辅助整合两条并行分支：核心补强（login/passcode、结构化 JS 错误、Subscription/Transaction 句柄、TLS、ActiveMQ Classic 6.3.2 认证互操作、Python 3.9 兼容）与可用性整理（README、示例、CLI）。随后让 CLI 和示例使用新 API，并按实测事实同步 README、Proposal.md 和状态/边界文档。未实现重连；TLS 只在本机脚本 peer 上验证，Classic 事务 ACK 与 NACK 重投递未测。本条是技术记录，不是人工申报书。

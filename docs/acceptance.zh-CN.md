@@ -14,4 +14,6 @@
 | OSI 许可 | 原创 MIT，测试参考 Apache-2.0，规范来源 CC BY 3.0 | 不分发 SDK 或 broker 二进制，没有 npm 运行依赖 |
 | 来源/AI/理解 | 归因及 AI_USAGE 明确，维护者需理解、审阅并解释实现 | 技术说明不是人工申报书，也不保证验收或奖励 |
 
-真实 Artemis 2.57.0 仅已记录的无凭据/无持久化/ANYCAST 回环 profile：三例和五检查通过，事务 ACK 回滚不支持已确认。其 NACK 丢弃不是通用重投递契约；其他 broker、认证/TLS/持久化/高负载仍未测。源码同步阶段重跑范围与原 broker 实测日期分别记录，不把历史时间改成新测。
+真实 Artemis 2.57.0 仅已记录的无凭据/无持久化/ANYCAST 回环 profile：三例和五检查通过，事务 ACK 回滚不支持已确认。其 NACK 丢弃不是通用重投递契约。
+
+**2026-10-20 候选补充**（未发布，未推送，远端 CI 未运行；上表“当前事实”列仍描述 0.1.2 正式包）：核心单测 JS 与 Wasm GC 各 70/70；login/passcode 与 TLS 在 Node 适配器可用，示例七个、CLI 支持 `--login`/`--passcode-env`/`--tls`；第二个真实 broker ActiveMQ Classic 6.3.2（需认证）通过三版本收发、版本化 ACK、事务 SEND commit/abort，Classic 事务 ACK 与 NACK 重投递未测；TLS 只在本机脚本 peer 上验证，没有真实 broker TLS 测试；仍没有重连。完整验收可用系统 Python 3.9 运行；各阶段结果以 `verify.py` 输出目录的 `verification.json` 为准。认证/TLS/持久化/高负载在 Artemis 与其他 broker 上仍未测。源码同步阶段重跑范围与原 broker 实测日期分别记录，不把历史时间改成新测。

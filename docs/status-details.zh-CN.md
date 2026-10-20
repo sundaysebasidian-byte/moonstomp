@@ -1,6 +1,6 @@
 # MoonSTOMP 详细状态、对照与资源上限(原 README 全文,2026-10-18 整改版)
 
-> 本文件是 2026-10-20 可用性整理前的 README 全文,内容未删改,仅修正相对链接。入口与摘要见仓库根目录 [README.md](../README.md);上手见 [guide.zh-CN.md](guide.zh-CN.md)。
+> 本文件是 2026-10-20 可用性整理前的 README 全文,内容未删改,仅修正相对链接；**2026-10-20 合并 core 补强后**，状态一览表、真实 broker 与 go-stomp 对照表中的凭据、TLS、Classic 行已同步，其余历史段落（含标注“本轮”的 2026-10-18 记录）保持原样。入口与摘要见仓库根目录 [README.md](../README.md);上手见 [guide.zh-CN.md](guide.zh-CN.md)。
 
 ## 状态一览（2026-10-18 整改后；先读这里）
 
@@ -14,13 +14,15 @@
 | STOMP 1.0 / 1.1 协商与线格式 | **不支持** | 已实现：`Version` V10/V11/V12、`connect_versions`、`subscribe_versioned`、`acknowledge_message`、`encode_versioned`、`Decoder::new(version=…)` | 本地单测（含在 68/68）+ 离线示例 `examples/versions`（本轮实跑）；真实 broker 互通见下 |
 | 按版本区分 ACK 头（1.0 `message-id`；1.1 `message-id`+`subscription`；1.2 `id`） | 否 | 已实现 | 离线示例输出逐版本显示；Go↔Artemis↔MoonBit 记录核对 |
 | 版本边界拒绝（1.0 无 NACK、1.0 无 `client-individual`、1.1/1.2 订阅必须有 id、1.0 无心跳协商、broker 回复未提供的版本） | 不适用 | 已实现 | 离线示例逐条打印拒绝原因（本轮实跑） |
-| Node TCP 适配器 `connect({versions})` | 仅 1.2 | 已实现，匿名连接 | 自造 peer 回环 10 项生命周期 + 4 项边界 + 6 项三版本超时控制（2026-10-18 本轮 `verify.py --transport` 实跑通过；不是 broker 互通） |
-| 真实 broker 互通 | 仅 Artemis 2.57.0 的 1.2 | Go（go-stomp 固定提交 `c155a2d…`）↔ Artemis 2.57.0 ↔ MoonBit，1.0/1.1/1.2 双向 | **本轮实跑（2026-10-18）**：macOS arm64、`moonc v0.10.14+7d59c7ec9`（锁定）、Java 17（Temurin 17.0.20）、Go 1.27.1、Artemis 2.57.0（官方 SHA512 已核）、端口 62613。1.0/1.1/1.2 三个版本双向消息交换均通过，另有 3 例 + 5 项扩展。**先前记录（Linux x86_64、`moonc v0.10.15`、Go 1.26.8、Java 21，2026-10-15）**见[旧验收报告](verified-multiversion-20261015.zh-CN.md)，两者环境不同，本轮结果不是旧记录的复述，旧记录也不证明本轮环境 |
-| 登录凭据（login/passcode）的 Node 便利连接 | 不支持 | 不支持（通用 `Frame` 可携带认证头，但无凭据测试） | — |
-| TLS、WebSocket、自动重连、持久 outbox、业务重试、exactly-once | 不支持 | 不支持 | — |
-| 多 broker 交叉验证（RabbitMQ、ActiveMQ 等） | 无 | 无 | 未做 |
+| Node TCP 适配器 `connect({versions, login, passcode})`、`tlsOptions`、Subscription/Transaction 句柄、结构化错误 | 仅 1.2、匿名 | 已实现（凭据与 TLS 为 2026-10-20 新增；句柄是 JS 适配器封装，非 MoonBit 类型） | 自造 peer 回环 10 项生命周期 + 4 项边界 + 6 项三版本超时控制（2026-10-18 本轮 `verify.py --transport` 实跑通过；不是 broker 互通） |
+| 真实 broker 互通（Classic） | 无 | ActiveMQ Classic 6.3.2，**需认证**，仅回环：错误口令被拒；1.0/1.1/1.2 二进制收发、版本化 ACK、事务 SEND commit/abort、关闭 receipt | `verify.py --classic-home … --classic-java-home …` 的 `real-broker-classic` 阶段（`scripts/classic-run.py`、`scripts/classic-interop-test.cjs`）。事务 ACK 与 NACK 重投递**未测**；Classic 的结果不能推广到其他 broker |
+| 真实 broker 互通（Artemis） | 仅 Artemis 2.57.0 的 1.2 | Go（go-stomp 固定提交 `c155a2d…`）↔ Artemis 2.57.0 ↔ MoonBit，1.0/1.1/1.2 双向 | **本轮实跑（2026-10-18）**：macOS arm64、`moonc v0.10.14+7d59c7ec9`（锁定）、Java 17（Temurin 17.0.20）、Go 1.27.1、Artemis 2.57.0（官方 SHA512 已核）、端口 62613。1.0/1.1/1.2 三个版本双向消息交换均通过，另有 3 例 + 5 项扩展。**先前记录（Linux x86_64、`moonc v0.10.15`、Go 1.26.8、Java 21，2026-10-15）**见[旧验收报告](verified-multiversion-20261015.zh-CN.md)，两者环境不同，本轮结果不是旧记录的复述，旧记录也不证明本轮环境 |
+| 登录凭据（login/passcode）的 Node 便利连接 | 不支持 | **已实现**（2026-10-20）：MoonBit `connect(login?, passcode?)`、Node `connect({login, passcode})`、CLI `--login`/`--passcode-env` | 回环凭据用例（`scripts/auth-transport-test.cjs`）、demo broker 凭据检查、示例 07、Classic 6.3.2 真实认证 |
+| TLS | 不支持 | **已实现**：`tlsOptions`，Node 标准 TLS，强制校验证书 | **仅本机脚本 peer**（`scripts/tls-transport-test.cjs`、`scripts/cli-tls-test.cjs`）；真实 broker TLS、mTLS、代理未测 |
+| WebSocket、自动重连、持久 outbox、业务重试、exactly-once | 不支持 | 不支持 | — |
+| 多 broker 交叉验证 | 无 | Artemis + ActiveMQ Classic 两个；RabbitMQ 等未做 | Classic 事务 ACK、NACK 重投递未测 |
 
-**拟实现（尚未开始，不是已有能力，也不构成承诺）**：①Node 便利连接支持 login/passcode；②再选一种 broker（如 RabbitMQ STOMP 插件）做互通；③基于 `node:tls` 的 TLS 适配；④带退避的重连辅助。WebSocket、服务端实现、持久 outbox 暂不计划。
+**拟实现（尚未开始，不是已有能力，也不构成承诺）**：①再选一种 broker（如 RabbitMQ STOMP 插件）做互通，或补测 Classic 事务 ACK / NACK；②对真实 broker 做 TLS 互通；③带退避的重连辅助。login/passcode 与 TLS 已于 2026-10-20 实现（TLS 仅本机脚本 peer 验证）。WebSocket、服务端实现、持久 outbox 暂不计划。
 
 ### 验证结果分开列（候选）
 
@@ -41,8 +43,8 @@ go-stomp（https://github.com/go-stomp/stomp）是成熟的 Go 客户端。本�
 |---|---|---|
 | 协议版本 | README 声明 1.0/1.1/1.2；`Conn.Version()` 暴露协商结果 | 1.0/1.1/1.2，`Version` V10/V11/V12 |
 | 连接方式 | `Dial`/`DialWithContext` 拨号；`Connect`/`ConnectWithContext` 接受任意 `io.ReadWriteCloser`（可自行传入 `tls.Conn`） | Node `net` TCP 适配器；核心接受任意字节流 |
-| TLS | 库内**没有** `crypto/tls` 代码，不提供 TLS 选项；只能由调用者自备已建立的加密连接传入 `Connect` | 无 TLS；仅计划（未开始） |
-| 登录凭据 | 有 `ConnOpt.Login` 连接选项 | Node 便利连接仅匿名；通用 `Frame` 可带认证头，无凭据测试 |
+| TLS | 库内**没有** `crypto/tls` 代码，不提供 TLS 选项；只能由调用者自备已建立的加密连接传入 `Connect` | 有 `tlsOptions`（强制校验证书）；仅本机脚本 peer 验证，无真实 broker TLS 测试 |
+| 登录凭据 | 有 `ConnOpt.Login` 连接选项 | 有（Node 适配器与 CLI；Classic 6.3.2 认证实测） |
 | 命令 | Send、Subscribe、Ack、Nack、Begin/Commit/Abort、Disconnect | 同类命令；按版本区分 ACK 头与边界拒绝 |
 | 心跳 | 连接选项 + 读写超时与宽限倍数 | 核心含心跳协商与单调时间；1.0 offer 心跳被拒绝 |
 | 自动重连 | 源码中**没有**重连逻辑 | 无 |
@@ -96,7 +98,7 @@ MoonBit 实现的 STOMP 1.2 增量字节流编解码与传输分层客户端。�
 - `auto`、`client`、`client-individual` ACK 模式；累计 ACK/NACK 限同一订阅，事务确认提交前暂存，ABORT 恢复可确认状态。未知/重复 ID 与事务重叠会拒绝。UNSUBSCRIBE 后仍可确认旧消息，但旧消息未结清时不能复用同一订阅 ID。
 - receipt 关联；发送 DISCONNECT 后禁止再发帧，等待其 receipt 后关闭；EOF、ERROR、协议异常和运输故障清理本地状态。
 
-0.1.2 不支持 STOMP 1.0/1.1（候选已实现，见顶部状态表）；不支持 WebSocket、TLS、自定义未知命令、自动重连、持久化 outbox、业务重试或 exactly-once 保证。destination 是不透明字符串；队列命名、NACK 重投递、持久化和服务端事务语义取决于 broker。底层连接必须是可靠、有序的双向字节流。通用 Frame 可携带 CONNECT 凭据 header，TCP `connect()` 便利入口仅实现无凭据连接；不会读取系统凭据。
+0.1.2 不支持 STOMP 1.0/1.1、login/passcode 便利连接和 TLS（候选已实现，见顶部状态表）；不支持 WebSocket、自定义未知命令、自动重连、持久化 outbox、业务重试或 exactly-once 保证。destination 是不透明字符串；队列命名、NACK 重投递、持久化和服务端事务语义取决于 broker。底层连接必须是可靠、有序的双向字节流。通用 Frame 可携带 CONNECT 凭据 header，0.1.2 的 TCP `connect()` 便利入口仅实现无凭据连接（候选已增加显式 `login`/`passcode`）；库不会读取系统凭据。
 
 ## 从源码运行
 

@@ -11,9 +11,9 @@
 | 帧协议 | 只支持 STOMP 1.2 列明的命令；UTF-8 command/header，正文 Bytes；LF/CRLF；重复 header 保存但按首值解释，大小写敏感；不支持未知命令及 1.0/1.1 协商。 |
 | codec 与会话 | encode/Decoder 检查语法；必需 header、收发方向及连接时序由 Client 验证。单独 encode 没有 Limits 容量约束，不可将它当作有界 Client。输入 chunk 及输出事件的生命周期由调用者负责。 |
 | 核心后端 | JS 和 Wasm-GC 的核心及独立应用已测试；JS bridge/TCP 只支持 JS/Node。整个工程包含 JS extern bridge，不支持直接把整个工程切为 Wasm-GC 构建；Wasm-GC 证据是根核心包测试和独立依赖消费。native/LLVM/旧 Wasm、浏览器及其他 Node/SDK 版本未验证。 |
-| 运输 | Node TCP 便利层不提供 TLS、WebSocket、自动重连或 CONNECT 登录参数；core Frame 可以携带凭据 header，但认证 broker 未测。broker 测试和示例只连接数字回环地址；不向公网 broker 测试。 |
+| 运输 | 0.1.2 的 Node TCP 便利层不提供 TLS、WebSocket、自动重连或 CONNECT 登录参数。**2026-10-20 候选**：`connect({login, passcode})` 与 `tlsOptions` 已实现（TLS 强制校验证书，拒绝 `rejectUnauthorized:false` 与传入已连接 socket；等待 secureConnect 后才发 CONNECT；DNS host 作为 SNI）；仍没有 WebSocket 和自动重连。login/passcode 在 Classic 6.3.2 上经真实认证验证；TLS 只在本机脚本 peer 上验证过信任与主机名，没有真实 broker TLS、mTLS、代理或生产网络测试。凭据或 TLS 在非回环主机上的使用没有测试，CLI 要求带登录的非回环连接必须使用 `--tls`。broker 测试和示例只连接数字回环地址；不向公网 broker 测试。 |
 | 业务语义 | destination 是不透明字符串；不检查 MIME 正文语义、不创建 broker 队列、不保证持久化、重投递、死信、顺序恢复或 exactly-once。receipt 表示协议处理反馈，不能代替业务成功或持久化证明。 |
-| 真实兼容 | 仅 Artemis 2.57.0 已记录的无认证、无持久化、默认 ANYCAST profile；其他 broker、支持事务 ACK 的真实互操作、认证/TLS/持久化/高负载未测。该 broker NACK 丢弃，事务 ACK 不随 ABORT 恢复。 |
+| 真实兼容 | 两个 broker：Artemis 2.57.0 已记录的无认证、无持久化、默认 ANYCAST profile（NACK 丢弃，事务 ACK 不随 ABORT 恢复）；ActiveMQ Classic 6.3.2 的认证、无持久化回环 profile（三版本二进制收发、版本化 ACK、事务 SEND commit/abort）。Classic 的事务 ACK、NACK 重投递，其他 broker，真实 broker TLS，持久化/高负载均未测。 |
 
 ## 容量与时钟
 
@@ -37,8 +37,8 @@
 | Decoder 非法、超限、截断或 EOF | ProtocolError；清理持有内容并进入不可复用状态。feed 整批失败，不返回该批先前成功帧；本批随后出现错误时不能把它当作部分成功。 |
 | Client receive/tick 错误 | fail/Closed；清理订阅、待退订、事务、receipt、delivery、clock 与解析内容。Client.end 无论干净 EOF 还是截断都关闭；截断另报错。 |
 | Client send 参数/容量错误 | 不登记订阅、退订、事务、确认或 receipt 意图，保持原协议状态；调用者时间仍须单调。成功 send/tick 是本地意图，运输失败必须 fail，不能继续复用原连接。 |
-| broker ERROR | core 返回 ServerError 后 Closed；Node 终止运输，已有 ERROR 等待者可拿到帧；无人等待的排队事件在 stop 时丢弃，不能把错误内容缓存当成诊断持久化。 |
-| TCP send/解析/队列/写缓冲失败 | 关闭连接，取消 timer，拒绝等待者并清空队列。bridge 将核心异常统一为 MoonSTOMP protocol error，不提供稳定细分错误码或保留原核心详细字符串。 |
+| broker ERROR | core 返回 ServerError 后 Closed；Node 终止运输，已有 ERROR 等待者可拿到帧；无人等待的排队事件在 stop 时丢弃，不能把错误内容缓存当成诊断持久化。候选的句柄/`receive` 路径抛出 `MoonSTOMPBrokerError`（`code=STOMP_BROKER_ERROR`，保留 `frame`）。 |
+| TCP send/解析/队列/写缓冲失败 | 关闭连接，取消 timer，拒绝等待者并清空队列。0.1.2 的 bridge 将核心异常统一为 MoonSTOMP protocol error，不提供稳定细分错误码。**候选**：桥接/协议/broker ERROR/句柄误用路径带 `name`/`code`/`operation`（`STOMP_INVALID`、`STOMP_ARGUMENT`、`STOMP_BROKER_ERROR`、`STOMP_HANDLE`）并保留核心 reason；EOF、超时、Node I/O 路径保持原接口，核心仍只有单一 Invalid 类别，没有更细分的协议错误码。 |
 | receipt 便利入口预检失败 | 参数、重复 header、等待者满或旧队列同 ID 回执拒绝且不发帧，保留健康连接；之后进入核心/运输的错误仍关闭。 |
 | waitFor 超时 | 只删除该等待者，连接仍可存活；已发送命令可能已被服务端处理，core pending receipt 仍等待到来或 fail，不能据超时直接重复业务操作。DISCONNECT 便利入口在成功/失败后都 stop。 |
 | 用户 predicate | 必须同步返回 Boolean、快速、无副作用；async/generator 在注册时拒绝，其他非 Boolean/Promise 返回值报错，原生 Promise 拒绝有处理器。已有队列匹配失败返回 rejected Promise 且队列保留，接收路径匹配失败会关闭连接；没有任意回调隔离、重入或线程安全保证。 |

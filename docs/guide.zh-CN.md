@@ -10,12 +10,13 @@
 | 看 1.0/1.1/1.2 的 ACK 头差异与边界拒绝 | `moon run examples/versions --target js` | 纯 MoonBit，有逐字节 golden |
 | 发布/订阅（topic 扇出、queue 分发） | `node examples/demo/01-pubsub.cjs` | 内置 demo broker |
 | 带 receipt 的可靠发送；receipt 丢失意味着什么 | `node examples/demo/02-reliable-send.cjs` | 内置 demo broker |
-| 手动 ACK / NACK | `node examples/demo/03-ack-nack.cjs` | NACK 是否重投由 broker 决定 |
-| 事务 BEGIN/COMMIT/ABORT | `node examples/demo/04-transaction.cjs` | 内置 demo broker |
+| 手动 ACK / NACK（Subscription 句柄） | `node examples/demo/03-ack-nack.cjs` | NACK 是否重投由 broker 决定 |
+| 事务 BEGIN/COMMIT/ABORT（Transaction 句柄） | `node examples/demo/04-transaction.cjs` | 内置 demo broker |
 | 心跳与对端静默检测 | `node examples/demo/05-heartbeat.cjs` | 内置 demo broker |
 | 同一套 API 跑 1.0/1.1/1.2 | `node examples/demo/06-versions.cjs` | 内置 demo broker |
+| 登录凭据与结构化错误（被拒绝时怎么判断） | `node examples/demo/07-auth-errors.cjs` | 内置 demo broker 开启凭据检查 |
 | 命令行发一条/收一条消息 | 见 §4 | `tools/stomp-cli.cjs` |
-| 对真实 broker 跑 | `node examples/1-tasks.cjs`（等） | 需要你自己的本地无凭据 STOMP broker，见 §5 |
+| 对真实 broker 跑 | `node examples/1-tasks.cjs`（等） | 需要你自己的本地 STOMP broker（Artemis 示例用匿名 broker；认证 broker 用 CLI 的 `--login`），见 §5 |
 
 所有 `examples/demo/*.cjs` 的输出与 `examples/demo/expected/*.txt` 逐字节比对，由 `python3 scripts/usability-test.py` 执行，也是 `scripts/verify.py` 的 `demos-and-cli` 阶段（CI 会跑）。
 
@@ -28,7 +29,7 @@
 ```js
 const {TcpClient} = require('./transport/tcp.cjs');
 const c = new TcpClient({host: '127.0.0.1', port: 61613});
-await c.connect({versions: ['1.2']});
+await c.connect({versions: ['1.2']});   // 需要认证时：connect({versions: ['1.2'], login: 'user', passcode: process.env.PASS})
 await c.receipt('SUBSCRIBE', [['id', 'w'], ['destination', '/queue/jobs']]);
 const incoming = c.waitFor(e => e.event === 'message');
 await c.receipt('SEND', [['destination', '/queue/jobs']], Buffer.from('hello'));
@@ -41,12 +42,17 @@ await c.disconnect();
 | 成员 | 行为 |
 |---|---|
 | `new TcpClient({host='127.0.0.1', port=61613, tickMs=25, maxQueue=1024, maxWaiters=256, maxQueueBytes=4 MiB})` | 参数非法立即抛错；一个实例只连一次 |
-| `connect({virtualHost='localhost', versions=['1.2'], heartbeat='1000,1000'})` | 提供 1–3 个版本；等 CONNECTED 最多 5 s；仅匿名。仅提供 `['1.0']` 时默认 `heartbeat` 为 `'0,0'` |
+| `connect({virtualHost='localhost', versions=['1.2'], heartbeat='1000,1000', login, passcode})` | 提供 1–3 个版本；等 CONNECTED 最多 5 s；`login`/`passcode` 省略时不发送，空字符串会发送，含 CR/LF/NUL 的值在打开 socket 前被拒绝。仅提供 `['1.0']` 时默认 `heartbeat` 为 `'0,0'` |
+| `new TcpClient({…, tlsOptions})` | `tlsOptions` 非 null 时用 Node `tls.connect`，必须校验证书（`rejectUnauthorized:false` 与传入已连接 socket 被拒）；自签 CA 用 `{ca}`，IP 以外的 host 自动作 SNI，可设 `servername`。**只在本机脚本 peer 上验证过** |
+| `await subscribe(destination, {id?, ack='auto', headers=[]})` | SUBSCRIBE receipt 后返回 Subscription：`next(timeout=5000)`、`ack(frame, {transaction?})`、`nack(…)`、`unsubscribe()`；`ack`/`nack` 只接受该句柄 `next` 返回的原 frame。1.0 下同 destination 的多订阅不保证区分 |
+| `await beginTransaction({id?})` | BEGIN receipt 后返回 Transaction：`send(destination, Uint8Array, headers)`、`commit()`、`abort()` |
 | `send(command, headers, body)` | 发后不管，无回执 |
 | `receipt(command, headers, body, id?)` | 自动加 `receipt` 头并等 RECEIPT（5 s）。**超时会关闭本连接**：结果未知，库不会替你重试 |
 | `waitFor(predicate, timeoutMs=5000)` | predicate 必须同步返回 Boolean；超时只拒绝该等待，连接保持 |
 | `disconnect()` / `stop()` | 带 receipt 的 DISCONNECT 后关闭 / 立即关闭 |
 | `state()` / `version()` | `fresh｜connecting｜active｜disconnecting｜closed` / 协商版本字符串 |
+
+错误：协议/参数/broker ERROR/句柄误用抛出带 `name`、`code`、`operation` 的错误（`STOMP_INVALID`、`STOMP_ARGUMENT`、`STOMP_BROKER_ERROR`（保留 `frame`）、`STOMP_HANDLE`）；超时、EOF、Node I/O 错误保持原样，不是所有错误都有 `code`。
 
 事件形状：`{event:'message', frame:{command, headers:[[k,v]], body:number[]}}`、`{event:'receipt', id}`、`{event:'heartbeat'}`、`{event:'error', frame}`。`frame.body` 是字节数组，用 `Buffer.from(frame.body)` 还原。
 
@@ -74,13 +80,14 @@ node tools/stomp-cli.cjs send --destination /queue/jobs --body 'hello 你好'   
 |---|---|
 | `send` | `--body TEXT｜--body-file F｜--body-hex HEX｜--stdin`、`--header k=v`（可重复）、`--no-receipt`、`--tx commit｜abort` |
 | `subscribe` | `--count N`、`--ack auto｜client｜client-individual`、`--nack-if SUBSTR`、`--timeout MS`、`--format text｜json` |
-| 通用 | `--host`（默认 127.0.0.1）、`--port`（默认 61613）、`--versions 1.0,1.1,1.2`、`--heartbeat cx,cy`、`--allow-remote` |
+| 通用 | `--host`（默认 127.0.0.1）、`--port`（默认 61613）、`--versions 1.0,1.1,1.2`、`--heartbeat cx,cy`、`--vhost NAME`、`--allow-remote` |
+| 认证与 TLS | `--login USER` 配 `--passcode-env VAR`（推荐）或 `--passcode PASS`（命令行对本机其他用户可见）；`--tls`、`--tls-ca FILE`、`--tls-servername NAME`（证书校验始终开启）；带登录的非回环连接必须 `--tls` |
 
-退出码：`0` 成功；`1` 运行失败（连接被拒、超时、broker ERROR、核心拒绝）；`2` 用法错误。非回环主机需 `--allow-remote`，且连接是明文、匿名的，本项目只在回环上测过。`--format json` 输出 `bodyHex`，二进制正文可无损取回。
+退出码：`0` 成功；`1` 运行失败（连接被拒、超时、broker ERROR、核心拒绝）；`2` 用法错误。非回环主机需 `--allow-remote`（带登录时还需 `--tls`），本项目只在回环上测过。认证失败时 stderr 显示错误类别和 broker 的原因（引号括起、限长），不回显口令。`--format json` 输出 `bodyHex`，二进制正文可无损取回。
 
 ## 5. 对真实 broker
 
-`examples/1-tasks.cjs`、`2-reliable.cjs`、`3-transactions.cjs` 与 CLI 都可指向你自己的本地 STOMP broker（默认 `127.0.0.1:61613`，环境变量 `STOMP_PORT` 可改端口，命令行用 `--port`）。本项目验证过的真实 broker 只有 Apache Artemis 2.57.0 的无认证、无持久化 profile；可复现的启动与验证命令见 [README](../README.md#真实-broker-复现) 与 [broker-plan](broker-plan.zh-CN.md)。
+`examples/1-tasks.cjs`、`2-reliable.cjs`、`3-transactions.cjs` 与 CLI 都可指向你自己的本地 STOMP broker（默认 `127.0.0.1:61613`，环境变量 `STOMP_PORT` 可改端口，命令行用 `--port`）。本项目验证过的真实 broker 有两个：Apache Artemis 2.57.0 的无认证、无持久化 profile，以及 Apache ActiveMQ Classic 6.3.2 的认证 profile（见 [broker-interop](broker-interop.zh-CN.md)）；可复现的启动与验证命令见 [README](../README.md#真实-broker-复现) 与 [broker-plan](broker-plan.zh-CN.md)。
 
 用 Docker 起一个 Artemis 只是常见做法，**本项目没有验证过任何 Docker 镜像**，所以不把它写成已验证路径；已验证路径是 `scripts/verify.py … --broker-archive` 那条（官方发行包 + 已有 Java 17，仅回环）。
 
