@@ -81,6 +81,12 @@ try:
     expect('cli --tx with --no-receipt exits 2', cli('send', '--destination', '/q', '--body', 'a', '--tx', 'commit', '--no-receipt'), 2)
     expect('cli odd hex exits 2', cli('send', '--destination', '/q', '--body-hex', 'abc'), 2, None, 'hex digits')
     expect('cli unknown option exits 2', cli('send', '--destination', '/q', '--body', 'a', '--bogus', '1'), 2, None, 'unknown option')
+    expect('cli connection refused explains what to do', node('tools/stomp-cli.cjs', 'send', '--port', 1, '--destination', '/q', '--body', 'a'), 1, None, 'no STOMP broker is listening on 127.0.0.1:1')
+    expect('cli connection refused names the offline demo', node('tools/stomp-cli.cjs', 'send', '--port', 1, '--destination', '/q', '--body', 'a'), 1, None, 'stomp-cli.cjs demo')
+    expect('cli listen is an alias of subscribe', (cli('send', '--destination', '/queue/t9', '--body', 'via-listen'), cli('listen', '--destination', '/queue/t9'))[1], 0, 'body="via-listen"')
+    demo_run = node('tools/stomp-cli.cjs', 'demo')
+    check('cli demo runs with no broker (exit 0)', demo_run.returncode == 0 and b'receipt=confirmed' in demo_run.stdout and b'body="hello from MoonSTOMP"' in demo_run.stdout and b'demo: ok' in demo_run.stdout, demo_run.stdout.decode()[:300] + demo_run.stderr.decode()[:300])
+    expect('cli demo rejects options (exit 2)', node('tools/stomp-cli.cjs', 'demo', '--port', 1), 2, None, 'demo takes no options')
     expect('missing bridge gives a one-line instruction (exit 1)', node('-e', "require('./tools/load-adapter.cjs').loadTcpClient('/nonexistent/bridge.js')"), 1, None, 'moon build --target js')
     expect('cli 1.0 + client-individual rejected by the core (exit 1)', cli('subscribe', '--destination', '/queue/t8', '--versions', '1.0', '--ack', 'client-individual', '--timeout', '300'), 1)
 finally:

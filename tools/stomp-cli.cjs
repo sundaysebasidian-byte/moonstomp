@@ -5,11 +5,13 @@
 // Plaintext, anonymous, numeric loopback by default; see README "Boundaries".
 const fs = require('node:fs');
 const TcpClient = require('./load-adapter.cjs').loadTcpClient();
+const {friendlyError} = require('./friendly-error.cjs');
 
 const USAGE = `usage:
+  stomp-cli demo      (no broker needed: starts the in-memory demo broker, sends one message, receives it, exits)
   stomp-cli send      --destination D (--body TEXT | --body-file F | --body-hex HEX | --stdin)
                       [--header k=v]... [--no-receipt] [--tx commit|abort]
-  stomp-cli subscribe --destination D [--count N] [--ack auto|client|client-individual]
+  stomp-cli subscribe --destination D   (alias: listen) [--count N] [--ack auto|client|client-individual]
                       [--nack-if SUBSTR] [--timeout MS] [--format text|json]
 common: [--host 127.0.0.1] [--port 61613] [--versions 1.0,1.1,1.2] [--heartbeat cx,cy]
         [--allow-remote]   (non-loopback host; connection is plaintext and anonymous)
@@ -17,7 +19,8 @@ exit codes: 0 ok, 1 failure, 2 usage`;
 
 class UsageError extends Error {}
 function parse(argv) {
-  const [command, ...rest] = argv;
+  let [command, ...rest] = argv;
+  if (command === 'listen') command = 'subscribe';
   if (!['send', 'subscribe'].includes(command)) throw new UsageError(command ? `unknown command ${command}` : 'missing command');
   const o = {command, headers: [], versions: ['1.2'], host: '127.0.0.1', port: 61613, count: 1, ack: 'auto', timeout: 5000, format: 'text', receipt: true};
   const flags = new Set(['--no-receipt', '--stdin', '--allow-remote']);
@@ -74,6 +77,19 @@ function ackHeaders(c, frame, subId) {
   return [['message-id', header(frame, 'message-id')]];
 }
 
+// Offline demonstration against the in-process demo broker (a test peer, not a real broker).
+async function demo() {
+  const {startDemoBroker} = require('./demo-broker.cjs');
+  const broker = await startDemoBroker({port: 0});
+  const common = {host: '127.0.0.1', port: broker.port, versions: ['1.2'], headers: [], count: 1, ack: 'auto', timeout: 5000, format: 'text', receipt: true, destination: '/queue/demo'};
+  console.log(`demo: in-process demo broker on 127.0.0.1:${broker.port} (a test peer, not a real broker)`);
+  try {
+    await run({...common, command: 'send', body: Buffer.from('hello from MoonSTOMP', 'utf8')});
+    await run({...common, command: 'subscribe'});
+    console.log('demo: ok');
+  } finally { await broker.close(); }
+}
+
 async function run(o) {
   const c = new TcpClient({host: o.host, port: o.port});
   try {
@@ -115,8 +131,13 @@ if (require.main === module) {
   let options;
   try {
     if (process.argv.includes('--help') || process.argv.length < 3) { console.log(USAGE); process.exit(process.argv.length < 3 ? 2 : 0); }
+    if (process.argv[2] === 'demo') {
+      if (process.argv.length > 3) throw new UsageError('demo takes no options');
+      demo().then(() => process.exit(0), e => { console.error('error: ' + e.message); process.exit(1); });
+      return;
+    }
     options = parse(process.argv.slice(2));
   } catch (e) { console.error((e instanceof UsageError ? 'usage error: ' : 'error: ') + e.message + '\n' + USAGE); process.exit(2); }
-  run(options).then(() => process.exit(0), e => { console.error('error: ' + e.message); process.exit(1); });
+  run(options).then(() => process.exit(0), e => { console.error('error: ' + friendlyError(e, options.host, options.port)); process.exit(1); });
 }
 module.exports = {parse, run, UsageError};
