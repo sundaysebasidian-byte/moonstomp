@@ -4,7 +4,7 @@
 // Exit codes: 0 success, 1 runtime failure (connect/timeout/broker error), 2 usage error.
 // Plaintext, anonymous, numeric loopback by default; see README "Boundaries".
 const fs = require('node:fs');
-const {TcpClient} = require('../transport/tcp.cjs');
+const TcpClient = require('./load-adapter.cjs').loadTcpClient();
 
 const USAGE = `usage:
   stomp-cli send      --destination D (--body TEXT | --body-file F | --body-hex HEX | --stdin)

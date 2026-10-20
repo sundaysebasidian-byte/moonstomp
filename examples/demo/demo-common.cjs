@@ -5,7 +5,7 @@
 // The demo broker is NOT interoperability evidence; see README "Evidence".
 const assert = require('node:assert/strict');
 const {startDemoBroker} = require('../../tools/demo-broker.cjs');
-const {TcpClient} = require('../../transport/tcp.cjs');
+const TcpClient = require('../../tools/load-adapter.cjs').loadTcpClient();
 
 const header = (frame, name) => frame.headers.find(h => h[0] === name)?.[1];
 const text = frame => Buffer.from(frame.body).toString('utf8');

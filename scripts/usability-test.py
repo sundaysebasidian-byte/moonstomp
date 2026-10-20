@@ -81,6 +81,7 @@ try:
     expect('cli --tx with --no-receipt exits 2', cli('send', '--destination', '/q', '--body', 'a', '--tx', 'commit', '--no-receipt'), 2)
     expect('cli odd hex exits 2', cli('send', '--destination', '/q', '--body-hex', 'abc'), 2, None, 'hex digits')
     expect('cli unknown option exits 2', cli('send', '--destination', '/q', '--body', 'a', '--bogus', '1'), 2, None, 'unknown option')
+    expect('missing bridge gives a one-line instruction (exit 1)', node('-e', "require('./tools/load-adapter.cjs').loadTcpClient('/nonexistent/bridge.js')"), 1, None, 'moon build --target js')
     expect('cli 1.0 + client-individual rejected by the core (exit 1)', cli('subscribe', '--destination', '/queue/t8', '--versions', '1.0', '--ack', 'client-individual', '--timeout', '300'), 1)
 finally:
     broker.terminate()
