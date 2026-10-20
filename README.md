@@ -25,17 +25,41 @@
 - 内置 demo broker 是测试对端，不是产品功能，也不是互通证据。
 - 只在 macOS arm64 + 锁定工具链上本地实测；候选未跑远端 CI；其他系统与工具版本未实测。
 
-完整的“已实现 / 已验证 / 拟实现”分栏、验证结果拆分和 go-stomp 逐项对照在 [docs/status-details.zh-CN.md](docs/status-details.zh-CN.md)；与 [go-stomp](https://github.com/go-stomp/stomp) 的对照也在那里（MoonSTOMP 不是 go-stomp 的功能等价物：它没有自己的 I/O 循环，也没有服务端和 TLS 选项）。边界与失败行为见 [docs/boundaries.zh-CN.md](docs/boundaries.zh-CN.md)。
+完整的“已实现 / 已验证 / 拟实现”分栏、验证结果拆分和 go-stomp 逐项对照在 [docs/status-details.zh-CN.md](docs/status-details.zh-CN.md)；与 [go-stomp](https://github.com/go-stomp/stomp) 的逐项对照（依据固定提交 `c155a2d…` 的源码）也在那里。摘要：
+
+| | go-stomp | MoonSTOMP 候选 |
+|---|---|---|
+| 协议版本 | 1.0 / 1.1 / 1.2 | 1.0 / 1.1 / 1.2 |
+| I/O 与定位 | 自带 I/O 与读写循环，另有 STOMP 服务端包 | 无 I/O 的编解码+会话核心，另有 Node TCP 适配器；不做服务端 |
+| 登录凭据 | 有 | **没有**（计划中） |
+| TLS | 库内无 TLS 代码，需调用者传入已加密连接 | **没有** |
+| 自动重连 | 没有 | 没有 |
+| 运行时 | Go | MoonBit（JS / Wasm GC 单测；TCP 适配器仅 Node） |
+
+MoonSTOMP 不是 go-stomp 的功能等价物，在登录凭据等方面更窄；互通测试中 go-stomp 的公共 API 被用作真实对端。边界与失败行为见 [docs/boundaries.zh-CN.md](docs/boundaries.zh-CN.md)。
 
 ## 30 秒上手（不需要 broker，不下载任何东西）
 
-需要已安装的 MoonBit 工具链（版本见 [toolchain.lock.json](toolchain.lock.json)：`moonc v0.10.14+7d59c7ec9`、`moon 0.1.20260920`）和 Node（已验证 v24.18.0）。
+**前置条件**
+
+| 要做什么 | 需要 |
+|---|---|
+| 跑示例和命令行 | 已安装的 MoonBit 工具链（`moonc v0.10.14+7d59c7ec9`、`moon 0.1.20260920`，见 [toolchain.lock.json](toolchain.lock.json)）+ Node（已验证 v24.18.0）。不需要 Python |
+| 跑 `scripts/usability-test.py` | Python 3（在 3.9 和 3.14 上实测通过） |
+| 跑 `scripts/verify.py`（全量验证） | **Python ≥ 3.11**（`scripts/downstream.py` 用了 `tomllib`；macOS 自带的 3.9 会失败）；实测 3.14.6 |
 
 ```sh
 cd moonstomp                              # 含 moon.mod 的本分支源码根目录（候选未推送，不在 GitHub 默认分支上）
 moon build --target js                    # 生成 Node 适配器要用的 bridge；忘了这步会得到一行提示
+node tools/stomp-cli.cjs demo             # 无需任何 broker：进程内起测试 broker，发一条再收一条，约 0.1 秒
+# 预期：demo: in-process demo broker on 127.0.0.1:<端口> (a test peer, not a real broker)
+#       sent destination=/queue/demo bytes=20 receipt=confirmed
+#       message destination=/queue/demo body="hello from MoonSTOMP"
+#       demo: ok
 node examples/demo/01-pubsub.cjs          # 预期最后一行：PASS pubsub
 ```
+
+连接被拒（broker 没启动）时，CLI 和示例会说明下一步该做什么，而不是只给 `ECONNREFUSED`。
 
 每个示例一条命令，退出码 0 表示通过，输出与 `examples/demo/expected/` 逐字节一致：
 
@@ -53,7 +77,7 @@ node examples/demo/01-pubsub.cjs          # 预期最后一行：PASS pubsub
 ```sh
 # 终端 1
 node tools/demo-broker.cjs --port 61613
-# 终端 2
+# 终端 2（subscribe 也可写作 listen）
 node tools/stomp-cli.cjs subscribe --port 61613 --destination /queue/jobs --count 1 &
 node tools/stomp-cli.cjs send      --port 61613 --destination /queue/jobs --body hello
 # send 默认等待 receipt；预期：sent destination=/queue/jobs bytes=5 receipt=confirmed
