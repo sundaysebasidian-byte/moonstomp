@@ -131,7 +131,7 @@ def main():
                 broker_command += ['--go-peer', str(args.go_peer.resolve())]
             run('real-broker', broker_command)
             report['go_stomp_interop'] = json.loads((out / 'broker/broker-tests.json').read_text())['go_stomp_interop']
-            report['real_broker'] = 'PASSED_ARTEMIS_2_57_PROFILE: 3 examples + 5 extended cases + 5 CLI cases; transaction ACK unsupported'
+            report['real_broker'] = 'PASSED_ARTEMIS_2_57_PROFILE: 3 examples + 5 extended cases + 7 CLI cases; transaction ACK unsupported'
         if inventory() != report['source_sha256']:
             raise RuntimeError('verification unexpectedly changed source files')
         report['overall'] = ('PASSED_WITH_ARTEMIS_PROFILE_LIMITATION_AND_UNTESTED_REMOTE_CI'
