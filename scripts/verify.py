@@ -99,6 +99,7 @@ def main():
             raise RuntimeError('Node differs from the verified version in toolchain.lock.json')
         run('runner-negative-controls', [sys.executable, '-E', 'scripts/broker-runner-test.py'])
         run('runner-negative-controls-optimized', [sys.executable, '-E', '-O', 'scripts/broker-runner-test.py'])
+        run('python-compatibility-controls', [sys.executable, '-E', '-m', 'unittest', 'discover', '-s', 'scripts', '-p', 'test_python_compat.py'])
         run('check-js', [moon, 'check', '--target', 'js', '-j', '1'])
         run('build-js', [moon, 'build', '--target', 'js', '-j', '1'])
         run('test-js', [moon, 'test', '--target', 'js', '-j', '1'])
@@ -115,10 +116,13 @@ def main():
         run('downstream', consumer_command)
         report['downstream'] = 'PASSED: independent module consumes local candidate archive; not Mooncakes'
         if args.transport:
+            run('loopback-authentication-headers', ['node', 'scripts/auth-transport-test.cjs'])
+            run('loopback-tls', ['node', 'scripts/tls-transport-test.cjs'])
+            run('loopback-handles', ['node', 'scripts/handles-test.cjs'])
             run('loopback-transport', ['node', 'scripts/transport-test.cjs'])
             run('loopback-transport-quality', ['node', 'scripts/transport-quality-test.cjs'])
             run('loopback-control-timeouts', ['node', 'scripts/transport-timeout-test.cjs'])
-            report['transport'] = 'PASSED: 10 lifecycle + 4 control/predicate/host + 6 three-version control-timeout cases, scripted loopback peers, not a broker'
+            report['transport'] = 'PASSED: credentials, scoped handles, TLS trust/hostname, 10 lifecycle + 4 control/predicate/host + 6 three-version control-timeout cases; scripted loopback peers, not a broker'
         if all(broker_args):
             broker_command = [sys.executable, 'scripts/broker-run.py',
                 '--archive', str(args.broker_archive.resolve()),

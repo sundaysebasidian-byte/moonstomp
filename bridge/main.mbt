@@ -11,11 +11,35 @@ extern "js" fn expose(
   close : (@stomp.Client) -> Unit,
   eof : (@stomp.Client) -> Bool,
   parse : (Bytes) -> Array[String],
+  acknowledge : (@stomp.Client, String, Bool, String, Int64) -> Bytes,
 ) -> Unit =
-  #| (create,state,version,send,receive,tick,close,eof,parse) => {
-  #| const wrap = f => (...args) => { try { return f(...args); } catch(e) { throw new Error('MoonSTOMP protocol error'); } };
-  #| globalThis.MoonSTOMP = {create, state, version, send:wrap((c,cmd,h,b,n) => send(c,cmd,JSON.stringify(h),b,n)), receive:wrap(receive), tick:wrap(tick), close, eof, parse:wrap(parse)};
+  #| (create,state,version,send,receive,tick,close,eof,parse,acknowledge) => {
+  #| const invalid = (operation, reason) => { const e = new Error(reason); e.name = 'MoonSTOMPArgumentError'; e.code = 'STOMP_ARGUMENT'; e.operation = operation; e.reason = reason; return e; };
+  #| const clock = (n, op) => { if (typeof n !== 'bigint' || n < 0n || n > 9223372036854775807n) throw invalid(op, 'clock must be a nonnegative Int64 bigint'); };
+  #| const bytes = (b, op) => { if (!(b instanceof Uint8Array)) throw invalid(op, 'body/chunk must be Uint8Array'); };
+  #| const headers = (h, op) => { if (!Array.isArray(h) || h.some(p => !Array.isArray(p) || p.length !== 2 || p.some(v => typeof v !== 'string'))) throw invalid(op, 'header pairs must be strings'); return JSON.stringify(h); };
+  #| globalThis.MoonSTOMP = {create, state, version, send:(c,cmd,h,b,n) => {
+  #|   if (typeof cmd !== 'string') throw invalid('send', 'command must be a string');
+  #|   bytes(b,'send'); clock(n,'send'); return send(c,cmd,headers(h,'send'),b,n);
+  #| }, receive:(c,b,n) => { bytes(b,'receive'); clock(n,'receive'); return receive(c,b,n); }, tick:(c,n) => { clock(n,'tick'); return tick(c,n); }, close, eof, parse:b => { bytes(b,'parse'); return parse(b); },
+  #| acknowledge:(c,h,negative,transaction,n) => { if (typeof negative !== 'boolean' || typeof transaction !== 'string') throw invalid('acknowledge', 'negative/transaction types invalid'); clock(n,'acknowledge'); return acknowledge(c,headers(h,'acknowledge'),negative,transaction,n); }};
   #| }
+
+///|
+extern "js" fn throw_protocol_error(
+  operation : String,
+  reason : String,
+) -> Unit =
+  #| (operation, reason) => { const e = new Error(reason); e.name = 'MoonSTOMPProtocolError'; e.code = 'STOMP_INVALID'; e.operation = operation; e.reason = reason; throw e; }
+
+///|
+fn[T] failed(operation : String, error : @stomp.ProtocolError) -> T {
+  match error {
+    @stomp.Invalid(reason) => throw_protocol_error(operation, reason)
+  }
+  // The JS FFI always throws. Keep the MoonBit return type total for all callers.
+  abort("unreachable after JS protocol error")
+}
 
 ///|
 fn frame_json(f : @stomp.Frame) -> String {
@@ -35,7 +59,7 @@ fn frame_json(f : @stomp.Frame) -> String {
 ///|
 fn main {
   expose(
-    () => @stomp.Client::new() catch { _ => abort("configuration") },
+    () => @stomp.Client::new() catch { error => failed("create", error) },
     c => {
       match c.state() {
         Fresh => "fresh"
@@ -45,17 +69,24 @@ fn main {
         Closed => "closed"
       }
     },
-    c => match c.version() {
-      Some(version) => version.wire()
-      None => ""
+    c => {
+      match c.version() {
+        Some(version) => version.wire()
+        None => ""
+      }
     },
     (c, command, headers, body, now) => {
-      c.send(@stomp.Frame::new(command, decode_headers(headers), body~), now) catch {
-        _ => abort("send")
+      c.send(
+        @stomp.Frame::new(command, decode_headers(headers, "send"), body~),
+        now,
+      ) catch {
+        error => failed("send", error)
       }
     },
     (c, chunk, now) => {
-      let events = c.receive(chunk, now) catch { _ => abort("receive") }
+      let events = c.receive(chunk, now) catch {
+        error => failed("receive", error)
+      }
       events.map(e => {
         match e {
           Connected => "{\"event\":\"connected\"}"
@@ -72,7 +103,7 @@ fn main {
         }
       })
     },
-    (c, now) => c.tick(now) catch { _ => abort("tick") },
+    (c, now) => c.tick(now) catch { error => failed("tick", error) },
     c => c.fail(),
     c => {
       try {
@@ -83,10 +114,10 @@ fn main {
       }
     },
     bytes => {
-      let d = @stomp.Decoder::new() catch { _ => abort("decoder") }
-      let events = d.feed(bytes) catch { _ => abort("decode") }
+      let d = @stomp.Decoder::new() catch { error => failed("parse", error) }
+      let events = d.feed(bytes) catch { error => failed("parse", error) }
       d.end() catch {
-        _ => abort("EOF")
+        error => failed("parse", error)
       }
       events.map(e => {
         match e {
@@ -95,12 +126,35 @@ fn main {
         }
       })
     },
+    (c, headers, negative, transaction, now) => {
+      let version = match c.version() {
+        Some(v) => v
+        None => {
+          throw_protocol_error("acknowledge", "client is not active")
+          abort("unreachable after JS protocol error")
+        }
+      }
+      try {
+        let frame = @stomp.acknowledge_message(
+          version,
+          @stomp.Frame::new("MESSAGE", decode_headers(headers, "acknowledge")),
+          negative~,
+          transaction~,
+        )
+        c.send(frame, now)
+      } catch {
+        error => failed("acknowledge", error)
+      }
+    },
   )
 }
 
 ///|
-fn decode_headers(text : String) -> Array[(String, String)] {
+fn decode_headers(text : String, operation : String) -> Array[(String, String)] {
   @json.from_json(@json.parse(text)) catch {
-    _ => abort("headers")
+    _ => {
+      throw_protocol_error(operation, "invalid header pair JSON")
+      abort("unreachable after JS protocol error")
+    }
   }
 }

@@ -12,9 +12,9 @@ pub fn acknowledge_message(Version, Frame, negative? : Bool, transaction? : Stri
 
 pub fn begin_transaction(String) -> Frame
 
-pub fn connect(String, heartbeat? : String) -> Frame
+pub fn connect(String, heartbeat? : String, login? : String, passcode? : String) -> Frame
 
-pub fn connect_versions(String, Array[Version], heartbeat? : String) -> Frame raise ProtocolError
+pub fn connect_versions(String, Array[Version], heartbeat? : String, login? : String, passcode? : String) -> Frame raise ProtocolError
 
 pub fn disconnect(String) -> Frame
 

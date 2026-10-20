@@ -1,11 +1,25 @@
 ///|
 /// Convenience constructors keep destinations opaque; broker semantics are external.
-pub fn connect(host : String, heartbeat? : String = "0,0") -> Frame {
-  Frame::new("CONNECT", [
+/// Omitted credentials stay absent; explicit empty strings are retained.
+/// CONNECT values are literal. encode/send validates forbidden delimiters.
+pub fn connect(
+  host : String,
+  heartbeat? : String = "0,0",
+  login? : String,
+  passcode? : String,
+) -> Frame {
+  let headers = [
     ("accept-version", "1.2"),
     ("host", host),
     ("heart-beat", heartbeat),
-  ])
+  ]
+  if login is Some(value) {
+    headers.push(("login", value))
+  }
+  if passcode is Some(value) {
+    headers.push(("passcode", value))
+  }
+  Frame::new("CONNECT", headers)
 }
 
 ///|
@@ -81,6 +95,8 @@ pub fn connect_versions(
   host : String,
   versions : Array[Version],
   heartbeat? : String = "0,0",
+  login? : String,
+  passcode? : String,
 ) -> Frame raise ProtocolError {
   if versions.is_empty() || versions.length() > 3 {
     raise Invalid("offer one to three versions")
@@ -91,14 +107,23 @@ pub fn connect_versions(
   }
   ignore(offered_versions(text))
   let (cx, cy) = heartbeat_pair(heartbeat)
+  let headers : Array[(String, String)] = []
   if versions == [V10] {
     if cx != 0 || cy != 0 {
       raise Invalid("STOMP 1.0 has no heartbeat negotiation")
     }
-    Frame::new("CONNECT", [])
   } else {
-    Frame::new("CONNECT", [("accept-version", text), ("host", host), ("heart-beat", heartbeat)])
+    headers.push(("accept-version", text))
+    headers.push(("host", host))
+    headers.push(("heart-beat", heartbeat))
   }
+  if login is Some(value) {
+    headers.push(("login", value))
+  }
+  if passcode is Some(value) {
+    headers.push(("passcode", value))
+  }
+  Frame::new("CONNECT", headers)
 }
 
 ///|
@@ -109,7 +134,9 @@ pub fn subscribe_versioned(
   id? : String = "",
   ack? : String = "auto",
 ) -> Frame raise ProtocolError {
-  if ack != "auto" && ack != "client" && (ack != "client-individual" || version == V10) {
+  if ack != "auto" &&
+    ack != "client" &&
+    (ack != "client-individual" || version == V10) {
     raise Invalid("invalid versioned acknowledgement mode")
   }
   let headers = [("destination", destination), ("ack", ack)]
