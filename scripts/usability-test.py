@@ -7,6 +7,7 @@ errors. A mutation self-test proves the golden comparison can fail.
 The demo broker is a test peer, not evidence of broker interoperability.
 """
 import json
+import os
 import re
 import subprocess
 import sys
@@ -21,8 +22,8 @@ def check(name, condition, detail=''):
     if not condition:
         failures.append(name)
 
-def node(*args, stdin=None, timeout=60):
-    return subprocess.run(['node', *map(str, args)], cwd=ROOT, input=stdin, capture_output=True, timeout=timeout)
+def node(*args, stdin=None, timeout=60, env=None):
+    return subprocess.run(['node', *map(str, args)], cwd=ROOT, input=stdin, capture_output=True, timeout=timeout, env=env)
 
 def golden_matches(actual, expected):
     return actual == expected
@@ -89,6 +90,36 @@ try:
     expect('cli demo rejects options (exit 2)', node('tools/stomp-cli.cjs', 'demo', '--port', 1), 2, None, 'demo takes no options')
     expect('missing bridge gives a one-line instruction (exit 1)', node('-e', "require('./tools/load-adapter.cjs').loadTcpClient('/nonexistent/bridge.js')"), 1, None, 'moon build --target js')
     expect('cli 1.0 + client-individual rejected by the core (exit 1)', cli('subscribe', '--destination', '/queue/t8', '--versions', '1.0', '--ack', 'client-individual', '--timeout', '300'), 1)
+
+    # 3. Credentials and structured errors against a demo broker that requires a login.
+    secured = subprocess.Popen(['node', 'tools/demo-broker.cjs', '--port', '0', '--login', 'alice', '--passcode', 'p@ss:word'], cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    try:
+        sport = int(re.search(r':(\d+) ', secured.stdout.readline()).group(1))
+        env = dict(os.environ, DEMO_PASSCODE='p@ss:word', WRONG_PASSCODE='not-the-passcode')
+        def scli(*args, env=env):
+            return node('tools/stomp-cli.cjs', *args, '--port', sport, env=env)
+        expect('cli login via --passcode-env sends and is confirmed', scli('send', '--destination', '/queue/a1', '--body', 'secret job', '--login', 'alice', '--passcode-env', 'DEMO_PASSCODE'), 0, 'receipt=confirmed')
+        expect('cli login receives with a literal colon in the passcode', scli('subscribe', '--destination', '/queue/a1', '--login', 'alice', '--passcode-env', 'DEMO_PASSCODE'), 0, 'body="secret job"')
+        expect('cli --passcode on the command line also works', scli('send', '--destination', '/queue/a2', '--body', 'x', '--login', 'alice', '--passcode', 'p@ss:word'), 0, 'receipt=confirmed')
+        for version in ('1.0', '1.1'):
+            expect(f'cli login under STOMP {version}', scli('send', '--destination', '/queue/a3', '--body', 'x', '--versions', version, '--login', 'alice', '--passcode-env', 'DEMO_PASSCODE'), 0, 'receipt=confirmed')
+        wrong = scli('send', '--destination', '/queue/a1', '--body', 'x', '--login', 'alice', '--passcode-env', 'WRONG_PASSCODE')
+        err = wrong.stderr.decode()
+        check('cli wrong passcode: exit 1, structured broker error', wrong.returncode == 1 and 'error: authentication failed' in err and 'name=MoonSTOMPBrokerError code=STOMP_BROKER_ERROR operation=receive' in err and 'broker frame: ERROR' in err and 'message: "authentication failed"' in err, f'exit={wrong.returncode} stderr={err[:400]!r}')
+        check('cli wrong passcode: hint names the credentials, passcode is not echoed', 'check --login' in err and 'not-the-passcode' not in err and 'p@ss:word' not in err, err[:400])
+        anonymous = scli('send', '--destination', '/queue/a1', '--body', 'x')
+        check('cli anonymous against a secured broker: exit 1 and says to pass --login', anonymous.returncode == 1 and 'code=STOMP_BROKER_ERROR' in anonymous.stderr.decode() and 'pass --login USER' in anonymous.stderr.decode(), anonymous.stderr.decode()[:400])
+    finally:
+        secured.terminate()
+        secured.wait(timeout=10)
+    expect('cli --login without a passcode exits 2', cli('send', '--destination', '/q', '--body', 'a', '--login', 'alice'), 2, None, 'go together')
+    expect('cli --passcode and --passcode-env together exit 2', cli('send', '--destination', '/q', '--body', 'a', '--login', 'a', '--passcode', 'b', '--passcode-env', 'PATH'), 2, None, 'either --passcode or --passcode-env')
+    expect('cli unset --passcode-env variable exits 2', cli('send', '--destination', '/q', '--body', 'a', '--login', 'a', '--passcode-env', 'MOONSTOMP_NOT_SET_XYZ'), 2, None, 'is not set')
+    expect('cli refuses a plaintext login to a remote host (exit 2)', cli('send', '--host', '192.0.2.1', '--allow-remote', '--destination', '/q', '--body', 'a', '--login', 'a', '--passcode', 'b'), 2, None, 'refusing to send a login over plaintext')
+    expect('cli --tls-ca without --tls exits 2', cli('send', '--destination', '/q', '--body', 'a', '--tls-ca', 'x.pem'), 2, None, 'need --tls')
+    expect('cli control characters in --login exit 2', cli('send', '--destination', '/q', '--body', 'a', '--login', 'a\nb', '--passcode', 'x'), 2, None, 'must not contain')
+    tls_run = node('scripts/cli-tls-test.cjs')
+    check('cli --tls against a scripted local TLS peer (trust, name check, no CONNECT on failure)', tls_run.returncode == 0 and b'PASS cli-tls' in tls_run.stdout, tls_run.stdout.decode()[-400:] + tls_run.stderr.decode()[-400:])
 finally:
     broker.terminate()
     broker.wait(timeout=10)

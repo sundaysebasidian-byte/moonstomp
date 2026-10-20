@@ -2,7 +2,7 @@
 'use strict';
 // moonstomp CLI: `send` and `subscribe` over the MoonBit-core TCP adapter.
 // Exit codes: 0 success, 1 runtime failure (connect/timeout/broker error), 2 usage error.
-// Plaintext, anonymous, numeric loopback by default; see README "Boundaries".
+// Plaintext and anonymous unless --login/--passcode-env/--tls are given; see README "Boundaries".
 const fs = require('node:fs');
 const TcpClient = require('./load-adapter.cjs').loadTcpClient();
 const {friendlyError} = require('./friendly-error.cjs');
@@ -13,17 +13,21 @@ const USAGE = `usage:
                       [--header k=v]... [--no-receipt] [--tx commit|abort]
   stomp-cli subscribe --destination D   (alias: listen) [--count N] [--ack auto|client|client-individual]
                       [--nack-if SUBSTR] [--timeout MS] [--format text|json]
-common: [--host 127.0.0.1] [--port 61613] [--versions 1.0,1.1,1.2] [--heartbeat cx,cy]
-        [--allow-remote]   (non-loopback host; connection is plaintext and anonymous)
+common: [--host 127.0.0.1] [--port 61613] [--versions 1.0,1.1,1.2] [--heartbeat cx,cy] [--vhost NAME]
+        [--login USER (--passcode-env VAR | --passcode PASS)]   (a passcode on the command line is visible to other local users)
+        [--tls [--tls-ca FILE] [--tls-servername NAME]]         (certificate verification is always on)
+        [--allow-remote]   (non-loopback host; needs --tls when a login is given)
 exit codes: 0 ok, 1 failure, 2 usage`;
 
 class UsageError extends Error {}
-function parse(argv) {
+const LOOPBACK = ['127.0.0.1', '::1', 'localhost'];
+function parse(argv, env = process.env) {
   let [command, ...rest] = argv;
   if (command === 'listen') command = 'subscribe';
   if (!['send', 'subscribe'].includes(command)) throw new UsageError(command ? `unknown command ${command}` : 'missing command');
   const o = {command, headers: [], versions: ['1.2'], host: '127.0.0.1', port: 61613, count: 1, ack: 'auto', timeout: 5000, format: 'text', receipt: true};
-  const flags = new Set(['--no-receipt', '--stdin', '--allow-remote']);
+  const flags = new Set(['--no-receipt', '--stdin', '--allow-remote', '--tls']);
+  let passcodeEnv;
   for (let i = 0; i < rest.length; i++) {
     const a = rest[i];
     if (!a.startsWith('--')) throw new UsageError(`unexpected argument ${a}`);
@@ -42,6 +46,13 @@ function parse(argv) {
       case '--port': o.port = Number(value); break;
       case '--versions': o.versions = value.split(','); break;
       case '--heartbeat': o.heartbeat = value; break;
+      case '--vhost': o.virtualHost = value; break;
+      case '--login': o.login = value; break;
+      case '--passcode': o.passcode = value; break;
+      case '--passcode-env': passcodeEnv = value; break;
+      case '--tls': o.tls = true; break;
+      case '--tls-ca': o.tlsCa = value; break;
+      case '--tls-servername': o.tlsServername = value; break;
       case '--count': o.count = Number(value); break;
       case '--ack': o.ack = value; break;
       case '--nack-if': o.nackIf = value; break;
@@ -53,7 +64,18 @@ function parse(argv) {
   }
   if (!o.destination) throw new UsageError('--destination is required');
   if (!Number.isInteger(o.port) || o.port < 1 || o.port > 65535) throw new UsageError('--port must be 1..65535');
-  if (!['127.0.0.1', '::1', 'localhost'].includes(o.host) && !o.remote) throw new UsageError('non-loopback host needs --allow-remote (plaintext, anonymous, untested)');
+  if (passcodeEnv !== undefined) {
+    if (o.passcode !== undefined) throw new UsageError('use either --passcode or --passcode-env, not both');
+    if (env[passcodeEnv] === undefined) throw new UsageError(`environment variable ${passcodeEnv} is not set`);
+    o.passcode = env[passcodeEnv];
+  }
+  if ((o.login === undefined) !== (o.passcode === undefined)) throw new UsageError('--login and a passcode (--passcode-env or --passcode) go together');
+  for (const [name, text] of [['--login', o.login], ['--passcode', o.passcode], ['--vhost', o.virtualHost]]) {
+    if (text !== undefined && /[\r\n\0]/.test(text)) throw new UsageError(`${name} must not contain CR, LF or NUL`);
+  }
+  if ((o.tlsCa !== undefined || o.tlsServername !== undefined) && !o.tls) throw new UsageError('--tls-ca and --tls-servername need --tls');
+  if (!LOOPBACK.includes(o.host) && !o.remote) throw new UsageError(`non-loopback host needs --allow-remote (${o.tls ? 'TLS is checked against --tls-ca or the system store' : 'plaintext'}; only a scripted local TLS peer has been tested)`);
+  if (!LOOPBACK.includes(o.host) && o.login !== undefined && !o.tls) throw new UsageError('refusing to send a login over plaintext to a non-loopback host; add --tls');
   if (!['auto', 'client', 'client-individual'].includes(o.ack)) throw new UsageError('--ack must be auto, client or client-individual');
   if (!['text', 'json'].includes(o.format)) throw new UsageError('--format must be text or json');
   if (!Number.isInteger(o.count) || o.count < 1) throw new UsageError('--count must be a positive integer');
@@ -70,12 +92,6 @@ function render(frame, format) {
   if (format === 'json') return JSON.stringify({destination: header(frame, 'destination'), messageId: header(frame, 'message-id'), headers: frame.headers, bodyUtf8: utf8, bodyHex: body.toString('hex')});
   return `message destination=${header(frame, 'destination')} body=${utf8 !== null ? JSON.stringify(utf8) : 'hex:' + body.toString('hex')}`;
 }
-function ackHeaders(c, frame, subId) {
-  const v = c.version();
-  if (v === '1.2') return [['id', header(frame, 'ack')]];
-  if (v === '1.1') return [['subscription', subId], ['message-id', header(frame, 'message-id')]];
-  return [['message-id', header(frame, 'message-id')]];
-}
 
 // Offline demonstration against the in-process demo broker (a test peer, not a real broker).
 async function demo() {
@@ -90,17 +106,26 @@ async function demo() {
   } finally { await broker.close(); }
 }
 
-async function run(o) {
-  const c = new TcpClient({host: o.host, port: o.port});
+function clientFor(o) {
+  const tlsOptions = o.tls ? {...(o.tlsCa ? {ca: fs.readFileSync(o.tlsCa)} : {}), ...(o.tlsServername ? {servername: o.tlsServername} : {})} : null;
+  return new TcpClient({host: o.host, port: o.port, tlsOptions});
+}
+
+// `state.connecting` tells main() whether an error happened before the broker accepted CONNECT.
+async function run(o, state = {}) {
+  const c = clientFor(o);
+  state.connecting = true;
   try {
-    await c.connect({versions: o.versions, ...(o.heartbeat ? {heartbeat: o.heartbeat} : {})});
+    await c.connect({versions: o.versions,
+      ...(o.heartbeat ? {heartbeat: o.heartbeat} : {}), ...(o.virtualHost !== undefined ? {virtualHost: o.virtualHost} : {}),
+      ...(o.login !== undefined ? {login: o.login, passcode: o.passcode} : {})});
+    state.connecting = false;
     if (o.command === 'send') {
       const headers = [['destination', o.destination], ...o.headers];
       if (o.tx) {
-        const t = 'cli-tx';
-        await c.receipt('BEGIN', [['transaction', t]]);
-        await c.receipt('SEND', [...headers, ['transaction', t]], o.body);
-        await c.receipt(o.tx === 'commit' ? 'COMMIT' : 'ABORT', [['transaction', t]]);
+        const tx = await c.beginTransaction();
+        tx.send(o.destination, o.body, o.headers);
+        await (o.tx === 'commit' ? tx.commit() : tx.abort());
         console.log(`sent destination=${o.destination} bytes=${o.body.length} tx=${o.tx}`);
       } else if (o.receipt) {
         await c.receipt('SEND', headers, o.body);
@@ -110,18 +135,17 @@ async function run(o) {
         console.log(`sent destination=${o.destination} bytes=${o.body.length} receipt=not-requested`);
       }
     } else {
-      const subId = 'cli-sub';
-      await c.receipt('SUBSCRIBE', [['id', subId], ['destination', o.destination], ['ack', o.ack]]);
+      const sub = await c.subscribe(o.destination, {ack: o.ack});
       for (let n = 0; n < o.count; n++) {
-        const frame = (await c.waitFor(e => e.event === 'message', o.timeout)).frame;
+        const frame = await sub.next(o.timeout);
         console.log(render(frame, o.format));
         if (o.ack !== 'auto') {
           const reject = o.nackIf !== undefined && Buffer.from(frame.body).toString('utf8').includes(o.nackIf);
-          await c.receipt(reject ? 'NACK' : 'ACK', ackHeaders(c, frame, subId));
+          if (reject) sub.nack(frame); else sub.ack(frame);
           console.error(reject ? 'nack' : 'ack');
         }
       }
-      await c.receipt('UNSUBSCRIBE', [['id', subId]]);
+      await sub.unsubscribe();
     }
     await c.disconnect();
   } finally { c.stop(); }
@@ -138,6 +162,10 @@ if (require.main === module) {
     }
     options = parse(process.argv.slice(2));
   } catch (e) { console.error((e instanceof UsageError ? 'usage error: ' : 'error: ') + e.message + '\n' + USAGE); process.exit(2); }
-  run(options).then(() => process.exit(0), e => { console.error('error: ' + friendlyError(e, options.host, options.port)); process.exit(1); });
+  const state = {};
+  run(options, state).then(() => process.exit(0), e => {
+    console.error('error: ' + friendlyError(e, options.host, options.port, {connecting: state.connecting, credentials: options.login !== undefined}));
+    process.exit(1);
+  });
 }
 module.exports = {parse, run, UsageError};
