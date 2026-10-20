@@ -41,6 +41,14 @@ def validate_extended(result):
     if result.get('passed') is not True or result.get('compatible_cases') != 5:
         raise RuntimeError('extended broker test evidence did not pass all five compatible cases')
 
+def extract_archive(bundle, destination):
+    """Strict regular-file/directory extraction, also available on Python 3.9."""
+    for member in bundle.getmembers():
+        path = Path(member.name)
+        if path.is_absolute() or '..' in path.parts or '\\' in member.name or not (member.isdir() or member.isfile()):
+            raise RuntimeError('unsafe broker archive member')
+    bundle.extractall(destination)
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--archive',type=Path,required=True)
@@ -85,7 +93,7 @@ def main():
         if not major or int(major.group(1)) < 17:raise RuntimeError('Apache Artemis 2.57.0 requires Java 17 or above')
         report['java_requirement_source']='https://artemis.apache.org/components/artemis/download/release-notes-2.57.0'
         report['java_major']=int(major.group(1))
-        with tarfile.open(archive) as bundle:bundle.extractall(temporary,filter='data')
+        with tarfile.open(archive) as bundle:extract_archive(bundle, temporary)
         home=temporary/'apache-artemis-2.57.0'
         instance=temporary/'instance'
         # Refuse to share or stop any preexisting listener.

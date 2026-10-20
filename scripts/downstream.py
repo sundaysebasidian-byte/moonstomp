@@ -10,10 +10,35 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
-import tomllib
+try:
+    import tomllib
+except ImportError:
+    tomllib = None
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
+
+def manifest_identity(text):
+    """Only name/version are needed. Legacy Python reads their literal prefix."""
+    if tomllib is not None:
+        metadata = tomllib.loads(text)
+        return metadata['name'], metadata['version']
+    found = {}
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith('[') or stripped.startswith('import '):
+            break
+        match = re.match(r'\s*(name|version)\s*=\s*("(?:[^"\\]|\\.)*")\s*(?:#.*)?$', line)
+        if match:
+            key, value = match.groups()
+            if key in found:
+                raise RuntimeError('duplicate manifest identity field')
+            found[key] = json.loads(value)
+        elif re.match(r'\s*(name|version)\s*=', line):
+            raise RuntimeError('Python <3.11 requires literal double-quoted name/version')
+    if set(found) != {'name', 'version'} or not all(isinstance(v, str) and v for v in found.values()):
+        raise RuntimeError('missing or empty manifest identity')
+    return found['name'], found['version']
 
 def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -55,8 +80,7 @@ def main():
         if completed.returncode:
             raise RuntimeError(name+' failed; see original log')
     try:
-        metadata = tomllib.loads((ROOT / 'moon.mod').read_text())
-        module, version = metadata['name'], metadata['version']
+        module, version = manifest_identity((ROOT / 'moon.mod').read_text())
         report['candidate_module'] = module
         report['candidate_version'] = version
         run('local-package', [moon, 'package', '--frozen'], ROOT)
@@ -101,9 +125,12 @@ def main():
         run('candidate-js-bridge', ['node','scripts/bridge-test.cjs'], candidate)
         report['node_adapter'] = 'PASSED: generated bridge and loaded adapter from actual candidate archive; no prebuilt JS distributed'
         if args.transport:
+            run('candidate-authentication-headers', ['node','scripts/auth-transport-test.cjs'], candidate)
+            run('candidate-handles', ['node','scripts/handles-test.cjs'], candidate)
+            run('candidate-tls', ['node','scripts/tls-transport-test.cjs'], candidate)
             run('candidate-loopback-quality', ['node','scripts/transport-quality-test.cjs'], candidate)
             run('candidate-control-timeouts', ['node','scripts/transport-timeout-test.cjs'], candidate)
-            report['node_adapter_transport'] = 'PASSED: 4 packaged-adapter boundaries + 6 three-version control-timeout cases with actual loopback sockets, not a broker'
+            report['node_adapter_transport'] = 'PASSED: packaged credentials, scoped handles, TLS trust/hostname, 4 adapter boundaries and 6 three-version control-timeout cases; real loopback sockets, scripted peers, not a broker'
         if report['candidate_source_sha256'] != {str(p.relative_to(candidate)):digest(p)
                 for p in sorted(candidate.rglob('*')) if p.is_file() and '_build' not in p.relative_to(candidate).parts and '.moon' not in p.relative_to(candidate).parts}:
             raise RuntimeError('candidate source unexpectedly changed')
