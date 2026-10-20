@@ -32,8 +32,8 @@
 需要已安装的 MoonBit 工具链（版本见 [toolchain.lock.json](toolchain.lock.json)：`moonc v0.10.14+7d59c7ec9`、`moon 0.1.20260920`）和 Node（已验证 v24.18.0）。
 
 ```sh
-git clone https://github.com/sundaysebasidian-byte/moonstomp && cd moonstomp
-moon build --target js                    # 生成 Node 适配器要用的 bridge
+cd moonstomp                              # 含 moon.mod 的本分支源码根目录（候选未推送，不在 GitHub 默认分支上）
+moon build --target js                    # 生成 Node 适配器要用的 bridge；忘了这步会得到一行提示
 node examples/demo/01-pubsub.cjs          # 预期最后一行：PASS pubsub
 ```
 
