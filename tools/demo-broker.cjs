@@ -4,7 +4,9 @@
 // CI. It is NOT a conformance reference and NOT evidence of broker
 // interoperability (use the Artemis/go-stomp runner for that). It exists so every
 // example can run with one command and no external download.
-// Scope: loopback only, anonymous, in-memory, no TLS, no persistence.
+// Scope: loopback only, in-memory, no TLS, no persistence. Anonymous unless started
+// with `credentials` (then CONNECT must carry the exact login/passcode, otherwise an
+// ERROR frame is returned) - a test peer for the client's authentication path only.
 // Parsing is deliberately independent of the MoonBit codec under test.
 const net = require('node:net');
 
@@ -73,8 +75,9 @@ const header = (frame, name) => frame.headers.find(h => h[0] === name)?.[1];
 
 // options: heartbeat 'cx,cy' offered by broker (default '0,0'); nack 'requeue'|'discard';
 // swallowReceipts: never answer receipt requests (demo of unknown outcome);
-// silentAfterConnect: stop all output after CONNECTED (demo of dead-peer detection).
-async function startDemoBroker({port = 0, host = '127.0.0.1', heartbeat = '0,0', nack = 'requeue', swallowReceipts = false, silentAfterConnect = false, versions = ['1.0', '1.1', '1.2']} = {}) {
+// silentAfterConnect: stop all output after CONNECTED (demo of dead-peer detection);
+// credentials {login, passcode}: require them on CONNECT (default: anonymous).
+async function startDemoBroker({port = 0, host = '127.0.0.1', heartbeat = '0,0', nack = 'requeue', swallowReceipts = false, silentAfterConnect = false, versions = ['1.0', '1.1', '1.2'], credentials = null} = {}) {
   if (host !== '127.0.0.1' && host !== '::1') throw new Error('demo broker is loopback only');
   const queues = new Map();   // destination -> {pending: [], subs: [], next: 0}
   const sessions = new Set();
@@ -146,6 +149,10 @@ async function startDemoBroker({port = 0, host = '127.0.0.1', heartbeat = '0,0',
       const offered = (header(frame, 'accept-version') || '1.0').split(',');
       const common = versions.filter(v => offered.includes(v));
       if (!common.length) { s.write('ERROR', [['version', versions.join(',')], ['message', 'unsupported version']], Buffer.from('supported versions: ' + versions.join(','))); s.socket.end(); return; }
+      if (credentials && (header(frame, 'login') !== credentials.login || header(frame, 'passcode') !== credentials.passcode)) {
+        s.write('ERROR', [['message', 'authentication failed'], ['content-type', 'text/plain']], Buffer.from('login or passcode rejected by the demo broker'));
+        s.socket.end(); return;
+      }
       s.version = common[common.length - 1]; s.connected = true;
       const headers = [['version', s.version]];
       if (s.version !== '1.0') {
@@ -233,10 +240,12 @@ if (require.main === module) {
   const args = process.argv.slice(2);
   const opt = (name, fallback) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : fallback; };
   if (args.includes('--help')) {
-    console.log('usage: node tools/demo-broker.cjs [--port 61613] [--heartbeat 0,0] [--nack requeue|discard]\nIn-memory loopback STOMP demo broker; not a conformance reference.');
+    console.log('usage: node tools/demo-broker.cjs [--port 61613] [--heartbeat 0,0] [--nack requeue|discard]\n                                  [--login USER --passcode PASS]\nIn-memory loopback STOMP demo broker; not a conformance reference. Anonymous unless --login/--passcode are given.');
     process.exit(0);
   }
-  startDemoBroker({port: Number(opt('--port', '61613')), heartbeat: opt('--heartbeat', '0,0'), nack: opt('--nack', 'requeue')}).then(b => {
+  const login = opt('--login'), passcode = opt('--passcode');
+  if ((login === undefined) !== (passcode === undefined)) { console.error('--login and --passcode go together'); process.exit(2); }
+  startDemoBroker({port: Number(opt('--port', '61613')), heartbeat: opt('--heartbeat', '0,0'), nack: opt('--nack', 'requeue'), ...(login !== undefined ? {credentials: {login, passcode}} : {})}).then(b => {
     console.log(`demo broker listening on ${b.host}:${b.port} (Ctrl-C to stop)`);
     process.on('SIGINT', () => b.close().then(() => process.exit(0)));
     process.on('SIGTERM', () => b.close().then(() => process.exit(0)));
