@@ -32,12 +32,17 @@ def main():
     parser.add_argument('--broker-checksum', type=Path, help='Official SHA512 file for the archive')
     parser.add_argument('--broker-java-home', type=Path, help='Existing Java 17+ home for the optional local broker')
     parser.add_argument('--broker-port', type=int, default=61613, help='Unused loopback port for the optional local broker')
+    parser.add_argument('--classic-home', type=Path, help='Optional unpacked official ActiveMQ Classic 6.3.2 directory (authenticated second broker); needs --classic-java-home')
+    parser.add_argument('--classic-java-home', type=Path, help='Existing Java 17+ home for the optional Classic broker')
+    parser.add_argument('--classic-port', type=int, default=61614, help='Unused loopback port for the optional Classic broker')
     args = parser.parse_args()
     broker_args = [args.broker_archive, args.broker_checksum, args.broker_java_home]
     if any(broker_args) and not all(broker_args):
         parser.error('provide all three broker arguments or none')
     if args.go_peer and not all(broker_args):
         parser.error('--go-peer requires all three broker arguments')
+    if bool(args.classic_home) != bool(args.classic_java_home):
+        parser.error('provide both --classic-home and --classic-java-home or neither')
     out = args.output.resolve()
     if out == ROOT or ROOT in out.parents:
         parser.error('--output must be outside the source tree')
@@ -53,16 +58,17 @@ def main():
               'python': sys.version, 'moon_bin': moon, 'moon_home': env.get('MOON_HOME'),
               'source_sha256': inventory(), 'stages': [], 'overall': 'FAILED',
               'transport': 'NOT TESTED', 'real_broker': 'NOT RUN IN THIS INVOCATION: optional local broker arguments required',
+              'real_broker_classic': 'NOT RUN IN THIS INVOCATION: --classic-home/--classic-java-home required',
               'remote_ci': 'NOT TESTED', 'mooncakes_publication': 'NOT DONE'}
     if (ROOT / '.git').exists():
         report['git_head'] = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
         report['git_status'] = subprocess.check_output(['git', 'status', '--short'], cwd=ROOT, text=True)
-    def run(name, command):
+    def run(name, command, timeout=180):
         begin = time.monotonic()
         stage = {'name': name, 'command': command, 'status': 'FAILED'}
         report['stages'].append(stage)
         print('RUN', name, flush=True)
-        result = subprocess.run(command, cwd=ROOT, env=env, capture_output=True, timeout=180)
+        result = subprocess.run(command, cwd=ROOT, env=env, capture_output=True, timeout=timeout)
         (out / (name + '.stdout.txt')).write_bytes(result.stdout)
         (out / (name + '.stderr.txt')).write_bytes(result.stderr)
         stage.update(exit_code=result.returncode, seconds=round(time.monotonic()-begin, 3),
@@ -107,7 +113,7 @@ def main():
         run('offline-example', [moon, 'run', 'examples/offline', '--target', 'js', '-j', '1'])
         run('versions-example', [sys.executable, '-E', 'scripts/versions-example-test.py'])
         run('demos-and-cli', [sys.executable, '-E', 'scripts/usability-test.py'])
-        report['demos_and_cli'] = 'PASSED: 6 demos (golden output) + CLI send/subscribe cases against the built-in demo broker; test peer, not broker interoperability evidence'
+        report['demos_and_cli'] = 'PASSED: 7 demos (golden output) + CLI send/subscribe/login/TLS/error cases against the built-in demo broker and a scripted local TLS peer; test peers, not broker interoperability evidence'
         run('js-bridge', ['node', 'scripts/bridge-test.cjs'])
         run('differential', ['node', 'scripts/differential.cjs'])
         consumer_command = [sys.executable, 'scripts/downstream.py', '--output', str(out / 'downstream')]
@@ -136,10 +142,20 @@ def main():
             run('real-broker', broker_command)
             report['go_stomp_interop'] = json.loads((out / 'broker/broker-tests.json').read_text())['go_stomp_interop']
             report['real_broker'] = 'PASSED_ARTEMIS_2_57_PROFILE: 3 examples + 5 extended cases + 7 CLI cases; transaction ACK unsupported'
+        if args.classic_home:
+            run('real-broker-classic', [sys.executable, 'scripts/classic-run.py',
+                '--home', str(args.classic_home.resolve()), '--java-home', str(args.classic_java_home.resolve()),
+                '--output', str(out / 'classic'), '--port', str(args.classic_port)], timeout=400)
+            report['classic_interop'] = json.loads((out / 'classic/classic.json').read_text())['interop']
+            report['real_broker_classic'] = 'PASSED_CLASSIC_6_3_2_AUTHENTICATED_PROFILE: wrong password rejected; STOMP 1.0/1.1/1.2 binary send/receive, versioned ACK/NACK, transactional SEND commit/abort; transactional ACK not tested'
         if inventory() != report['source_sha256']:
             raise RuntimeError('verification unexpectedly changed source files')
-        report['overall'] = ('PASSED_WITH_ARTEMIS_PROFILE_LIMITATION_AND_UNTESTED_REMOTE_CI'
-            if all(broker_args) else 'PASSED_WITH_BROKER_NOT_RUN_AND_UNTESTED_REMOTE_CI')
+        if all(broker_args):
+            report['overall'] = 'PASSED_WITH_ARTEMIS_PROFILE_LIMITATION_AND_UNTESTED_REMOTE_CI'
+        elif args.classic_home:
+            report['overall'] = 'PASSED_WITH_CLASSIC_ONLY_AND_UNTESTED_REMOTE_CI'
+        else:
+            report['overall'] = 'PASSED_WITH_BROKER_NOT_RUN_AND_UNTESTED_REMOTE_CI'
     except Exception as error:
         report['error'] = str(error)
     finally:
