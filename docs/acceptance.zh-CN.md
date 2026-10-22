@@ -1,5 +1,7 @@
 # MoonSTOMP 源码与验证矩阵
 
+**阅读范围（2026-10-22）**：下表及旧候选补充为历史记录，不是当前 Linux 私有包的支持声明。最新可审阅提交材料见 [提交准备](submission-preparation.zh-CN.md)，逐项命令/失败见 [Linux 审计](linux-audit-20261022.zh-CN.md)。本轮 JS 核心70/70、源码ZIP消费者6/6、真实Classic TCP/TLS通过；普通Wasm/Wasm GC控制失败、native缺runtime、正式package缺mooncake。当前候选未发布，有限测试不能保证无bug或竞赛验收。
+
 源码版本 0.1.2；0.1.2 正式发布及新版独立安装状态见 publication-0.1.2.zh-CN.md。最新源码同步及准确 SHA/CI 记录见 source-sync-0.1.2.zh-CN.md。本矩阵报告工程证据，不代表赛事已经验收。
 
 | 要求 | 当前事实 | 边界 |

@@ -24,7 +24,10 @@ async function check(version, operation) {
     await assert.rejects(c.waitFor(e=>e.event==='message',10),/event timeout/);
     assert.equal(c.state(),'active'); // ordinary observer timeout must not close
     const other=c.waitFor(()=>false,10000);other.catch(()=>{});
-    await assert.rejects(operation==='DISCONNECT'?c.disconnect():c.receipt('SEND',[['destination','tasks']]),/event timeout/);
+    await assert.rejects(operation==='DISCONNECT'?c.disconnect():c.receipt('SEND',[['destination','tasks']]), error =>
+      error.code === 'STOMP_RECEIPT_TIMEOUT' && error.operation === operation &&
+      typeof error.receiptId === 'string' && error.outcomeUnknown === true &&
+      error.cause.code === 'STOMP_EVENT_TIMEOUT');
     assert.equal(c.state(),'closed');
     await assert.rejects(other,/event timeout|closed/);
     assert.equal(c.waiters.length,0);assert.equal(c.queue.length,0);assert.equal(c.queueBytes,0);

@@ -13,11 +13,13 @@ demo('reliable-send', async ctx => {
   await c.disconnect();
 
   const mute = await ctx.broker({swallowReceipts: true});
-  const d = new TcpClient({port: mute.port});
+  const d = new TcpClient({port: mute.port, controlTimeoutMs: 400});
   await d.connect({heartbeat: '0,0'});
-  // The default receipt wait is 5 s; shrink it only for this demo by waiting on the same condition directly.
-  d.send('SEND', [['destination', '/queue/orders'], ['receipt', 'lost-1']], Buffer.from('order-2'));
-  await assert.rejects(d.waitFor(e => e.event === 'receipt' && e.id === 'lost-1', 400), /event timeout/);
+  // Use the public receipt API: a missing control receipt retires the session.
+  await assert.rejects(d.receipt('SEND', [['destination', '/queue/orders']], Buffer.from('order-2'), 'lost-1'),
+    error => error.code === 'STOMP_RECEIPT_TIMEOUT' && error.receiptId === 'lost-1' && error.outcomeUnknown);
+  assert.equal(d.state(), 'closed');
+  assert.equal(mute.pending('/queue/orders'), 1); // accepted by this demo peer, but not confirmed to the caller
   say('unconfirmed no RECEIPT within 400 ms: outcome unknown, the library never retries for you');
   d.stop();
 });

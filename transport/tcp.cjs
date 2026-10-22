@@ -3,12 +3,16 @@
 const net = require('node:net');
 const tls = require('node:tls');
 const {performance} = require('node:perf_hooks');
+const {transportError, receiptFailure} = require('./errors.cjs');
 const {Subscription, Transaction, extraHeaders, handleError} = require('./handles.cjs');
 require('../_build/js/debug/build/bridge/bridge.js');
 const protocol = globalThis.MoonSTOMP;
 class TcpClient {
-  constructor({host = '127.0.0.1', port = 61613, tickMs = 25, maxQueue = 1024, maxWaiters = 256, maxQueueBytes = 4*1024*1024, tlsOptions = null} = {}) {
+  #writeSequence = 0n;
+  constructor({host = '127.0.0.1', port = 61613, tickMs = 25, maxQueue = 1024, maxWaiters = 256, maxQueueBytes = 4*1024*1024, tlsOptions = null, controlTimeoutMs = 5000} = {}) {
     if (typeof host !== 'string' || !host.trim().length || !Number.isInteger(port) || port < 1 || port > 65535 || !Number.isInteger(tickMs) || tickMs < 1 || tickMs > 2147483647 || !Number.isInteger(maxQueue) || maxQueue < 1 || !Number.isInteger(maxWaiters) || maxWaiters < 1 || !Number.isInteger(maxQueueBytes) || maxQueueBytes < 1) throw new Error('invalid TCP configuration');
+    if (!Number.isInteger(controlTimeoutMs) || controlTimeoutMs < 1 || controlTimeoutMs > 2147483647) throw new Error('invalid control timeout');
+    Object.defineProperty(this, 'controlTimeoutMs', {value: controlTimeoutMs, enumerable: true});
     this.options = {host, port};
     if (tlsOptions !== null && (typeof tlsOptions !== 'object' || Array.isArray(tlsOptions) || tlsOptions.rejectUnauthorized === false || tlsOptions.socket !== undefined)) throw new Error('invalid TLS configuration; certificate verification is required');
     this.tlsOptions = tlsOptions === null ? null : {...tlsOptions};
@@ -23,7 +27,7 @@ class TcpClient {
     if (error && !this.error) this.error = error;
     clearInterval(this.timer); this.timer = null;
     protocol.close(this.core);
-    for (const w of this.waiters.splice(0)) { w.cleanup(); w.reject(this.error || new Error('connection closed')); }
+    for (const w of this.waiters.splice(0)) { w.cleanup(); w.reject(this.error || transportError('STOMP_CONNECTION_CLOSED', 'connection closed')); }
     this.queue.length = 0; this.queueBytes = 0;
     if (this.socket && !this.socket.destroyed) this.socket.destroy();
   }
@@ -63,13 +67,13 @@ class TcpClient {
       this.queueBytes -= Buffer.byteLength(JSON.stringify(event));
       return Promise.resolve(event);
     }
-    if (this.error || this.state() === 'closed') return Promise.reject(this.error || new Error('connection closed'));
+    if (this.error || this.state() === 'closed') return Promise.reject(this.error || transportError('STOMP_CONNECTION_CLOSED', 'connection closed'));
     if (this.waiters.length >= this.maxWaiters) return Promise.reject(new Error('waiter limit'));
     return new Promise((resolve,reject) => {
       const w = {predicate, resolve, reject};
       const cancel = () => { this.waiters = this.waiters.filter(x => x !== w); w.cleanup(); reject(handleError('subscription closed')); };
       w.cleanup = () => { clearTimeout(w.timer); signal?.removeEventListener('abort', cancel); };
-      w.timer = setTimeout(() => { this.waiters = this.waiters.filter(x => x !== w); w.cleanup(); reject(new Error('event timeout')); }, timeout);
+      w.timer = setTimeout(() => { this.waiters = this.waiters.filter(x => x !== w); w.cleanup(); reject(transportError('STOMP_EVENT_TIMEOUT', 'event timeout', {operation: 'waitFor'})); }, timeout);
       signal?.addEventListener('abort', cancel, {once: true});
       // Dedicated handshake/receipt waits own their control events before generic
       // waitFor predicates; ordinary waits retain first-matching registration order.
@@ -79,6 +83,7 @@ class TcpClient {
   write(bytes) {
     if (!bytes.length) return;
     if (!this.socket || this.socket.destroyed || this.socket.writableLength + bytes.length > 2*1024*1024) throw new Error('transport unavailable or write buffer limit');
+    this.#writeSequence++; // The command may reach the peer after this boundary.
     this.socket.write(bytes, error => { if (error) this.stop(error); });
   }
   send(command, headers = [], body = Buffer.alloc(0)) {
@@ -130,9 +135,13 @@ class TcpClient {
       } catch(e) { this.stop(e); }
     });
     this.socket.on('error', e => this.stop(e));
-    this.socket.on('end', () => this.stop(new Error(protocol.eof(this.core) ? 'peer EOF' : 'truncated STOMP stream')));
+    this.socket.on('end', () => {
+      const complete = protocol.eof(this.core);
+      this.stop(transportError(complete ? 'STOMP_PEER_EOF' : 'STOMP_TRUNCATED_STREAM',
+        complete ? 'peer EOF' : 'truncated STOMP stream', {operation: 'receive'}));
+    });
     this.socket.on('close', () => this.stop());
-    const connected = this._waitFor(e => e.event === 'connected', 5000, true);
+    const connected = this._waitFor(e => e.event === 'connected', this.controlTimeoutMs, true);
     // Consume rejection even when the socket fails before CONNECT is sent.
     connected.catch(() => {});
     this.socket.once(this.tlsOptions === null ? 'connect' : 'secureConnect', () => {
@@ -140,7 +149,11 @@ class TcpClient {
       catch(e) { this.stop(e); }
     });
     try { await connected; }
-    catch(e) { this.stop(e); throw e; }
+    catch(e) {
+      const error = e.code === 'STOMP_EVENT_TIMEOUT' ? transportError('STOMP_CONNECT_TIMEOUT',
+        'CONNECT timeout', {operation: 'CONNECT'}, e) : e;
+      this.stop(error); throw error;
+    }
     if (this.state() !== 'active' || this.socket.destroyed) {
       const error = this.error || new Error('connection closed during negotiation');
       this.stop(error); throw error;
@@ -151,22 +164,28 @@ class TcpClient {
     return this;
   }
   async receipt(command, headers = [], body = Buffer.alloc(0), id = 'r-' + (++TcpClient.sequence)) {
+    if (!['SEND', 'SUBSCRIBE', 'UNSUBSCRIBE', 'BEGIN', 'COMMIT', 'ABORT', 'ACK', 'NACK', 'DISCONNECT'].includes(command))
+      throw transportError('STOMP_ARGUMENT', 'invalid receipt command', {operation: 'receipt'});
     if (typeof id !== 'string' || !id.length || !Array.isArray(headers) || headers.some(h => !Array.isArray(h) || h.length !== 2 || h.some(v => typeof v !== 'string')) || !(body instanceof Uint8Array)) throw new Error('invalid receipt arguments');
     if (headers.some(h => h[0] === 'receipt')) throw new Error('receipt() controls the receipt header');
     if (this.error || this.state() !== 'active') throw this.error || new Error('connection is not active');
     // Registering a failed waiter must never send an unobservable command.
     if (this.waiters.length >= this.maxWaiters) throw new Error('waiter limit');
     if (this.queue.some(e => e.event === 'receipt' && e.id === id)) throw new Error('unconsumed receipt id');
-    const wait = this._waitFor(e => e.event === 'receipt' && e.id === id, 5000, true);
+    const wait = this._waitFor(e => e.event === 'receipt' && e.id === id, this.controlTimeoutMs, true);
     wait.catch(() => {});
+    let writeAttempted = false;
+    const beforeWrite = this.#writeSequence;
     try {
-      this.send(command, [...headers,['receipt',id]], body);
+      try { this.send(command, [...headers,['receipt',id]], body); }
+      finally { writeAttempted = this.#writeSequence !== beforeWrite; }
       return await wait;
     } catch (error) {
       // A control timeout leaves the broker outcome unknown. Retire this
       // session, including its pending receipt IDs; never retry implicitly.
-      this.stop(error);
-      throw error;
+      const failure = receiptFailure(error, command, id, writeAttempted);
+      this.stop(failure);
+      throw failure;
     }
   }
   async disconnect() {

@@ -1,5 +1,7 @@
 # 支持边界与失败行为
 
+**2026-10-22 私有候选入口**：下方 0.1.2 的协议/后端表为历史发布范围；当前多版本候选及此次支持矩阵以 [README](../README.md)、[Linux 审计](linux-audit-20261022.zh-CN.md) 为准。候选已有 STOMP1.0/1.1/1.2、认证/TLS与句柄；本轮真实Classic TCP/TLS通过，Wasm/Wasm GC控制失败、native和正式打包缺件。旧表不能用于把当前已测TLS写成未测，也不能把历史后端通过当成本轮通过。
+
 本仓库源码为 0.1.2，基于正式 0.1.1/f7aa474；正式 Mooncakes 0.1.0/0.1.1 历史保留。源码同步与准确 CI 状态见 source-sync-0.1.2.zh-CN.md；旧版发布/registry 证据不代表 0.1.2 正式发布。
 
 0.1.2 使所有未关闭状态的 tick 校验/推进单调时间（仅 Active 发心跳）；Closed 的 tick 是无效应空输出。Node connect/receipt 的内部控制等待者优先于普通匹配；predicate 必须同步返回 Boolean，async/generator 预先拒绝，已排队事件的匹配错误返回 rejected Promise 不移除队列，实际接收匹配错误仍关闭并清理。非法 host 在连接前拒绝。

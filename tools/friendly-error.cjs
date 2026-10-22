@@ -33,6 +33,9 @@ function friendlyError(error, host, port, context = {}) {
   const fields = ['name', 'code', 'operation'].filter(key => error && typeof error[key] === 'string' && error[key]);
   if (fields.length) lines.push('  ' + fields.map(key => `${key}=${error[key]}`).join(' '));
   if (error && typeof error.reason === 'string' && error.reason !== text) lines.push(`  reason=${quote(error.reason)}`);
+  if (error && typeof error.receiptId === 'string') lines.push(`  receiptId=${quote(error.receiptId)}`);
+  if (error && error.outcomeUnknown === true) lines.push(
+    '  broker outcome is unknown; the session is closed. Reconcile before retrying; no automatic resend.');
   if (error && error.frame) {
     lines.push(...describeFrame(error.frame));
     if (context.connecting) {

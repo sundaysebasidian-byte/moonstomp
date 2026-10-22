@@ -34,6 +34,7 @@ def main():
     parser.add_argument('--broker-port', type=int, default=61613, help='Unused loopback port for the optional local broker')
     parser.add_argument('--classic-home', type=Path, help='Optional unpacked official ActiveMQ Classic 6.3.2 directory (authenticated second broker); needs --classic-java-home')
     parser.add_argument('--classic-java-home', type=Path, help='Existing Java 17+ home for the optional Classic broker')
+    parser.add_argument('--classic-tls', action='store_true', help='Run Classic over verified TLS with ephemeral test certificate; requires both Classic paths')
     parser.add_argument('--classic-port', type=int, default=61614, help='Unused loopback port for the optional Classic broker')
     args = parser.parse_args()
     broker_args = [args.broker_archive, args.broker_checksum, args.broker_java_home]
@@ -43,6 +44,8 @@ def main():
         parser.error('--go-peer requires all three broker arguments')
     if bool(args.classic_home) != bool(args.classic_java_home):
         parser.error('provide both --classic-home and --classic-java-home or neither')
+    if args.classic_tls and not args.classic_home:
+        parser.error('--classic-tls requires --classic-home and --classic-java-home')
     out = args.output.resolve()
     if out == ROOT or ROOT in out.parents:
         parser.error('--output must be outside the source tree')
@@ -58,6 +61,7 @@ def main():
               'python': sys.version, 'moon_bin': moon, 'moon_home': env.get('MOON_HOME'),
               'source_sha256': inventory(), 'stages': [], 'overall': 'FAILED',
               'transport': 'NOT TESTED', 'real_broker': 'NOT RUN IN THIS INVOCATION: optional local broker arguments required',
+              'real_broker_classic_tls': 'NOT RUN IN THIS INVOCATION',
               'real_broker_classic': 'NOT RUN IN THIS INVOCATION: --classic-home/--classic-java-home required',
               'remote_ci': 'NOT TESTED', 'mooncakes_publication': 'NOT DONE'}
     if (ROOT / '.git').exists():
@@ -78,6 +82,8 @@ def main():
         stage['status'] = 'PASSED'
         return result.stdout.decode('utf-8').strip()
     try:
+        run('classic-profile-guards', [sys.executable, '-m', 'unittest', 'discover', '-s', 'scripts', '-p', 'test_classic_profile.py'])
+        run('adapter-unit-faults', ['node', '--test', 'scripts/adapter-unit-test.cjs'])
         if not moon:
             raise RuntimeError('moon not available; set MOON_BIN/PATH to the existing trusted SDK')
         moonc = shutil.which('moonc', path=env['PATH'])
@@ -145,7 +151,8 @@ def main():
         if args.classic_home:
             run('real-broker-classic', [sys.executable, 'scripts/classic-run.py',
                 '--home', str(args.classic_home.resolve()), '--java-home', str(args.classic_java_home.resolve()),
-                '--output', str(out / 'classic'), '--port', str(args.classic_port)], timeout=400)
+                '--output', str(out / 'classic'), '--port', str(args.classic_port)] + (['--tls'] if args.classic_tls else []), timeout=400)
+            report['real_broker_classic_tls'] = 'PASSED' if args.classic_tls else 'NOT RUN IN THIS INVOCATION'
             report['classic_interop'] = json.loads((out / 'classic/classic.json').read_text())['interop']
             report['real_broker_classic'] = 'PASSED_CLASSIC_6_3_2_AUTHENTICATED_PROFILE: wrong password rejected; STOMP 1.0/1.1/1.2 binary send/receive, versioned ACK/NACK, transactional SEND commit/abort; transactional ACK not tested'
         if inventory() != report['source_sha256']:

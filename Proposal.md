@@ -2,6 +2,8 @@
 
 本文只列事实，按状态分栏，申报时请逐项对应，不要把“已实现”和“拟实现”混写。申报书须由申请人人工撰写并按当期官方模板，本文不是申报书。
 
+2026-10-22 当前候选的新增贡献、订单场景和设计取舍请先读 [提交准备](docs/submission-preparation.zh-CN.md)，支持/失败状态以 [Linux 审计](docs/linux-audit-20261022.zh-CN.md) 为准；本文保留原日期记录，历史通过不代替本次私有包验收。
+
 ## 项目是什么
 
 MoonBit 实现的 STOMP 无 I/O 编解码与客户端会话核心（帧、header 转义、`content-length`/NUL、订阅、ACK/NACK、事务、receipt、心跳、断连），外加一个 Node TCP 适配器（登录凭据、可校验证书的 TLS、Subscription/Transaction 句柄、带 `code` 的结构化错误）。核心不依赖 socket、系统时钟或 Node；MIT；AI 辅助范围见 AI_USAGE.md。

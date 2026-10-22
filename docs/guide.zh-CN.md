@@ -43,7 +43,7 @@ await c.disconnect();
 |---|---|
 | `new TcpClient({host='127.0.0.1', port=61613, tickMs=25, maxQueue=1024, maxWaiters=256, maxQueueBytes=4 MiB})` | 参数非法立即抛错；一个实例只连一次 |
 | `connect({virtualHost='localhost', versions=['1.2'], heartbeat='1000,1000', login, passcode})` | 提供 1–3 个版本；等 CONNECTED 最多 5 s；`login`/`passcode` 省略时不发送，空字符串会发送，含 CR/LF/NUL 的值在打开 socket 前被拒绝。仅提供 `['1.0']` 时默认 `heartbeat` 为 `'0,0'` |
-| `new TcpClient({…, tlsOptions})` | `tlsOptions` 非 null 时用 Node `tls.connect`，必须校验证书（`rejectUnauthorized:false` 与传入已连接 socket 被拒）；自签 CA 用 `{ca}`，IP 以外的 host 自动作 SNI，可设 `servername`。**只在本机脚本 peer 上验证过** |
+| `new TcpClient({…, tlsOptions})` | `tlsOptions` 非 null 时用 Node `tls.connect`，必须校验证书（`rejectUnauthorized:false` 与传入已连接 socket 被拒）；自签 CA 用 `{ca}`，IP 以外的 host 自动作 SNI，可设 `servername`。**已在脚本 peer 与真实 Classic 6.3.2 回环 TLS profile 验证；不代表生产网络验收** |
 | `await subscribe(destination, {id?, ack='auto', headers=[]})` | SUBSCRIBE receipt 后返回 Subscription：`next(timeout=5000)`、`ack(frame, {transaction?})`、`nack(…)`、`unsubscribe()`；`ack`/`nack` 只接受该句柄 `next` 返回的原 frame。1.0 下同 destination 的多订阅不保证区分 |
 | `await beginTransaction({id?})` | BEGIN receipt 后返回 Transaction：`send(destination, Uint8Array, headers)`、`commit()`、`abort()` |
 | `send(command, headers, body)` | 发后不管，无回执 |
@@ -52,7 +52,11 @@ await c.disconnect();
 | `disconnect()` / `stop()` | 带 receipt 的 DISCONNECT 后关闭 / 立即关闭 |
 | `state()` / `version()` | `fresh｜connecting｜active｜disconnecting｜closed` / 协商版本字符串 |
 
-错误：协议/参数/broker ERROR/句柄误用抛出带 `name`、`code`、`operation` 的错误（`STOMP_INVALID`、`STOMP_ARGUMENT`、`STOMP_BROKER_ERROR`（保留 `frame`）、`STOMP_HANDLE`）；超时、EOF、Node I/O 错误保持原样，不是所有错误都有 `code`。
+错误：协议/参数/broker ERROR/句柄误用抛出带 `name`、`code`、`operation` 的错误（`STOMP_INVALID`、`STOMP_ARGUMENT`、`STOMP_BROKER_ERROR`（保留 `frame`）、`STOMP_HANDLE`）；恢复版增加 `STOMP_EVENT_TIMEOUT`（普通观察等待，保持连接）、`STOMP_CONNECT_TIMEOUT`、`STOMP_RECEIPT_TIMEOUT`、`STOMP_PEER_EOF`、`STOMP_TRUNCATED_STREAM` 与 `STOMP_CONNECTION_CLOSED`。Node I/O 原始 code 保留。receipt 失败另有 `operation`（命令）、`receiptId`、`outcomeUnknown` 和 `cause`（只有开始调用 `socket.write` 后才标记结果未知；本地验证/写缓冲拒绝为 false），broker 的 `frame` 保留。其他参数错误仍可能没有 code。
+
+`new TcpClient({controlTimeoutMs: 5000})` 同时限制 CONNECT 与每个 receipt 等待；必须是 1..2147483647 的整数，构造后只读。`waitFor`/`Subscription.next` 的观察期限独立设置。控制等待失败后会话关闭、未完成的等待被拒绝，不会自动重连或重发。原始 `event timeout` 文本保留，调用方应优先使用 code。
+
+COMMIT receipt 超时后 `Transaction.state === 'failed'` 只说明客户端没有确认结果，**不能解释成已回滚**。业务应使用业务 ID/状态查询等方式对账，再决定是否在新会话重试。STOMP receipt 只确认 broker 对帧的处理，不等于消费端业务处理或 exactly-once。
 
 事件形状：`{event:'message', frame:{command, headers:[[k,v]], body:number[]}}`、`{event:'receipt', id}`、`{event:'heartbeat'}`、`{event:'error', frame}`。`frame.body` 是字节数组，用 `Buffer.from(frame.body)` 还原。
 
