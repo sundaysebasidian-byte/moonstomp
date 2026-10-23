@@ -15,7 +15,7 @@
 ```sh
 git clone https://github.com/sundaysebasidian-byte/moonstomp.git
 cd moonstomp
-moon test                                   # 70 个单元 / 属性 / 对抗测试
+moon test                                   # 71 个单元 / 属性 / 对抗测试
 moon build --target js                      # 构建 Node 用的 bridge
 node tools/stomp-cli.cjs demo               # 进程内 demo broker：发一条、收一条
 node examples/demo/01-pubsub.cjs            # 最后一行输出 PASS pubsub
@@ -113,7 +113,7 @@ node tools/stomp-cli.cjs send --port 61613 --destination /queue/jobs --body hell
 
 ## 测试
 
-- 70 个 MoonBit 测试：编解码、头部转义、心跳、会话状态、版本矩阵、属性测试和对抗输入。
+- 71 个 MoonBit 测试：编解码、头部转义、心跳、会话状态、版本矩阵、属性测试和对抗输入。
 - 与 stomp.js 7.2.0 解析器的差分测试（`scripts/differential.cjs`，按不同分段长度喂入），Node 适配器的生命周期 / TLS / 凭据测试。
 - CI：[ci.yml](.github/workflows/ci.yml) 在官方 SDK 上跑完整验证（`scripts/verify.py --transport`）；[fresh-clone.yml](.github/workflows/fresh-clone.yml) 模拟新用户 `git clone` 后直接 `moon test`、本页快速开始和 7 个示例，并在最新 SDK 上同样跑一遍。
 
