@@ -16,3 +16,20 @@ MoonSTOMP 的 MoonBit 核心、测试、Node 适配器、文档和验证脚本�
 6. 自造 peer、独立参考、实际包消费与真实 broker 各自证明什么，以及未测范围。
 
 可运行 examples/offline 并修改长度、ACK 或时钟用例观察错误。代码与技术说明需要本人理解和审阅；竞赛最终申报须本人按官方要求撰写。本文件与 Proposal.md 是 AI 辅助技术资料，不是人工申报书。
+
+
+2026-10-14：Codex接续原仓库的独立review分支。新增/修正STOMP多版本源码草案与针对测试，ODS只核生态、修正发行状态并记录reader/mbtexcel最小方案。包含独立只读源码审查及所发现问题的修正。官方SDK脚本HTTP403、moon/moonc缺失，新增MoonBit源码未编译或执行；不声称完成运行验证、ODS reader或跨格式消费。未push/dispatch/publish/重申；技术底稿不能冒充本人撰写的最终申报。
+
+2026-10-15：Codex接续原review分支并经独立只读审查。STOMP修混合offer并写真实go-stomp/broker测试glue；ODS只准备独立LODev外部样本、固定oracle和负控制，不冒称reader或跨格式实现。SDK官方请求仍403，17项MoonBit测试未执行；保留真实失败、静态与fixture结果各自范围。原恢复包和提交历史保留。
+
+2026-10-20：Claude 辅助整合两条并行分支：核心补强（login/passcode、结构化 JS 错误、Subscription/Transaction 句柄、TLS、ActiveMQ Classic 6.3.2 认证互操作、Python 3.9 兼容）与可用性整理（README、示例、CLI）。随后让 CLI 和示例使用新 API，并按实测事实同步 README、Proposal.md 和状态/边界文档。未实现重连；TLS 只在本机脚本 peer 上验证，Classic 事务 ACK 与 NACK 重投递未测。本条是技术记录，不是人工申报书。
+
+
+2026-10-20（私有隔离恢复）：Codex 基于 GitHub review/moonbit-20261015-sync 的 62694580a9c58aec9eb2199e2e1f9685b5e30781 补强 receipt/EOF/控制等待错误上下文、可配置控制期限、Classic TLS profile 与失败证据守卫、候选获取说明和设计取舍。适配器故障注入使用明确的协议/socket 替身；不是 MoonBit、真实 TCP 或 broker 互通证据。SDK 官方下载失败，未运行本次核心、脚本 peer 或真实 broker TLS 回归；未公开推送或发布。详见 docs/recovery-20261020.zh-CN.md。
+
+2026-10-20（真实 broker 续验）：按官方 Wasm 工具链渠道恢复编译器及配套 moon/moonrun，Apache 官方 Classic 6.3.2 归档续传并经 SHA512 校验。当前源码 JS 核心70/70、实际TCP/TLS脚本peer、七demo/CLI及真实Classic TLS认证/三版本事务/提交前断线检查通过。当前兼容工具链的Wasm GC在独立常量断言模块也失败，保留失败，不声称全量或锁定工具链通过。只补测试和事实说明，未新增产品功能或公开推送。
+
+
+2026-10-20（三分钟交付打磨）：Codex 复用既有 Classic runner，增加仅 STOMP1.2 的 --tls --demo 演示入口和演示专用回环 TLS receipt 丢弃中继；没有增加产品 API 或重跑完整三版本矩阵。实测真实认证/事务/receipt未知不重放、两条故意失败的清理与输出不泄露测试标记；演示边界/准备条件/三分钟讲解收拢在既有恢复说明。Wasm GC 失败不被本演示替代。
+
+2026-10-22（Linux 审计与提交准备）：Codex 在同一私有候选保留原始改动，执行 JS70/70、源码 ZIP 独立消费者6/6、真实 Classic TCP/TLS三版本、receipt丢失不重放、真实心跳丢流量和失败清理检查；命令与原始回执见 docs/linux-audit-20261022.zh-CN.md 及交付 evidence。普通Wasm/Wasm GC独立控制模块失败、native runtime及mooncake缺失分别保留，不把源码ZIP当成正式package/registry安装。此次提交准备复用现有演示，只完善快速上手、独立消费者文档、贡献/取舍、许可来源和可解释边界；最终包的实际复现以新回执为准。没有增加产品API、虚构采用或性能优势，没有代为发布软件包或提交比赛；随后维护者明确授权公开独立开发分支供审阅，不合并主分支或发版。维护者应理解、审阅并按官方要求自行完成最终申报，不能把这些AI辅助材料声称为全手工成果。

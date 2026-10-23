@@ -47,8 +47,18 @@ test "external caller observes monotonic negotiation polling without I O" {
   let c = @moonstomp.Client::new()
   ignore(c.send(@moonstomp.connect("localhost"), 100))
   assert_eq(c.tick(101), b"")
-  assert_true(try { ignore(c.receive(b"CONNECTED\nversion:1.2\n\n\x00", 100)); false } catch { _ => true })
-  match c.state() { Closed => (); _ => fail("clock regression must close") }
+  assert_true(
+    try {
+      ignore(c.receive(b"CONNECTED\nversion:1.2\n\n\x00", 100))
+      false
+    } catch {
+      _ => true
+    },
+  )
+  match c.state() {
+    Closed => ()
+    _ => fail("clock regression must close")
+  }
   assert_eq(c.pending_receipts(), 0)
   assert_eq(c.tick(0), b"")
 }

@@ -13,3 +13,13 @@ assert.throws(() => protocol.send(c,'ACK',[['id','unknown']],Buffer.alloc(0),0n)
 protocol.close(c);
 assert.equal(protocol.state(c), 'closed');
 console.log('PASS JS boundary: JSON headers, byte body, errors and cleanup');
+for (const [operation, action, reason] of [
+  ['send', () => protocol.send(protocol.create(), 'SEND', [], Buffer.alloc(0), 0n), /connect first/],
+  ['parse', () => protocol.parse(Buffer.from('UNKNOWN\n\n\0')), /unknown command/],
+  ['parse', () => protocol.parse(Buffer.from('MESSAGE\n')), /truncated/],
+]) {
+  assert.throws(action, error => error.name === 'MoonSTOMPProtocolError' && error.code === 'STOMP_INVALID' && error.operation === operation && reason.test(error.reason) && error.message === error.reason);
+}
+assert.throws(() => protocol.send(protocol.create(), 'CONNECT', [['login', 1]], Buffer.alloc(0), 0n), error => error.code === 'STOMP_ARGUMENT' && error.operation === 'send');
+assert.throws(() => protocol.tick(protocol.create(), -1n), error => error.code === 'STOMP_ARGUMENT');
+console.log('PASS structured JS protocol/argument errors: code, operation, reason');

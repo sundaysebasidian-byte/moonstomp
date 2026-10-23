@@ -42,7 +42,7 @@ fn heartbeat_pair(s : String) -> (Int, Int) raise ProtocolError {
 
 ///|
 /// Time is monotonic milliseconds supplied by the transport; no hidden wall clock.
-pub struct HeartbeatClock {
+struct HeartbeatClock {
   plan : HeartbeatPlan
   tolerance_ms : Int64
   mut sent : Int64

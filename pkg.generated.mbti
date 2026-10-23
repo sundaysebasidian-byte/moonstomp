@@ -1,0 +1,148 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "sundaysebasidian-byte/moonstomp"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn acknowledge(String, negative? : Bool, transaction? : String) -> Frame
+
+pub fn acknowledge_message(Version, Frame, negative? : Bool, transaction? : String) -> Frame raise ProtocolError
+
+pub fn begin_transaction(String) -> Frame
+
+pub fn connect(String, heartbeat? : String, login? : String, passcode? : String) -> Frame
+
+pub fn connect_versions(String, Array[Version], heartbeat? : String, login? : String, passcode? : String) -> Frame raise ProtocolError
+
+pub fn disconnect(String) -> Frame
+
+pub fn encode(Frame) -> Bytes raise ProtocolError
+
+pub fn encode_versioned(Frame, Version) -> Bytes raise ProtocolError
+
+pub fn escape_header(String) -> String raise ProtocolError
+
+pub fn finish_transaction(String, commit? : Bool) -> Frame
+
+pub fn negotiate_heartbeat(Int, Int, Int, Int) -> HeartbeatPlan raise ProtocolError
+
+pub fn parse_version(String) -> Version raise ProtocolError
+
+pub fn send_message(String, Bytes, transaction? : String, receipt? : String) -> Frame
+
+pub fn subscribe(String, String, ack? : String) -> Frame
+
+pub fn subscribe_versioned(Version, String, id? : String, ack? : String) -> Frame raise ProtocolError
+
+pub fn unescape_header(String) -> String raise ProtocolError
+
+pub fn unsubscribe(String) -> Frame
+
+pub fn unsubscribe_destination(String) -> Frame
+
+pub fn valid_command(String) -> Bool
+
+// Errors
+pub suberror ProtocolError {
+  Invalid(String)
+} derive(@debug.Debug)
+pub fn ProtocolError::to_repr(Self) -> @debug.Repr
+
+// Types and methods
+type Client
+pub fn Client::end(Self) -> Unit raise ProtocolError
+pub fn Client::fail(Self) -> Unit
+pub fn Client::new(capacity? : Int, max_pending? : Int) -> Self raise ProtocolError
+pub fn Client::pending_deliveries(Self) -> Int
+pub fn Client::pending_receipts(Self) -> Int
+pub fn Client::receive(Self, Bytes, Int64) -> Array[ClientEvent] raise ProtocolError
+pub fn Client::send(Self, Frame, Int64) -> Bytes raise ProtocolError
+pub fn Client::state(Self) -> State
+pub fn Client::tick(Self, Int64) -> Bytes raise ProtocolError
+pub fn Client::version(Self) -> Version?
+
+pub enum ClientEvent {
+  Connected
+  Message(Frame)
+  Receipt(String)
+  ServerError(Frame)
+  Heartbeat
+} derive(Eq, @debug.Debug)
+pub fn ClientEvent::equal(Self, Self) -> Bool
+pub fn ClientEvent::not_equal(Self, Self) -> Bool
+pub fn ClientEvent::to_repr(Self) -> @debug.Repr
+
+type Decoder
+pub fn Decoder::end(Self) -> Unit raise ProtocolError
+pub fn Decoder::feed(Self, Bytes) -> Array[WireEvent] raise ProtocolError
+pub fn Decoder::new(limits? : Limits, version? : Version) -> Self raise ProtocolError
+
+pub struct Frame {
+  command : String
+  headers : Array[(String, String)]
+  body : Bytes
+} derive(Eq, @debug.Debug)
+pub fn Frame::equal(Self, Self) -> Bool
+pub fn Frame::header(Self, String) -> String?
+pub fn Frame::new(String, Array[(String, String)], body? : Bytes) -> Self
+pub fn Frame::not_equal(Self, Self) -> Bool
+pub fn Frame::to_repr(Self) -> @debug.Repr
+
+type HeartbeatClock
+pub fn HeartbeatClock::new(HeartbeatPlan, Int64, tolerance_ms? : Int64) -> Self raise ProtocolError
+pub fn HeartbeatClock::poll(Self, Int64) -> (Bool, Bool) raise ProtocolError
+pub fn HeartbeatClock::received_data(Self, Int64) -> Unit raise ProtocolError
+pub fn HeartbeatClock::sent_data(Self, Int64) -> Unit raise ProtocolError
+
+pub struct HeartbeatPlan {
+  send_ms : Int
+  receive_ms : Int
+} derive(Eq, @debug.Debug)
+pub fn HeartbeatPlan::equal(Self, Self) -> Bool
+pub fn HeartbeatPlan::not_equal(Self, Self) -> Bool
+pub fn HeartbeatPlan::to_repr(Self) -> @debug.Repr
+
+pub struct Limits {
+  max_line : Int
+  max_headers : Int
+  max_body : Int
+  max_events : Int
+} derive(@debug.Debug)
+pub fn Limits::default() -> Self
+pub fn Limits::new(max_line? : Int, max_headers? : Int, max_body? : Int, max_events? : Int) -> Self raise ProtocolError
+pub fn Limits::to_repr(Self) -> @debug.Repr
+
+pub enum State {
+  Fresh
+  Connecting
+  Active
+  Disconnecting
+  Closed
+} derive(Eq, @debug.Debug)
+pub fn State::equal(Self, Self) -> Bool
+pub fn State::not_equal(Self, Self) -> Bool
+pub fn State::to_repr(Self) -> @debug.Repr
+
+pub(all) enum Version {
+  V10
+  V11
+  V12
+} derive(Eq, @debug.Debug)
+pub fn Version::equal(Self, Self) -> Bool
+pub fn Version::not_equal(Self, Self) -> Bool
+pub fn Version::to_repr(Self) -> @debug.Repr
+pub fn Version::wire(Self) -> String
+
+pub enum WireEvent {
+  Heartbeat
+  Frame(Frame)
+} derive(Eq, @debug.Debug)
+pub fn WireEvent::equal(Self, Self) -> Bool
+pub fn WireEvent::not_equal(Self, Self) -> Bool
+pub fn WireEvent::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits

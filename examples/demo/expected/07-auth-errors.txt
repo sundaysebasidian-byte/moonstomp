@@ -1,0 +1,5 @@
+anonymous   rejected: MoonSTOMPBrokerError code=STOMP_BROKER_ERROR operation=receive
+            broker said "authentication failed" in an ERROR frame
+wrong pass  rejected: code=STOMP_BROKER_ERROR; the passcode is not in the error: true
+accepted    login alice, STOMP 1.2, SEND confirmed by receipt
+PASS auth-errors

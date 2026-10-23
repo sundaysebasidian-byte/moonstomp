@@ -17,7 +17,7 @@ pub enum ClientEvent {
 } derive(Debug, Eq)
 
 ///|
-struct Delivery {
+priv struct Delivery {
   id : String
   subscription : String
   cumulative : Bool
@@ -26,11 +26,14 @@ struct Delivery {
 
 ///|
 /// A sans-I/O client. Caller writes returned bytes and calls `fail` on write failure.
-pub struct Client {
+struct Client {
   decoder : Decoder
   capacity : Int
   max_pending : Int
   subscriptions : Array[(String, String)]
+  destinations : Array[(String, String)] // internal subscription key, destination
+  mut offered : Array[Version]
+  mut version : Version?
   unsubscribing : Array[(String, String)] // subscription id, receipt fence
   transactions : Array[String]
   receipts : Array[String]
@@ -56,6 +59,9 @@ pub fn Client::new(
     capacity,
     max_pending,
     subscriptions: [],
+    destinations: [],
+    offered: [V12],
+    version: None,
     unsubscribing: [],
     transactions: [],
     receipts: [],
@@ -78,6 +84,7 @@ pub fn Client::state(self : Client) -> State {
 pub fn Client::fail(self : Client) -> Unit {
   self.state = Closed
   self.subscriptions.clear()
+  self.destinations.clear()
   self.unsubscribing.clear()
   self.transactions.clear()
   self.receipts.clear()
@@ -115,6 +122,11 @@ fn Client::remove_subscription(self : Client, id : String) -> Unit {
   for i = self.subscriptions.length() - 1; i >= 0; i = i - 1 {
     if self.subscriptions[i].0 == id {
       ignore(self.subscriptions.remove(i))
+      for j = self.destinations.length() - 1; j >= 0; j = j - 1 {
+        if self.destinations[j].0 == id {
+          ignore(self.destinations.remove(j))
+        }
+      }
     }
   }
 }
@@ -145,9 +157,19 @@ fn remove_string(a : Array[String], s : String) -> Unit {
 
 ///|
 fn Client::check_ack(self : Client, f : Frame) -> Int raise ProtocolError {
-  let id = required(f, "id")
+  let version = self.version.unwrap_or(V12)
+  let id = required(f, if version == V12 { "id" } else { "message-id" })
+  let subscription = if version == V11 {
+    Some(required(f, "subscription"))
+  } else {
+    None
+  }
   for i = 0; i < self.deliveries.length(); i = i + 1 {
-    if self.deliveries[i].id == id {
+    if self.deliveries[i].id == id &&
+      (
+        subscription == None ||
+        subscription == Some(self.deliveries[i].subscription)
+      ) {
       if self.deliveries[i].staged != None {
         raise Invalid("ack already staged")
       }
@@ -188,7 +210,8 @@ pub fn Client::send(
     Some(c) => c.advance(now)
     None => ()
   }
-  let automatic_length = f.body.length() > 0 && f.header("content-length") == None
+  let automatic_length = f.body.length() > 0 &&
+    f.header("content-length") == None
   if f.headers.length() > 128 ||
     (automatic_length && f.headers.length() == 128) ||
     f.body.length() > 1048576 {
@@ -199,19 +222,40 @@ pub fn Client::send(
       raise Invalid("outbound header limit")
     }
   }
-  let bytes = encode(f)
+  let wire_version = if self.state == Fresh &&
+    (f.command == "CONNECT" || f.command == "STOMP") {
+    let offered = offered_versions(f.header("accept-version").unwrap_or("1.0"))
+    if offered.contains(V12) {
+      V12
+    } else if offered.contains(V11) {
+      V11
+    } else {
+      V10
+    }
+  } else {
+    self.version.unwrap_or(V12)
+  }
+  let bytes = encode_versioned(f, wire_version)
   if self.state == Fresh {
     if f.command != "CONNECT" && f.command != "STOMP" {
       raise Invalid("connect first")
     }
-    ignore(required(f, "host"))
-    if required(f, "accept-version") != "1.2" {
-      raise Invalid("only 1.2 supported")
+    let offered = offered_versions(f.header("accept-version").unwrap_or("1.0"))
+    if offered != [V10] {
+      ignore(required(f, "host"))
+    }
+    if f.command == "STOMP" && offered == [V10] {
+      raise Invalid("STOMP command requires a modern offered version")
     }
     if f.header("receipt") != None {
       raise Invalid("CONNECT receipt forbidden")
     }
     let (cx, cy) = heartbeat_pair(f.header("heart-beat").unwrap_or("0,0"))
+    if offered == [V10] && (cx != 0 || cy != 0) {
+      raise Invalid("STOMP 1.0 has no heartbeat negotiation")
+    }
+    self.offered = offered
+    self.decoder.expect_versions(offered)
     self.cx = cx
     self.cy = cy
     self.state = Connecting
@@ -238,8 +282,16 @@ pub fn Client::send(
       self.check_transaction(f)
     }
     "SUBSCRIBE" => {
-      let id = required(f, "id")
-      ignore(required(f, "destination"))
+      let id = self.subscription_key(f)
+      let destination = required(f, "destination")
+      if self.version == Some(V10) {
+        for item in self.destinations {
+          if item.1 == destination &&
+            (f.header("id") == None || item.0.has_prefix("destination:")) {
+            raise Invalid("ambiguous STOMP 1.0 destination subscription")
+          }
+        }
+      }
       if self.subscription_mode(id) != None {
         raise Invalid("duplicate subscription")
       }
@@ -252,12 +304,16 @@ pub fn Client::send(
         raise Invalid("subscription capacity")
       }
       match f.header("ack").unwrap_or("auto") {
-        "auto" | "client" | "client-individual" => ()
+        "auto" | "client" => ()
+        "client-individual" =>
+          if self.version == Some(V10) {
+            raise Invalid("client-individual requires STOMP 1.1 or 1.2")
+          }
         _ => raise Invalid("invalid ack mode")
       }
     }
     "UNSUBSCRIBE" => {
-      let id = required(f, "id")
+      let id = self.unsubscribe_key(f)
       if self.subscription_mode(id) == None {
         raise Invalid("unknown subscription")
       }
@@ -281,6 +337,9 @@ pub fn Client::send(
       self.check_transaction(f)
     }
     "ACK" | "NACK" => {
+      if f.command == "NACK" && self.version == Some(V10) {
+        raise Invalid("NACK requires STOMP 1.1 or 1.2")
+      }
       self.check_transaction(f)
       let i = self.check_ack(f)
       let item = self.deliveries[i]
@@ -297,17 +356,17 @@ pub fn Client::send(
     _ => raise Invalid("not a client command")
   }
   match f.command {
-    "SUBSCRIBE" =>
-      self.subscriptions.push(
-        (required(f, "id"), f.header("ack").unwrap_or("auto")),
-      )
+    "SUBSCRIBE" => {
+      let id = self.subscription_key(f)
+      self.subscriptions.push((id, f.header("ack").unwrap_or("auto")))
+      self.destinations.push((id, required(f, "destination")))
+    }
     "UNSUBSCRIBE" => {
-      let id = required(f, "id")
+      let id = self.unsubscribe_key(f)
       match f.header("receipt") {
-        Some(receipt) => {
+        Some(receipt) =>
           // Keep the slot/mode until the ordered receipt fences earlier MESSAGEs.
           self.unsubscribing.push((id, receipt))
-        }
         None => self.remove_subscription(id)
       }
       // Pending acknowledgements remain valid until explicitly settled/connection closes.
@@ -358,13 +417,20 @@ fn Client::accept_frame(
     return ServerError(f)
   }
   if self.state == Connecting {
-    if f.command != "CONNECTED" || required(f, "version") != "1.2" {
+    if f.command != "CONNECTED" {
+      raise Invalid("expected CONNECTED")
+    }
+    let version = parse_version(f.header("version").unwrap_or("1.0"))
+    if !self.offered.contains(version) {
       raise Invalid("invalid version negotiation")
     }
-    let (sx, sy) = heartbeat_pair(f.header("heart-beat").unwrap_or("0,0"))
-    self.clock = Some(
-      HeartbeatClock::new(negotiate_heartbeat(self.cx, self.cy, sx, sy), now),
-    )
+    self.version = Some(version)
+    if version != V10 {
+      let (sx, sy) = heartbeat_pair(f.header("heart-beat").unwrap_or("0,0"))
+      self.clock = Some(
+        HeartbeatClock::new(negotiate_heartbeat(self.cx, self.cy, sx, sy), now),
+      )
+    }
     self.state = Active
     return Connected
   }
@@ -375,18 +441,32 @@ fn Client::accept_frame(
     "MESSAGE" => {
       ignore(required(f, "destination"))
       ignore(required(f, "message-id"))
-      let sub = required(f, "subscription")
+      let sub = if self.version == Some(V10) {
+        match f.header("subscription") {
+          Some(id) => "id:" + id
+          None => self.destination_key(required(f, "destination"))
+        }
+      } else {
+        required(f, "subscription")
+      }
       let mode = match self.subscription_mode(sub) {
         Some(m) => m
         None => raise Invalid("unknown MESSAGE subscription")
       }
       if mode != "auto" {
-        let id = required(f, "ack")
+        let id = required(
+          f,
+          if self.version == Some(V12) {
+            "ack"
+          } else {
+            "message-id"
+          },
+        )
         if self.deliveries.length() >= self.max_pending {
           raise Invalid("pending delivery limit")
         }
         for d in self.deliveries {
-          if d.id == id {
+          if d.id == id && (self.version != Some(V11) || d.subscription == sub) {
             raise Invalid("duplicate acknowledgement id")
           }
         }
@@ -516,4 +596,57 @@ fn Client::advance(self : Client, now : Int64) -> Unit raise ProtocolError {
     raise Invalid("clock moved backwards")
   }
   self.last_now = now
+}
+
+///|
+/// None before negotiation; remains inspectable after close.
+pub fn Client::version(self : Client) -> Version? {
+  self.version
+}
+
+///|
+fn Client::subscription_key(
+  self : Client,
+  frame : Frame,
+) -> String raise ProtocolError {
+  if self.version == Some(V10) {
+    match frame.header("id") {
+      Some(_) => "id:" + required(frame, "id")
+      None => "destination:" + required(frame, "destination")
+    }
+  } else {
+    required(frame, "id")
+  }
+}
+
+///|
+fn Client::destination_key(
+  self : Client,
+  destination : String,
+) -> String raise ProtocolError {
+  let mut key : String? = None
+  for item in self.destinations {
+    if item.1 == destination {
+      if key != None {
+        raise Invalid("ambiguous STOMP 1.0 MESSAGE destination")
+      }
+      key = Some(item.0)
+    }
+  }
+  match key {
+    Some(id) => id
+    None => raise Invalid("unknown subscription destination")
+  }
+}
+
+///|
+fn Client::unsubscribe_key(
+  self : Client,
+  frame : Frame,
+) -> String raise ProtocolError {
+  if self.version == Some(V10) && frame.header("id") == None {
+    self.destination_key(required(frame, "destination"))
+  } else {
+    self.subscription_key(frame)
+  }
 }

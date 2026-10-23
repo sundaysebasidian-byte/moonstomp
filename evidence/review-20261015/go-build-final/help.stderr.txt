@@ -1,0 +1,11 @@
+Usage of /workspace/moon-review/checks/go-peer-final-20261015/go-peer:
+  -incoming string
+    	Node producer to Go consumer destination
+  -outgoing string
+    	Go producer to Node consumer destination
+  -port int
+    	Numeric loopback broker port (default 61613)
+  -trace string
+    	New trace file (required)
+  -version string
+    	Exactly one of 1.0, 1.1, 1.2

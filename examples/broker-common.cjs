@@ -13,5 +13,7 @@ async function open(name, ack='auto') {
   return {c,destination};
 }
 function message(c) { return c.waitFor(e=>e.event==='message'); }
-function run(fn) { fn().catch(e=>{ console.error(e.message); process.exitCode=1; }); }
+function run(fn) {
+  fn().catch(e=>{ const o = options(); console.error(require('../tools/friendly-error.cjs').friendlyError(e, o.host, o.port)); process.exitCode=1; });
+}
 module.exports={assert,header,options,open,message,run};

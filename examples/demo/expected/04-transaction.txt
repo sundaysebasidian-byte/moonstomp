@@ -1,0 +1,4 @@
+abort    staged "debit 10" discarded; nothing delivered
+staged   two sends inside t2 are invisible before COMMIT
+commit   delivered in order: debit 10 | credit 10
+PASS transaction

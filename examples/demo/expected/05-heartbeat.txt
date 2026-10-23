@@ -1,0 +1,3 @@
+alive   negotiated 200,200: two broker heart-beats observed, session still active
+silent  broker went quiet: client closed the session itself (state=closed) instead of hanging
+PASS heartbeat

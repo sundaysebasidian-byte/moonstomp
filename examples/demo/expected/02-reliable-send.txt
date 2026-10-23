@@ -1,0 +1,4 @@
+confirmed   RECEIPT received: broker holds order-1 before we continue
+delivered   order-1 reached the subscriber
+unconfirmed no RECEIPT within 400 ms: outcome unknown, the library never retries for you
+PASS reliable-send

@@ -1,0 +1,3 @@
+topic    both subscribers received "moonbit 0.10" and "moonbit 0.10"
+queue    4 jobs delivered exactly once across 2 workers: job-1,job-2,job-3,job-4
+PASS pubsub

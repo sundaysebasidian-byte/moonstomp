@@ -1,0 +1,5 @@
+ACK    resize processed and acknowledged
+NACK   corrupt rejected
+retry  demo broker redelivered corrupt (redelivered:true); ACKed on second attempt
+policy NACK with discard policy: no redelivery (the recorded Artemis 2.57.0 profile behaves this way)
+PASS ack-nack

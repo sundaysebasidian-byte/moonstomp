@@ -1,0 +1,6 @@
+{
+  "go_stomp_commit": "c155a2d699bb5bc1b2547a4382b3cdd7f4403648",
+  "scope": "Go peer build only; no broker or MoonBit execution",
+  "status": "FAILED",
+  "error": "supplied tool is not a Go compiler"
+}

@@ -1,0 +1,47 @@
+# Mirrors what a reviewer does after `git clone`: install the official SDK,
+# then plain `moon check` / `moon test` and the README quick start.
+name: Fresh clone quick start
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  quickstart:
+    name: moon ${{ matrix.sdk }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        sdk: [pinned, latest]
+    env:
+      PINNED_SDK: 0.10.14+7d59c7ec9
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - name: Install official MoonBit SDK
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh -o "$RUNNER_TEMP/install-moonbit.sh"
+          if [ "${{ matrix.sdk }}" = pinned ]; then
+            bash "$RUNNER_TEMP/install-moonbit.sh" "$PINNED_SDK"
+          else
+            bash "$RUNNER_TEMP/install-moonbit.sh"
+          fi
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+      - run: moon version --all
+      - run: moon check
+      - run: moon test
+      - name: README quick start
+        run: |
+          moon build --target js
+          node tools/stomp-cli.cjs demo
+          for demo in examples/demo/0*.cjs; do node "$demo"; done
+          moon run examples/versions --target js > "$RUNNER_TEMP/versions.txt"
+          diff -u examples/versions/expected_output.txt "$RUNNER_TEMP/versions.txt"
+          moon run examples/offline --target js
+      - name: Formatting and generated interfaces are up to date
+        if: matrix.sdk == 'pinned'
+        run: |
+          moon fmt --check
+          moon info
+          git diff --exit-code -- '*.mbti'

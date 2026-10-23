@@ -23,6 +23,8 @@ python3 scripts/broker-run.py --output ../broker-evidence \
   --java-home /absolute/path/java17/Contents/Home
 ```
 
+**第二个 broker（2026-10-20）**：ActiveMQ Classic 6.3.2。官方页 https://activemq.apache.org/components/classic/download/ ，官方文档 https://activemq.apache.org/components/classic/documentation/stomp ；归档 57,001,071 字节，SHA256 `543e9ca8a234d118a8c195d802a110994a59b7973d75ae0a7ccd47dc2cc2c5c1`（已与官方 SHA512 核对，下载记录在 core-20261020 交付日志中，不在本仓库）。`scripts/classic-run.py --home <已解压目录> --java-home <JDK17> --output <新目录> [--port 62614]` 不下载软件，用测试专用账号、关闭持久化/JMX/Web，只监听 127.0.0.1，并运行 `scripts/classic-interop-test.cjs`；也可由 `verify.py --classic-home … --classic-java-home …` 调用。
+
 没有公网 broker 测试。实际 profile 与限制见 broker-interop.zh-CN.md；公开仓库、准确首发提交远端 CI、Mooncakes 发布与独立 registry 安装已完成，见 publication.zh-CN.md。
 
 正式首发 0.1.0、对应远端 CI 与独立 registry 消费证据见 [publication.zh-CN.md](publication.zh-CN.md)，本地候选消费与正式安装各自保留记录。
