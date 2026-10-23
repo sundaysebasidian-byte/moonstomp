@@ -15,7 +15,14 @@ test "versioned headers preserve 1.0 literals and 1.1 escapes" {
     decoder.end()
   }
   assert_eq(unescape_versioned("x\\n\\c\\\\", V11), "x\n:\\")
-  assert_true(try { ignore(unescape_versioned("\\r", V11)); false } catch { _ => true })
+  assert_true(
+    try {
+      ignore(unescape_versioned("\\r", V11))
+      false
+    } catch {
+      _ => true
+    },
+  )
   assert_eq(unescape_versioned("\\r", V12), "\r")
   assert_eq(escape_versioned("\r", V11), "\r")
 }
@@ -24,11 +31,27 @@ test "versioned headers preserve 1.0 literals and 1.1 escapes" {
 test "only 1.2 accepts CRLF frame delimiters" {
   for version in [V10, V11] {
     let decoder = Decoder::new(version~)
-    assert_true(try { ignore(decoder.feed(b"MESSAGE\r\n\r\n\x00")); false } catch { _ => true })
-    assert_true(try { ignore(decoder.feed(b"MESSAGE\n\n\x00")); false } catch { _ => true })
+    assert_true(
+      try {
+        ignore(decoder.feed(b"MESSAGE\r\n\r\n\x00"))
+        false
+      } catch {
+        _ => true
+      },
+    )
+    assert_true(
+      try {
+        ignore(decoder.feed(b"MESSAGE\n\n\x00"))
+        false
+      } catch {
+        _ => true
+      },
+    )
   }
   let decoder = Decoder::new(version=V12)
-  assert_eq(decoder.feed(b"MESSAGE\r\n\r\n\x00"), [WireEvent::Frame(Frame::new("MESSAGE", []))])
+  assert_eq(decoder.feed(b"MESSAGE\r\n\r\n\x00"), [
+    WireEvent::Frame(Frame::new("MESSAGE", [])),
+  ])
 }
 
 ///|
@@ -38,7 +61,9 @@ test "CONNECTED selects 1.0 before the next frame in every chunk partition" {
     let decoder = Decoder::new()
     decoder.expect_versions([V10, V11, V12])
     let events = decoder.feed(bytes[:boundary].to_owned())
-    for event in decoder.feed(bytes[boundary:].to_owned()) { events.push(event) }
+    for event in decoder.feed(bytes[boundary:].to_owned()) {
+      events.push(event)
+    }
     assert_eq(events.length(), 2)
     match events[1] {
       WireEvent::Frame(frame) => assert_eq(frame.header("path"), Some("a\\r:b"))
@@ -52,19 +77,44 @@ test "CONNECTED selects 1.0 before the next frame in every chunk partition" {
 test "CONNECTED selects 1.1 before rejecting a following 1.2-only escape" {
   let decoder = Decoder::new()
   decoder.expect_versions([V10, V11, V12])
-  assert_true(try {
-    ignore(decoder.feed(b"CONNECTED\nversion:1.1\n\n\x00MESSAGE\npath:a\\r\n\n\x00"))
-    false
-  } catch { _ => true })
-  assert_true(try { ignore(decoder.feed(b"\n")); false } catch { _ => true })
+  assert_true(
+    try {
+      ignore(
+        decoder.feed(
+          b"CONNECTED\nversion:1.1\n\n\x00MESSAGE\npath:a\\r\n\n\x00",
+        ),
+      )
+      false
+    } catch {
+      _ => true
+    },
+  )
+  assert_true(
+    try {
+      ignore(decoder.feed(b"\n"))
+      false
+    } catch {
+      _ => true
+    },
+  )
 }
 
 ///|
 test "negotiation rejects unoffered and unsupported selections" {
-  for selection in [b"CONNECTED\nversion:1.1\n\n\x00", b"CONNECTED\n\n\x00", b"CONNECTED\nversion:2.0\n\n\x00"] {
+  for
+    selection in [
+      b"CONNECTED\nversion:1.1\n\n\x00", b"CONNECTED\n\n\x00", b"CONNECTED\nversion:2.0\n\n\x00",
+    ] {
     let client = Client::new()
     ignore(client.send(connect("local"), 0))
-    assert_true(try { ignore(client.receive(selection, 0)); false } catch { _ => true })
+    assert_true(
+      try {
+        ignore(client.receive(selection, 0))
+        false
+      } catch {
+        _ => true
+      },
+    )
     assert_eq(client.state(), Closed)
   }
 }
@@ -76,17 +126,38 @@ test "1.0 destination subscription ACK and receipt-fenced unsubscribe" {
   ignore(client.receive(b"CONNECTED\nsession:legacy\n\n\x00", 0))
   assert_eq(client.version(), Some(V10))
   ignore(client.send(subscribe_versioned(V10, "tasks", ack="client"), 0))
-  let message = Frame::new("MESSAGE", [("destination", "tasks"), ("message-id", "m\\1")], body=b"job")
+  let message = Frame::new(
+    "MESSAGE",
+    [("destination", "tasks"), ("message-id", "m\\1")],
+    body=b"job",
+  )
   ignore(client.receive(encode_versioned(message, V10), 0))
   assert_eq(client.pending_deliveries(), 1)
-  assert_eq(client.send(acknowledge_message(V10, message), 0), b"ACK\nmessage-id:m\\1\n\n\x00")
+  assert_eq(
+    client.send(acknowledge_message(V10, message), 0),
+    b"ACK\nmessage-id:m\\1\n\n\x00",
+  )
   assert_eq(client.pending_deliveries(), 0)
   assert_eq(client.tick(100000), b"")
-  ignore(client.send(Frame::new("UNSUBSCRIBE", [("destination", "tasks"), ("receipt", "fence")]), 100000))
-  ignore(client.receive(b"MESSAGE\ndestination:tasks\nmessage-id:last\n\n\x00", 100000))
+  ignore(
+    client.send(
+      Frame::new("UNSUBSCRIBE", [("destination", "tasks"), ("receipt", "fence")]),
+      100000,
+    ),
+  )
+  ignore(
+    client.receive(
+      b"MESSAGE\ndestination:tasks\nmessage-id:last\n\n\x00", 100000,
+    ),
+  )
   ignore(client.receive(b"RECEIPT\nreceipt-id:fence\n\n\x00", 100000))
   assert_eq(client.pending_deliveries(), 1)
-  ignore(client.send(acknowledge_message(V10, Frame::new("MESSAGE", [("message-id", "last")])), 100000))
+  ignore(
+    client.send(
+      acknowledge_message(V10, Frame::new("MESSAGE", [("message-id", "last")])),
+      100000,
+    ),
+  )
   assert_eq(client.pending_deliveries(), 0)
 }
 
@@ -95,18 +166,50 @@ test "1.0 optional subscription id is separate from destination key" {
   let client = Client::new()
   ignore(client.send(connect_versions("", [V10]), 0))
   ignore(client.receive(b"CONNECTED\n\n\x00", 0))
-  ignore(client.send(subscribe_versioned(V10, "tasks", id="s", ack="client"), 0))
-  ignore(client.receive(b"MESSAGE\ndestination:tasks\nsubscription:s\nmessage-id:m\n\n\x00", 0))
-  ignore(client.send(acknowledge_message(V10, Frame::new("MESSAGE", [("message-id", "m")])), 0))
+  ignore(
+    client.send(subscribe_versioned(V10, "tasks", id="s", ack="client"), 0),
+  )
+  ignore(
+    client.receive(
+      b"MESSAGE\ndestination:tasks\nsubscription:s\nmessage-id:m\n\n\x00", 0,
+    ),
+  )
+  ignore(
+    client.send(
+      acknowledge_message(V10, Frame::new("MESSAGE", [("message-id", "m")])),
+      0,
+    ),
+  )
   ignore(client.send(unsubscribe("s"), 0))
   assert_eq(client.pending_deliveries(), 0)
 }
 
 ///|
 test "1.0 rejects NACK individual mode and active heartbeat intent" {
-  assert_true(try { ignore(connect_versions("", [V10], heartbeat="1,1")); false } catch { _ => true })
-  assert_true(try { ignore(subscribe_versioned(V10, "tasks", ack="client-individual")); false } catch { _ => true })
-  assert_true(try { ignore(encode_versioned(Frame::new("NACK", [("message-id", "m")]), V10)); false } catch { _ => true })
+  assert_true(
+    try {
+      ignore(connect_versions("", [V10], heartbeat="1,1"))
+      false
+    } catch {
+      _ => true
+    },
+  )
+  assert_true(
+    try {
+      ignore(subscribe_versioned(V10, "tasks", ack="client-individual"))
+      false
+    } catch {
+      _ => true
+    },
+  )
+  assert_true(
+    try {
+      ignore(encode_versioned(Frame::new("NACK", [("message-id", "m")]), V10))
+      false
+    } catch {
+      _ => true
+    },
+  )
 }
 
 ///|
@@ -114,13 +217,44 @@ test "1.1 ACK must name the delivered message and subscription" {
   let client = Client::new()
   ignore(client.send(connect_versions("local", [V11]), 0))
   ignore(client.receive(b"CONNECTED\nversion:1.1\n\n\x00", 0))
-  ignore(client.send(subscribe_versioned(V11, "tasks", id="s", ack="client-individual"), 0))
-  let message = Frame::new("MESSAGE", [("destination", "tasks"), ("subscription", "s"), ("message-id", "m")])
+  ignore(
+    client.send(
+      subscribe_versioned(V11, "tasks", id="s", ack="client-individual"),
+      0,
+    ),
+  )
+  let message = Frame::new("MESSAGE", [
+    ("destination", "tasks"),
+    ("subscription", "s"),
+    ("message-id", "m"),
+  ])
   ignore(client.receive(encode_versioned(message, V11), 0))
-  assert_true(try { ignore(client.send(acknowledge("m"), 0)); false } catch { _ => true })
-  assert_true(try { ignore(client.send(Frame::new("ACK", [("message-id", "m"), ("subscription", "other")]), 0)); false } catch { _ => true })
+  assert_true(
+    try {
+      ignore(client.send(acknowledge("m"), 0))
+      false
+    } catch {
+      _ => true
+    },
+  )
+  assert_true(
+    try {
+      ignore(
+        client.send(
+          Frame::new("ACK", [("message-id", "m"), ("subscription", "other")]),
+          0,
+        ),
+      )
+      false
+    } catch {
+      _ => true
+    },
+  )
   assert_eq(client.pending_deliveries(), 1)
-  assert_eq(client.send(acknowledge_message(V11, message, negative=true), 0), b"NACK\nmessage-id:m\nsubscription:s\n\n\x00")
+  assert_eq(
+    client.send(acknowledge_message(V11, message, negative=true), 0),
+    b"NACK\nmessage-id:m\nsubscription:s\n\n\x00",
+  )
   assert_eq(client.pending_deliveries(), 0)
 }
 
@@ -129,8 +263,15 @@ test "1.1 cumulative transaction abort restores deliveries" {
   let client = Client::new()
   ignore(client.send(connect_versions("local", [V10, V11, V12]), 0))
   ignore(client.receive(b"CONNECTED\nversion:1.1\n\n\x00", 0))
-  ignore(client.send(subscribe_versioned(V11, "tasks", id="s", ack="client"), 0))
-  ignore(client.receive(b"MESSAGE\ndestination:tasks\nsubscription:s\nmessage-id:a\n\n\x00MESSAGE\ndestination:tasks\nsubscription:s\nmessage-id:b\n\n\x00", 0))
+  ignore(
+    client.send(subscribe_versioned(V11, "tasks", id="s", ack="client"), 0),
+  )
+  ignore(
+    client.receive(
+      b"MESSAGE\ndestination:tasks\nsubscription:s\nmessage-id:a\n\n\x00MESSAGE\ndestination:tasks\nsubscription:s\nmessage-id:b\n\n\x00",
+      0,
+    ),
+  )
   ignore(client.send(begin_transaction("t"), 0))
   let last = Frame::new("MESSAGE", [("message-id", "b"), ("subscription", "s")])
   ignore(client.send(acknowledge_message(V11, last, transaction="t"), 0))
@@ -150,7 +291,14 @@ test "legacy handshake cannot silently accept 1.2-only EOLs" {
     } else {
       b"CONNECTED\r\nversion:1.1\r\n\r\n\x00"
     }
-    assert_true(try { ignore(decoder.feed(wire)); false } catch { _ => true })
+    assert_true(
+      try {
+        ignore(decoder.feed(wire))
+        false
+      } catch {
+        _ => true
+      },
+    )
   }
 }
 
@@ -162,8 +310,17 @@ test "1.0 idless overlap is rejected atomically in both insertion orders" {
     ignore(client.receive(b"CONNECTED\n\n\x00", 0))
     ignore(client.send(subscribe_versioned(V10, "tasks", id=first_id), 0))
     let second_id = if first_id == "" { "s" } else { "" }
-    assert_true(try { ignore(client.send(subscribe_versioned(V10, "tasks", id=second_id), 0)); false } catch { _ => true })
-    ignore(client.receive(b"MESSAGE\ndestination:tasks\nmessage-id:m\n\n\x00", 0))
+    assert_true(
+      try {
+        ignore(client.send(subscribe_versioned(V10, "tasks", id=second_id), 0))
+        false
+      } catch {
+        _ => true
+      },
+    )
+    ignore(
+      client.receive(b"MESSAGE\ndestination:tasks\nmessage-id:m\n\n\x00", 0),
+    )
     assert_eq(client.state(), Active)
   }
 }
@@ -173,7 +330,9 @@ test "older headers retain literal CR data including at line end" {
   for version in [V10, V11] {
     let frame = Frame::new("MESSAGE", [("mid", "a\rb"), ("tail", "a\r")])
     let decoder = Decoder::new(version~)
-    assert_eq(decoder.feed(encode_versioned(frame, version)), [WireEvent::Frame(frame)])
+    assert_eq(decoder.feed(encode_versioned(frame, version)), [
+      WireEvent::Frame(frame),
+    ])
     decoder.end()
     let negotiated = Decoder::new()
     negotiated.expect_versions([V10, V11, V12])
@@ -204,7 +363,14 @@ test "1.1 heartbeat negotiation reuses send liveness and receive timeout" {
   assert_eq(client.tick(40), b"\n")
   ignore(client.receive(b"\n", 100))
   assert_eq(client.tick(230), b"\n")
-  assert_true(try { ignore(client.tick(231)); false } catch { _ => true })
+  assert_true(
+    try {
+      ignore(client.tick(231))
+      false
+    } catch {
+      _ => true
+    },
+  )
   assert_eq(client.state(), Closed)
 }
 
@@ -226,10 +392,22 @@ test "pure older client CONNECT preserves literal CR header data" {
 ///|
 test "STOMP command allows mixed modern offers but rejects pure 1.0" {
   let client = Client::new()
-  ignore(client.send(Frame::new("STOMP", [("host", "local"), ("accept-version", "1.0,1.1")]), 0))
+  ignore(
+    client.send(
+      Frame::new("STOMP", [("host", "local"), ("accept-version", "1.0,1.1")]),
+      0,
+    ),
+  )
   ignore(client.receive(b"CONNECTED\nversion:1.1\n\n\x00", 0))
   assert_eq(client.version(), Some(V11))
   let legacy = Client::new()
-  assert_true(try { ignore(legacy.send(Frame::new("STOMP", [("accept-version", "1.0")]), 0)); false } catch { _ => true })
+  assert_true(
+    try {
+      ignore(legacy.send(Frame::new("STOMP", [("accept-version", "1.0")]), 0))
+      false
+    } catch {
+      _ => true
+    },
+  )
   assert_eq(legacy.state(), Fresh)
 }

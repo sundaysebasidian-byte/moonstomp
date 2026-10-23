@@ -15,8 +15,8 @@ jobs:
     env:
       PINNED_SDK: 0.10.14+7d59c7ec9
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
       - name: Install official MoonBit SDK

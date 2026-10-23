@@ -73,10 +73,15 @@ fn Decoder::finish_frame(
   // STOMP 1.0 also explicitly requires RECEIPT to have an empty body.
   // Its other legacy command bodies retain the existing tolerant behavior.
   if (self.version != V10 || self.command == "RECEIPT") &&
-    !body_allowed(self.command) && self.body.length() > 0 {
+    !body_allowed(self.command) &&
+    self.body.length() > 0 {
     raise Invalid("body forbidden")
   }
-  events.push(Frame(Frame::new(self.command, self.headers, body=Bytes::from_array(self.body))))
+  events.push(
+    Frame(
+      Frame::new(self.command, self.headers, body=Bytes::from_array(self.body)),
+    ),
+  )
   self.line.clear()
   self.headers.clear()
   self.handshake_headers.clear()
@@ -92,10 +97,18 @@ fn split_header(text : String) -> (String, String) raise ProtocolError {
   let chars = text.to_array()
   let mut colon = -1
   for i = 0; i < chars.length(); i = i + 1 {
-    if chars[i] == ':' { colon = i; break }
+    if chars[i] == ':' {
+      colon = i
+      break
+    }
   }
-  if colon <= 0 { raise Invalid("header missing colon or key") }
-  (String::from_array(chars[:colon].to_owned()), String::from_array(chars[colon + 1:].to_owned()))
+  if colon <= 0 {
+    raise Invalid("header missing colon or key")
+  }
+  (
+    String::from_array(chars[:colon].to_owned()),
+    String::from_array(chars[colon + 1:].to_owned()),
+  )
 }
 
 ///|
@@ -109,16 +122,25 @@ fn strip_eol_cr(text : String) -> String {
 }
 
 ///|
-fn Decoder::add_header(self : Decoder, text : String) -> Unit raise ProtocolError {
+fn Decoder::add_header(
+  self : Decoder,
+  text : String,
+) -> Unit raise ProtocolError {
   if self.headers.length() >= self.limits.max_headers {
     raise Invalid("header count limit")
   }
   let (key, value) = split_header(text)
   self.headers.push(
     if self.version == V10 || unescaped(self.command) {
-      (raw_header(key, true, version=self.version), raw_header(value, false, version=self.version))
+      (
+        raw_header(key, true, version=self.version),
+        raw_header(value, false, version=self.version),
+      )
     } else {
-      (unescape_versioned(key, self.version), unescape_versioned(value, self.version))
+      (
+        unescape_versioned(key, self.version),
+        unescape_versioned(value, self.version),
+      )
     },
   )
 }
@@ -126,7 +148,10 @@ fn Decoder::add_header(self : Decoder, text : String) -> Unit raise ProtocolErro
 ///|
 /// Defer CONNECTED header normalization until its version is known. Older versions
 /// allow literal CR in headers; treating those octets as EOL loses data.
-fn Decoder::select_version(self : Decoder, offered : Array[Version]) -> Unit raise ProtocolError {
+fn Decoder::select_version(
+  self : Decoder,
+  offered : Array[Version],
+) -> Unit raise ProtocolError {
   let mut selected = V10
   for line in self.handshake_headers {
     let (key, value) = split_header(line)
@@ -162,7 +187,10 @@ fn Decoder::start_body(self : Decoder) -> Unit raise ProtocolError {
 }
 
 ///|
-fn Decoder::line_done(self : Decoder, events : Array[WireEvent]) -> Unit raise ProtocolError {
+fn Decoder::line_done(
+  self : Decoder,
+  events : Array[WireEvent],
+) -> Unit raise ProtocolError {
   let raw = @utf8.decode(Bytes::from_array(self.line)) catch {
     _ => raise Invalid("invalid UTF8 header")
   }
@@ -170,13 +198,17 @@ fn Decoder::line_done(self : Decoder, events : Array[WireEvent]) -> Unit raise P
   if self.phase == 0 {
     let text = if self.version == V12 { strip_eol_cr(raw) } else { raw }
     if text == "" {
-      if events.length() >= self.limits.max_events { raise Invalid("event limit") }
+      if events.length() >= self.limits.max_events {
+        raise Invalid("event limit")
+      }
       events.push(Heartbeat)
     } else {
       if self.version == V10 && (text == "STOMP" || text == "NACK") {
         raise Invalid("command unavailable in STOMP 1.0")
       }
-      if !valid_command(text) { raise Invalid("unknown command") }
+      if !valid_command(text) {
+        raise Invalid("unknown command")
+      }
       self.frame_crlf = raw.has_suffix("\r")
       self.command = text
       self.phase = 1
@@ -184,19 +216,20 @@ fn Decoder::line_done(self : Decoder, events : Array[WireEvent]) -> Unit raise P
     return
   }
   match self.negotiation {
-    Some(offered) => if self.command == "CONNECTED" {
-      if raw == "" || raw == "\r" {
-        self.frame_crlf = self.frame_crlf || raw == "\r"
-        self.select_version(offered)
-        self.start_body()
-      } else {
-        if self.handshake_headers.length() >= self.limits.max_headers {
-          raise Invalid("header count limit")
+    Some(offered) =>
+      if self.command == "CONNECTED" {
+        if raw == "" || raw == "\r" {
+          self.frame_crlf = self.frame_crlf || raw == "\r"
+          self.select_version(offered)
+          self.start_body()
+        } else {
+          if self.handshake_headers.length() >= self.limits.max_headers {
+            raise Invalid("header count limit")
+          }
+          self.handshake_headers.push(raw)
         }
-        self.handshake_headers.push(raw)
+        return
       }
-      return
-    }
     None => ()
   }
   let text = if self.version == V12 { strip_eol_cr(raw) } else { raw }

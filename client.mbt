@@ -159,10 +159,17 @@ fn remove_string(a : Array[String], s : String) -> Unit {
 fn Client::check_ack(self : Client, f : Frame) -> Int raise ProtocolError {
   let version = self.version.unwrap_or(V12)
   let id = required(f, if version == V12 { "id" } else { "message-id" })
-  let subscription = if version == V11 { Some(required(f, "subscription")) } else { None }
+  let subscription = if version == V11 {
+    Some(required(f, "subscription"))
+  } else {
+    None
+  }
   for i = 0; i < self.deliveries.length(); i = i + 1 {
     if self.deliveries[i].id == id &&
-      (subscription == None || subscription == Some(self.deliveries[i].subscription)) {
+      (
+        subscription == None ||
+        subscription == Some(self.deliveries[i].subscription)
+      ) {
       if self.deliveries[i].staged != None {
         raise Invalid("ack already staged")
       }
@@ -203,7 +210,8 @@ pub fn Client::send(
     Some(c) => c.advance(now)
     None => ()
   }
-  let automatic_length = f.body.length() > 0 && f.header("content-length") == None
+  let automatic_length = f.body.length() > 0 &&
+    f.header("content-length") == None
   if f.headers.length() > 128 ||
     (automatic_length && f.headers.length() == 128) ||
     f.body.length() > 1048576 {
@@ -214,9 +222,16 @@ pub fn Client::send(
       raise Invalid("outbound header limit")
     }
   }
-  let wire_version = if self.state == Fresh && (f.command == "CONNECT" || f.command == "STOMP") {
+  let wire_version = if self.state == Fresh &&
+    (f.command == "CONNECT" || f.command == "STOMP") {
     let offered = offered_versions(f.header("accept-version").unwrap_or("1.0"))
-    if offered.contains(V12) { V12 } else if offered.contains(V11) { V11 } else { V10 }
+    if offered.contains(V12) {
+      V12
+    } else if offered.contains(V11) {
+      V11
+    } else {
+      V10
+    }
   } else {
     self.version.unwrap_or(V12)
   }
@@ -290,9 +305,10 @@ pub fn Client::send(
       }
       match f.header("ack").unwrap_or("auto") {
         "auto" | "client" => ()
-        "client-individual" => if self.version == Some(V10) {
-          raise Invalid("client-individual requires STOMP 1.1 or 1.2")
-        }
+        "client-individual" =>
+          if self.version == Some(V10) {
+            raise Invalid("client-individual requires STOMP 1.1 or 1.2")
+          }
         _ => raise Invalid("invalid ack mode")
       }
     }
@@ -348,10 +364,9 @@ pub fn Client::send(
     "UNSUBSCRIBE" => {
       let id = self.unsubscribe_key(f)
       match f.header("receipt") {
-        Some(receipt) => {
+        Some(receipt) =>
           // Keep the slot/mode until the ordered receipt fences earlier MESSAGEs.
           self.unsubscribing.push((id, receipt))
-        }
         None => self.remove_subscription(id)
       }
       // Pending acknowledgements remain valid until explicitly settled/connection closes.
@@ -439,7 +454,14 @@ fn Client::accept_frame(
         None => raise Invalid("unknown MESSAGE subscription")
       }
       if mode != "auto" {
-        let id = required(f, if self.version == Some(V12) { "ack" } else { "message-id" })
+        let id = required(
+          f,
+          if self.version == Some(V12) {
+            "ack"
+          } else {
+            "message-id"
+          },
+        )
         if self.deliveries.length() >= self.max_pending {
           raise Invalid("pending delivery limit")
         }
@@ -583,7 +605,10 @@ pub fn Client::version(self : Client) -> Version? {
 }
 
 ///|
-fn Client::subscription_key(self : Client, frame : Frame) -> String raise ProtocolError {
+fn Client::subscription_key(
+  self : Client,
+  frame : Frame,
+) -> String raise ProtocolError {
   if self.version == Some(V10) {
     match frame.header("id") {
       Some(_) => "id:" + required(frame, "id")
@@ -595,7 +620,10 @@ fn Client::subscription_key(self : Client, frame : Frame) -> String raise Protoc
 }
 
 ///|
-fn Client::destination_key(self : Client, destination : String) -> String raise ProtocolError {
+fn Client::destination_key(
+  self : Client,
+  destination : String,
+) -> String raise ProtocolError {
   let mut key : String? = None
   for item in self.destinations {
     if item.1 == destination {
@@ -612,7 +640,10 @@ fn Client::destination_key(self : Client, destination : String) -> String raise 
 }
 
 ///|
-fn Client::unsubscribe_key(self : Client, frame : Frame) -> String raise ProtocolError {
+fn Client::unsubscribe_key(
+  self : Client,
+  frame : Frame,
+) -> String raise ProtocolError {
   if self.version == Some(V10) && frame.header("id") == None {
     self.destination_key(required(frame, "destination"))
   } else {

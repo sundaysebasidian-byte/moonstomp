@@ -102,7 +102,9 @@ test "ACK after unsubscribe retains original cumulative semantics" {
 test "pending unsubscribe fences are released by transport failure" {
   let c = active()
   sub(c, "s", "auto")
-  ignore(c.send(Frame::new("UNSUBSCRIBE", [("id", "s"), ("receipt", "unsub")]), 0))
+  ignore(
+    c.send(Frame::new("UNSUBSCRIBE", [("id", "s"), ("receipt", "unsub")]), 0),
+  )
   assert_eq(c.unsubscribing.length(), 1)
   assert_eq(c.subscriptions.length(), 1)
   c.fail()
@@ -231,7 +233,10 @@ test "clock regression during negotiation is fatal" {
 ///|
 test "outbound header budget includes automatic binary content length" {
   let c = active()
-  let headers : Array[(String, String)] = [("destination", "tasks"), ("receipt", "budget")]
+  let headers : Array[(String, String)] = [
+    ("destination", "tasks"),
+    ("receipt", "budget"),
+  ]
   for i = 0; i < 126; i = i + 1 {
     headers.push(("x", "v"))
   }
@@ -240,7 +245,9 @@ test "outbound header budget includes automatic binary content length" {
     try {
       ignore(c.send(Frame::new("SEND", headers, body=b"\x00"), 0))
       false
-    } catch { _ => true },
+    } catch {
+      _ => true
+    },
   )
   assert_eq(c.state(), Active)
   assert_eq(c.pending_receipts(), 0)
@@ -273,16 +280,49 @@ test "unsubscribe receipt fences in-flight messages and prevents premature id re
   ignore(c.send(connect("local"), 0))
   ignore(c.receive(b"CONNECTED\nversion:1.2\n\n\x00", 0))
   sub(c, "s", "client")
-  ignore(c.send(Frame::new("UNSUBSCRIBE", [("id", "s"), ("receipt", "unsub")]), 0))
-  assert_true(try { ignore(c.send(subscribe("s", "other"), 0)); false } catch { _ => true })
-  assert_true(try { ignore(c.send(unsubscribe("s"), 0)); false } catch { _ => true })
-  assert_true(try { ignore(c.send(subscribe("other", "tasks"), 0)); false } catch { _ => true })
-  let events = c.receive(b"MESSAGE\nsubscription:s\nmessage-id:old\ndestination:tasks\nack:old\n\njob\x00RECEIPT\nreceipt-id:unsub\n\n\x00", 0)
+  ignore(
+    c.send(Frame::new("UNSUBSCRIBE", [("id", "s"), ("receipt", "unsub")]), 0),
+  )
+  assert_true(
+    try {
+      ignore(c.send(subscribe("s", "other"), 0))
+      false
+    } catch {
+      _ => true
+    },
+  )
+  assert_true(
+    try {
+      ignore(c.send(unsubscribe("s"), 0))
+      false
+    } catch {
+      _ => true
+    },
+  )
+  assert_true(
+    try {
+      ignore(c.send(subscribe("other", "tasks"), 0))
+      false
+    } catch {
+      _ => true
+    },
+  )
+  let events = c.receive(
+    b"MESSAGE\nsubscription:s\nmessage-id:old\ndestination:tasks\nack:old\n\njob\x00RECEIPT\nreceipt-id:unsub\n\n\x00",
+    0,
+  )
   assert_eq(events.length(), 2)
   assert_eq(c.state(), Active)
   assert_eq(c.pending_receipts(), 0)
   assert_eq(c.pending_deliveries(), 1)
-  assert_true(try { ignore(c.send(subscribe("s", "other"), 0)); false } catch { _ => true })
+  assert_true(
+    try {
+      ignore(c.send(subscribe("s", "other"), 0))
+      false
+    } catch {
+      _ => true
+    },
+  )
   ignore(c.send(acknowledge("old"), 0))
   ignore(c.send(subscribe("s", "other", ack="client-individual"), 0))
   assert_eq(c.pending_deliveries(), 0)
@@ -295,13 +335,29 @@ test "unreceipted unsubscribe and messages after unsubscribe receipt close on un
   let c = active()
   sub(c, "s", "auto")
   ignore(c.send(unsubscribe("s"), 0))
-  assert_true(try { message(c, "s", "late"); false } catch { _ => true })
+  assert_true(
+    try {
+      message(c, "s", "late")
+      false
+    } catch {
+      _ => true
+    },
+  )
   assert_eq(c.state(), Closed)
   let c = active()
   sub(c, "s", "auto")
-  ignore(c.send(Frame::new("UNSUBSCRIBE", [("id", "s"), ("receipt", "unsub")]), 0))
+  ignore(
+    c.send(Frame::new("UNSUBSCRIBE", [("id", "s"), ("receipt", "unsub")]), 0),
+  )
   ignore(c.receive(b"RECEIPT\nreceipt-id:unsub\n\n\x00", 0))
-  assert_true(try { message(c, "s", "late"); false } catch { _ => true })
+  assert_true(
+    try {
+      message(c, "s", "late")
+      false
+    } catch {
+      _ => true
+    },
+  )
   assert_eq(c.state(), Closed)
   assert_eq(c.pending_receipts(), 0)
   assert_eq(c.pending_deliveries(), 0)
