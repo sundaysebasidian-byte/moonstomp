@@ -51,25 +51,7 @@ pub suberror ProtocolError {
 pub fn ProtocolError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
-pub struct Client {
-  decoder : Decoder
-  capacity : Int
-  max_pending : Int
-  subscriptions : Array[(String, String)]
-  destinations : Array[(String, String)]
-  mut offered : Array[Version]
-  mut version : Version?
-  unsubscribing : Array[(String, String)]
-  transactions : Array[String]
-  receipts : Array[String]
-  deliveries : Array[Delivery]
-  mut state : State
-  mut clock : HeartbeatClock?
-  mut last_now : Int64
-  mut cx : Int
-  mut cy : Int
-  mut disconnect_receipt : String?
-}
+type Client
 pub fn Client::end(Self) -> Unit raise ProtocolError
 pub fn Client::fail(Self) -> Unit
 pub fn Client::new(capacity? : Int, max_pending? : Int) -> Self raise ProtocolError
@@ -92,20 +74,7 @@ pub fn ClientEvent::equal(Self, Self) -> Bool
 pub fn ClientEvent::not_equal(Self, Self) -> Bool
 pub fn ClientEvent::to_repr(Self) -> @debug.Repr
 
-pub struct Decoder {
-  limits : Limits
-  mut version : Version
-  mut negotiation : Array[Version]?
-  mut frame_crlf : Bool
-  handshake_headers : Array[String]
-  line : Array[Byte]
-  headers : Array[(String, String)]
-  body : Array[Byte]
-  mut phase : Int
-  mut command : String
-  mut length : Int
-  mut failed : Bool
-}
+type Decoder
 pub fn Decoder::end(Self) -> Unit raise ProtocolError
 pub fn Decoder::feed(Self, Bytes) -> Array[WireEvent] raise ProtocolError
 pub fn Decoder::new(limits? : Limits, version? : Version) -> Self raise ProtocolError
@@ -123,13 +92,7 @@ pub fn Frame::new(String, Array[(String, String)], body? : Bytes) -> Self
 pub fn Frame::not_equal(Self, Self) -> Bool
 pub fn Frame::to_repr(Self) -> @debug.Repr
 
-pub struct HeartbeatClock {
-  plan : HeartbeatPlan
-  tolerance_ms : Int64
-  mut sent : Int64
-  mut received : Int64
-  mut now : Int64
-}
+type HeartbeatClock
 pub fn HeartbeatClock::new(HeartbeatPlan, Int64, tolerance_ms? : Int64) -> Self raise ProtocolError
 pub fn HeartbeatClock::poll(Self, Int64) -> (Bool, Bool) raise ProtocolError
 pub fn HeartbeatClock::received_data(Self, Int64) -> Unit raise ProtocolError

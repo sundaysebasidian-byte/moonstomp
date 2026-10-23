@@ -26,7 +26,7 @@ struct Delivery {
 
 ///|
 /// A sans-I/O client. Caller writes returned bytes and calls `fail` on write failure.
-pub struct Client {
+struct Client {
   decoder : Decoder
   capacity : Int
   max_pending : Int

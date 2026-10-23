@@ -20,7 +20,7 @@ pub fn Limits::default() -> Limits {
 
 ///|
 /// Single pass across arbitrary chunks. Fatal errors poison the decoder.
-pub struct Decoder {
+struct Decoder {
   limits : Limits
   mut version : Version
   mut negotiation : Array[Version]?
