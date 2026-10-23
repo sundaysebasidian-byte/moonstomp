@@ -20,10 +20,10 @@ cat > ../moonstomp-consumer/moon.work <<'EOF'
 members = [".", "../moonstomp"]
 EOF
 cd ../moonstomp-consumer
-moon check . --target js --deny-warn -j 1
-moon build . --target js --deny-warn -j 1
-moon test --target js --package independent/moonstomp-consumer --deny-warn -j 1
-moon run . --target js --deny-warn -j 1
+moon check . --target js --frozen --no-mbti --deny-warn -j 1
+moon build . --target js --frozen --deny-warn -j 1
+moon test --target js --package independent/moonstomp-consumer --frozen --deny-warn -j 1
+moon run . --target js --frozen --deny-warn -j 1
 ```
 
 预期各命令退出 0，测试为 `Total tests: 6, passed: 6, failed: 0.`，运行输出为：
@@ -34,4 +34,4 @@ sensor-feed: readings=2, values=25/26, duplicate-first, heartbeat=LF
 ledger-batch: staged=2, abort-restored=2, commit-pending=0, receipts=2
 ```
 
-输入 server 帧由 fixture 明确提供，没有连接真实 broker。真实 TLS 订单场景使用源码根目录的 `scripts/classic-run.py --tls --demo`，见 [提交准备](../../docs/submission-preparation.zh-CN.md)。消费者运行后可删除这个独立模块；不会改全局 SDK、配置或服务。
+`--frozen`禁止同步依赖，`--no-mbti`避免check时用另一SDK重写候选的接口索引；所需core已随现有SDK准备。输入server帧由fixture明确提供，没有连接真实broker。真实TLS订单场景使用源码根目录的 `scripts/classic-run.py --tls --demo`，见 [提交准备](../../docs/submission-preparation.zh-CN.md)。消费者运行后可删除这个独立模块；不会改全局SDK、配置或服务。

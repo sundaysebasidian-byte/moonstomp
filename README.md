@@ -30,6 +30,10 @@ moon add sundaysebasidian-byte/moonstomp
 
 > 已发布的 0.1.2 只支持 STOMP 1.2；多版本协商、认证、TLS 和句柄在当前源码中，尚未发布新版本。
 
+当前 master 还将 `Client`、`Decoder`、`HeartbeatClock` 的字段收为抽象类型；依赖字段的外部代码需要迁移，虽然 `moon.mod` 仍写 0.1.2。升级前请读 [迁移说明与固定 SHA/CI](docs/migration-master-20261023.zh-CN.md)；未来 0.2.0 只是 PR 中的建议，没有因此发布新版本。
+
+固定 master `636ef52…` 的本地接入续验已覆盖干净消费者6/6、真实Classic TLS三版本、receipt丢失不重发及真实心跳关闭。精确源码、SDK、命令与未测范围见 [当前源码接入回执](docs/integration-master636-20261023.zh-CN.md)；这与旧v5和已发布0.1.2分开报告。
+
 ## 用法
 
 ### MoonBit：喂字节，拿事件
