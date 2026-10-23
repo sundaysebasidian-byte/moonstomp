@@ -79,8 +79,6 @@ pub fn Decoder::end(Self) -> Unit raise ProtocolError
 pub fn Decoder::feed(Self, Bytes) -> Array[WireEvent] raise ProtocolError
 pub fn Decoder::new(limits? : Limits, version? : Version) -> Self raise ProtocolError
 
-type Delivery
-
 pub struct Frame {
   command : String
   headers : Array[(String, String)]

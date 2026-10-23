@@ -17,7 +17,7 @@ pub enum ClientEvent {
 } derive(Debug, Eq)
 
 ///|
-struct Delivery {
+priv struct Delivery {
   id : String
   subscription : String
   cumulative : Bool
