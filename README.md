@@ -28,9 +28,9 @@ moon run examples/versions --target js      # 1.0 / 1.1 / 1.2 协商与边界
 moon add sundaysebasidian-byte/moonstomp@0.2.0
 ```
 
-> **0.2.0 目前是待发布候选，尚无本轮 registry 成功回执。** 上面的安装命令仅在官方registry返回实际version与metadata.version均为0.2.0后使用；不能把manifest版本、GitHub合并或回退到旧版的响应当作已发布。历史已发布0.1.2只支持STOMP1.2，可显式使用`moon add sundaysebasidian-byte/moonstomp@0.1.2`。发布准备及阻塞见[0.2.0说明](docs/release-0.2.0.zh-CN.md)。
+> **[0.2.0 已发布到 Mooncakes](https://mooncakes.io/docs/sundaysebasidian-byte/moonstomp)。** Registry 实际版本、metadata 和发布 ZIP checksum 均已核对；全新 registry 消费者通过核心 API、多版本及模拟 TCP/TLS 验证。历史 0.1.2 仅支持 STOMP 1.2。精确发布 commit、CI、校验和与未验范围见[0.2.0 回执](docs/release-0.2.0.zh-CN.md)。
 
-当前源码将`Client`、`Decoder`、`HeartbeatClock`字段收为抽象类型，依赖字段的外部代码需要迁移。因此候选从0.1.x提升为0.2.0，不覆盖旧0.1.2；升级前请读[迁移说明](docs/migration-master-20261023.zh-CN.md)。该历史说明固定于变更基线，发布状态以0.2.0发布回执为准。
+当前源码将`Client`、`Decoder`、`HeartbeatClock`字段收为抽象类型，依赖字段的外部代码需要迁移。因此版本从0.1.x提升为0.2.0，不覆盖旧0.1.2；升级前请读[迁移说明](docs/migration-master-20261023.zh-CN.md)。该历史说明固定于变更基线，发布状态以0.2.0发布回执为准。
 
 固定 master `636ef52…` 的本地接入续验已覆盖干净消费者6/6、真实Classic TLS三版本、receipt丢失不重发及真实心跳关闭。精确源码、SDK、命令与未测范围见 [当前源码接入回执](docs/integration-master636-20261023.zh-CN.md)；这与旧v5和已发布0.1.2分开报告。
 
