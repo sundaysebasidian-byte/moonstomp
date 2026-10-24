@@ -18,7 +18,7 @@ class Compatibility(unittest.TestCase):
     def test_actual_manifest_identity_without_tomllib(self):
         with patch.object(downstream, 'tomllib', None):
             self.assertEqual(downstream.manifest_identity((downstream.ROOT / 'moon.mod').read_text()),
-                             ('sundaysebasidian-byte/moonstomp', '0.1.2'))
+                             ('sundaysebasidian-byte/moonstomp', '0.2.0'))
 
     def test_literal_prefix_and_comments(self):
         with patch.object(downstream, 'tomllib', None):

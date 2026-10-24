@@ -50,6 +50,10 @@ def validate_archive(bundle):
         p = Path(name)
         if p.is_absolute() or '..' in p.parts or '.git' in p.parts or '_build' in p.parts:
             raise RuntimeError('unsafe candidate archive entry')
+        if (any(part in {'evidence', '.moon', '.mooncakes', 'target', '__pycache__'} for part in p.parts)
+                or p.suffix.lower() in {'.p12', '.key', '.zip', '.patch'}
+                or p.name == 'credentials.json' or p.name == '.env' or p.name.startswith('.env.')):
+            raise RuntimeError('candidate archive contains local state, credentials or unrelated evidence')
 
 def parse_targets(text):
     targets = text.split(',')

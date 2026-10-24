@@ -13,7 +13,7 @@ name = "independent/moonstomp-consumer"
 version = "0.1.0"
 license = "MIT"
 import {
-  "sundaysebasidian-byte/moonstomp@0.1.2",
+  "sundaysebasidian-byte/moonstomp@0.2.0",
 }
 EOF
 cat > ../moonstomp-consumer/moon.work <<'EOF'

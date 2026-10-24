@@ -5,3 +5,18 @@ docs/rules-and-ecology.zh-CN.md
 
 **/__pycache__/
 *.pyc
+
+# Also exclude local state, credential files and backup archives.
+.git/
+_build/
+.moon/
+.mooncakes/
+target/
+.DS_Store
+*.zip
+*.patch
+*.p12
+*.key
+.env
+.env.*
+credentials.json
