@@ -1,6 +1,6 @@
 name = "sundaysebasidian-byte/moonstomp"
 
-version = "0.1.2"
+version = "0.2.0"
 
 license = "MIT"
 
@@ -10,6 +10,6 @@ repository = "https://github.com/sundaysebasidian-byte/moonstomp"
 
 preferred_target = "js"
 
-description = "Bounded incremental STOMP 1.2 codec and transport-independent client"
+description = "Bounded incremental STOMP 1.0/1.1/1.2 codec and transport-independent client"
 
 keywords = [ "stomp", "messaging", "protocol" ]

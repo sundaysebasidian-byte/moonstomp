@@ -25,12 +25,12 @@ moon run examples/versions --target js      # 1.0 / 1.1 / 1.2 协商与边界
 在自己的 MoonBit 项目里使用：
 
 ```sh
-moon add sundaysebasidian-byte/moonstomp
+moon add sundaysebasidian-byte/moonstomp@0.2.0
 ```
 
-> 已发布的 0.1.2 只支持 STOMP 1.2；多版本协商、认证、TLS 和句柄在当前源码中，尚未发布新版本。
+> **0.2.0 目前是待发布候选，尚无本轮 registry 成功回执。** 上面的安装命令仅在官方registry返回实际version与metadata.version均为0.2.0后使用；不能把manifest版本、GitHub合并或回退到旧版的响应当作已发布。历史已发布0.1.2只支持STOMP1.2，可显式使用`moon add sundaysebasidian-byte/moonstomp@0.1.2`。发布准备及阻塞见[0.2.0说明](docs/release-0.2.0.zh-CN.md)。
 
-当前 master 还将 `Client`、`Decoder`、`HeartbeatClock` 的字段收为抽象类型；依赖字段的外部代码需要迁移，虽然 `moon.mod` 仍写 0.1.2。升级前请读 [迁移说明与固定 SHA/CI](docs/migration-master-20261023.zh-CN.md)；未来 0.2.0 只是 PR 中的建议，没有因此发布新版本。
+当前源码将`Client`、`Decoder`、`HeartbeatClock`字段收为抽象类型，依赖字段的外部代码需要迁移。因此候选从0.1.x提升为0.2.0，不覆盖旧0.1.2；升级前请读[迁移说明](docs/migration-master-20261023.zh-CN.md)。该历史说明固定于变更基线，发布状态以0.2.0发布回执为准。
 
 固定 master `636ef52…` 的本地接入续验已覆盖干净消费者6/6、真实Classic TLS三版本、receipt丢失不重发及真实心跳关闭。精确源码、SDK、命令与未测范围见 [当前源码接入回执](docs/integration-master636-20261023.zh-CN.md)；这与旧v5和已发布0.1.2分开报告。
 
