@@ -95,6 +95,8 @@ def main():
     parser.add_argument('--java-home', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--port', type=int, default=62614)
+    parser.add_argument('--processors', type=int, choices=[1, 2], default=2,
+                        help='Bound Java active processors; manual CI uses one, historical default remains two')
     parser.add_argument('--tls', action='store_true', help='Ephemeral localhost certificate, verified STOMP TLS plus authentication; no plaintext connector')
     parser.add_argument('--demo', action='store_true', help='One focused STOMP 1.2 TLS/transaction/receipt-loss demonstration; requires --tls; does not run broker matrix')
     args = parser.parse_args()
@@ -155,7 +157,7 @@ def main():
                 '-file', str(conf / 'broker-cert.pem')])
         config.write_text(broker_config(args.port, key_store))
         (conf / 'log4j2.properties').write_text('status=error\nname=MoonSTOMPClassic\nappender.console.type=Console\nappender.console.name=console\nappender.console.layout.type=PatternLayout\nappender.console.layout.pattern=%p %m%n\nrootLogger.level=warn\nrootLogger.appenderRef.console.ref=console\n')
-        command = [java, '-Xms64m', '-Xmx256m', '-XX:ActiveProcessorCount=2', '-Djava.awt.headless=true',
+        command = [java, '-Xms64m', '-Xmx256m', '-XX:ActiveProcessorCount=' + str(args.processors), '-Djava.awt.headless=true',
                    '-Dactivemq.home=' + str(home), '-Dactivemq.base=' + str(profile),
                    '-Dactivemq.conf=' + str(conf), '-Dactivemq.data=' + str(profile / 'data'),
                    '-Djava.io.tmpdir=' + str(profile / 'tmp'),
