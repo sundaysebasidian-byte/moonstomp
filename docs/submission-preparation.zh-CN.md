@@ -1,6 +1,20 @@
-# MoonSTOMP：10 月 24 日前的私有提交准备
+# MoonSTOMP：10 月 24 日提交准备与源码状态核对
 
-这份材料供维护者审阅、复现和自行讲解。按 **2026 年 10 月 24 日北京时间**的提交窗口准备，尚未指定提交时刻；没有代为报名、接受协议或提交比赛。维护者随后授权公开独立开发分支供审阅，准确提交和 CI 状态以交付回执为准；不合并主分支或发版。它是 AI 辅助技术说明，不是声称本人独立撰写的最终申报书；季度评分权重尚未核实，不承诺获奖。
+这份材料供维护者审阅、复现和自行讲解。按 **2026 年 10 月 24 日北京时间**的提交窗口准备，尚未指定提交时刻；没有代为报名、接受协议或提交比赛。它是 AI 辅助技术说明，不是声称本人独立撰写的最终申报书；季度评分权重尚未核实，不承诺获奖。
+
+## 2026-10-23 核实的提交状态
+
+[PR #3](https://github.com/sundaysebasidian-byte/moonstomp/pull/3) 已于 **2026-10-23 09:28:49 UTC** 合入 master，当前核实 SHA 为 [`636ef52a8022991b15b366bf3da23ccd5c51e9a0`](https://github.com/sundaysebasidian-byte/moonstomp/commit/636ef52a8022991b15b366bf3da23ccd5c51e9a0)。这是既有状态，不推断操作者；本次文档工作没有执行合并。随后明确授权的交付只更新原review分支，不代表进一步合并、发版或提交比赛权限。
+
+| 来源与精确版本 | 可引用的事实 | 不能混用的范围 |
+|---|---|---|
+| 历史发布的0.1.2 | 仅STOMP1.2，原发布记录保留 | manifest同为0.1.2不代表registry包含新master |
+| 旧候选 `907bea9ed4b483426dada3cc1f080e743b8cb7d9` / Library v5 | 当时消费者6/6、Classic场景、本地SDK边界；该SHA的CI39826182007成功 | v5保留原源码、哈希与回执，旧实测不改写为master新测试 |
+| master `636ef52a8022991b15b366bf3da23ccd5c51e9a0` | [checks 39932161429](https://github.com/sundaysebasidian-byte/moonstomp/actions/runs/39932161429)与[fresh clone 39932161423](https://github.com/sundaysebasidian-byte/moonstomp/actions/runs/39932161423)均为该SHA的push、completed/success；fresh clone锁定0.10.14、当次最新0.10.17均71/71、七demo通过 | 不代表未推送文档补丁已有CI，也不代表本次重跑broker/plain Wasm/native矩阵 |
+
+三个有状态类型已改为抽象类型，对旧字段调用方存在破坏性变更。`moon.mod` 仍为0.1.2；PR中的0.2.0只是未来发布建议，未自动定版或发包。字段到方法的迁移及没有公开替代的内部信息见 [迁移说明](migration-master-20261023.zh-CN.md)。
+
+**后续本地接入续验**：同一master636ef52加文档补丁，干净消费者6/6、真实Classic TLS三版本、receipt未知不重发和真实心跳关闭均已执行通过，详见[接入回执](integration-master636-20261023.zh-CN.md)。这是新一轮本地证据；下面提到的旧v5以及此前“仅文档、未跑broker”保留原日期范围，不代表此次续验没有执行。
 
 ## 项目解决什么问题
 
@@ -10,7 +24,7 @@
 
 ## 用现有真实演示讲清楚
 
-先按 README 从私有包生成 JS bridge，再运行既有的一条命令：
+若选择当前 master 作为提交来源，应先固定上述完整 SHA，再按 README 生成 JS bridge。此前文档收尾仅引用旧v5回执；当前源码的订单场景已在后续本地接入续验单独执行，结果见上面的接入回执，不把不同轮次混为一份测试：
 
 ```sh
 python3 scripts/classic-run.py --home /path/to/apache-activemq-6.3.2 \
@@ -28,13 +42,13 @@ python3 scripts/classic-run.py --home /path/to/apache-activemq-6.3.2 \
 | 安全失败 | 发送方关闭；后续发送被拒；中继连接/SEND/丢 receipt 各 1 | 没有自动重发或重连；应用需稳定业务 ID、幂等约束和对账，不能声称 exactly-once |
 | 清理 | finally 关闭客户端、中继、自己启动的 broker，删除私钥并验证端口关闭 | 失败回执仍可见；公开输出白名单不打印 raw frame/cause 或任意消息正文 |
 
-ACK 已在当前演示和三版本矩阵中使用；Classic 事务 ACK 回滚和 NACK 重投递未验收。演示显式关闭心跳以聚焦投递歧义；**不能声称这条命令演示了真实心跳**。心跳是已有单独实测证据：本次 Linux 审计中的认证 TCP broker 双向各 2 次心跳，随后回环中继丢 broker 流量，客户端报告 `heartbeat timeout` 并清理，未重连。两份证据分别展示，见 [Linux 审计](linux-audit-20261022.zh-CN.md) 与包内 `evidence/linux-audit-20261022/broker-heartbeat/results.json`。
+ACK 已在旧 v5 演示和三版本矩阵中使用；Classic 事务 ACK 回滚和 NACK 重投递未验收。演示显式关闭心跳；**不能声称这条命令演示了真实心跳**。10月22日另有真实认证TCP心跳实测：双向各2次后中继丢broker流量，客户端heartbeat timeout并清理、未重连。两份历史证据分别见 [Linux审计](linux-audit-20261022.zh-CN.md) 与旧v5包内 `evidence/linux-audit-20261022/broker-heartbeat/results.json`。
 
 ## 此次新增贡献与历史分界
 
-远端基线是 `review/moonbit-20261015-sync` 的 `62694580a9c58aec9eb2199e2e1f9685b5e30781`。基线已有多版本核心、认证/TLS、句柄和 CLI，不将这些全部算成本轮新写。本次私有增量是控制等待期限、receipt 的发送边界与未知结果上下文、EOF/超时错误、故障回归、真实 Classic TLS/断线/receipt 丢失演示及审计证据；此次提交准备仅补材料和最终包复现，没有扩展产品 API。
+早期私有增量以 review 分支的 `62694580a9c58aec9eb2199e2e1f9685b5e30781` 为基线，随后形成 `907bea9…`；当前提交来源应指明 master `636ef52…`，不能继续把旧基线当最新版。已有增量包含控制等待期限、receipt发送边界与未知结果、EOF/超时错误、故障回归、Classic TLS/断线/receipt演示及审计证据。后续PR #3另含格式/README整理、fresh-clone CI、README测试及抽象类型，不归为此次文档补丁实现。
 
-`moon.mod` 仍为 0.1.2，含候选修改的私有包不是已发布的 0.1.2。Git SHA 固定基线，私有 patch SHA256 与逐文件清单固定增量；既有 CI/registry 记录不能冒充此次候选通过。主命令与支持矩阵放在 README，独立公共 API 复现放在 [消费者说明](../validation/consumer/README.md)。
+`moon.mod`仍为0.1.2，旧私有包和当前master都不能冒称已发布的新版本。前一轮独立文档补丁包保持不变；接入续验另交付基于`636ef52…`的完整本地候选与新回执，不修改master，不混入或更新旧v5包。独立公共API的workspace命令见 [消费者说明](../validation/consumer/README.md)，换用新SHA时先遵守迁移契约。
 
 ## 设计取舍与证据边界
 
@@ -42,9 +56,9 @@ ACK 已在当前演示和三版本矩阵中使用；Classic 事务 ACK 回滚和
 - receipt 等控制等待失败后关闭会话，避免迟到回执与后续操作混淆；普通观察超时不必关闭。只在尝试 socket 写入后标记未知结果，不能由客户端推断 broker 是否执行。
 - 不做自动重放：网络错误不能替业务决定重试。事务只是当前 STOMP 会话中的消息事务，不是跨数据库的原子处理。
 - 有界缓存和 fail-closed 清理优先于宽松容错；差分参考的宽松解析不作为放松长度/转义校验的理由。
-- 本轮 Linux JS 70/70、私有源码消费者 6/6、真实 Classic TCP/TLS 检查通过；普通 Wasm/Wasm GC 的独立常量控制失败，native 缺 runtime，正式 `moon package` 缺 `mooncake`。这些失败保留，不列为当前已验证支持。
+- 10月22日旧候选的本地Linux JS70/70、消费者6/6、Classic TCP/TLS通过；当时0.10.16兼容工具链的Wasm/Wasm GC控制失败、native runtime与mooncake缺件仍保留。新master已存在的远端CI单列在上表，不把不同SHA、SDK和测试范围互相替代。
 
-官方完整 SDK 的安装入口和校验方法仍在 [官方下载页](https://www.moonbitlang.com/download/)；此前该发行端点 HTTP403，未绕过或反复请求。官方 GitHub `v0.10.16+b1a0e846e` 发行物只列 Wasm 工具链和源码归档，本轮没有取得完整 native SDK/打包器，没有重新运行已知失败后端矩阵。
+SDK入口仍见 [官方下载页](https://www.moonbitlang.com/download/)；此前本地HTTP403失败保留，远端runner安装成功不代表本地缺件恢复。本次只校验文档，不安装依赖、不取新权限、不重跑已知失败后端矩阵。
 
 ## 许可、来源与本人应能解释的内容
 
