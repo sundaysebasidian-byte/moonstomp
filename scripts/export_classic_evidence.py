@@ -17,6 +17,7 @@ def main():
     parser.add_argument('--heartbeat', type=Path)
     parser.add_argument('--soak', type=Path)
     parser.add_argument('--resources', type=Path)
+    parser.add_argument('--async-send', type=Path)
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     if args.output.exists():
@@ -59,10 +60,10 @@ def main():
                 good = False
         report[name] = safe
         passed.append(good)
-    for name, directory in [('heartbeat', args.heartbeat), ('soak', args.soak)]:
+    for name, directory in [('heartbeat', args.heartbeat), ('soak', args.soak), ('async_send', args.async_send)]:
         if directory is None:
             continue
-        report['scope'] = 'Classic TLS matrix, receipt-loss demo and requested heartbeat/load checks'
+        report['scope'] = 'Classic TLS matrix, receipt-loss demo and requested heartbeat/load/async checks'
         path = directory / 'classic.json'
         if not path.is_file():
             report[name] = {'status': 'missing'}
@@ -81,7 +82,7 @@ def main():
             good = good and all(data.get(k) is True for k in ['tls', 'real_broker', 'heartbeat_timeout', 'no_reconnect', 'upstream_tls_verified'])
             good = good and data.get('status') == 'PASSED' and data.get('connections') == 1 and data.get('business_SENDs') == 0 and data.get('open_relay_sockets') == 0
             good = good and all(isinstance(data.get(k), int) and data[k] >= minimum for k, minimum in [('client_heartbeats', 2), ('broker_heartbeats', 2), ('dropped_broker_bytes', 1)])
-        else:
+        elif name == 'soak':
             allowed = ['status', 'diagnostic', 'elapsed_ms', 'target_active_rate_per_second', 'attempted_sends',
                        'outcome_unknown', 'sent', 'received', 'acked', 'receipts', 'errors', 'timeouts', 'duplicates',
                        'unique_payloads', 'expected_negative_observation_timeouts', 'outgoing_heartbeats',
@@ -96,6 +97,13 @@ def main():
             good = good and len(windows) == 5 and all(isinstance(w.get(k), int) and w[k] > 0 for w in windows for k in ['outgoing_delta', 'incoming_delta'])
             safe['idle_windows'] = [{k: w[k] for k in ['window', 'start_ms', 'end_ms', 'outgoing_delta', 'incoming_delta'] if k in w} for w in windows]
             safe['latency_ms'] = {k: data.get('latency_ms', {})[k] for k in ['mean', 'max'] if k in data.get('latency_ms', {})}
+        else:
+            allowed = ['status', 'tls_verified', 'version', 'async_local_writes',
+                       'observed_ordered_deliveries', 'separate_broker_receipt', 'no_automatic_replay']
+            good = good and data.get('status') == 'PASSED' and data.get('version') == '1.2'
+            good = good and all(data.get(k) is True for k in ['tls_verified', 'separate_broker_receipt', 'no_automatic_replay'])
+            good = good and type(data.get('async_local_writes')) is int and data['async_local_writes'] == 16
+            good = good and type(data.get('observed_ordered_deliveries')) is int and data['observed_ordered_deliveries'] == 17
         safe['assertions'] = {key: data[key] for key in allowed if key in data}
         report[name] = safe
         passed.append(good)
