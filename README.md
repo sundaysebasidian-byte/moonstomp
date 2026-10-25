@@ -8,6 +8,8 @@
 
 核心不碰 socket，只吃字节、吐字节和事件，所以能放进任何运行时；仓库另带一个 Node TCP/TLS 适配器、`send` / `subscribe` 命令行和一条命令就能跑的场景示例。
 
+本地开发候选为0.3.0（有界异步SEND），尚未公开或发布；当前可安装版本仍为0.2.1。[候选变更与发布条件](docs/release-0.3.0.zh-CN.md)。
+
 ## 快速开始
 
 需要 MoonBit 工具链（CI 锁定 `moonc v0.10.14+7d59c7ec9`，见 [toolchain.lock.json](toolchain.lock.json)）和 Node.js（CI 用 24），**不需要外部 broker**。
