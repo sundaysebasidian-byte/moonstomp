@@ -53,6 +53,12 @@ jobs:
         timeout-minutes: 2
         run: |
           python3 scripts/classic-run.py --home "$RUNNER_TEMP/classic-home/apache-activemq-6.3.2" --java-home "$JAVA_HOME" --output "$RUNNER_TEMP/classic-heartbeat" --port 62617 --processors 1 --tls --heartbeat > "$RUNNER_TEMP/classic-heartbeat-console.txt" 2> "$RUNNER_TEMP/classic-heartbeat-console.stderr.txt"
+      - name: Real TLS heartbeat 1000ms positive observation and negative drop
+        timeout-minutes: 2
+        env:
+          STOMP_HEARTBEAT_PERIOD_MS: 1000
+        run: |
+          python3 scripts/classic-run.py --home "$RUNNER_TEMP/classic-home/apache-activemq-6.3.2" --java-home "$JAVA_HOME" --output "$RUNNER_TEMP/classic-heartbeat1000" --port 62620 --processors 1 --tls --heartbeat > "$RUNNER_TEMP/classic-heartbeat1000-console.txt" 2> "$RUNNER_TEMP/classic-heartbeat1000-console.stderr.txt"
       - name: Short real TLS async SEND with separate receipt and cleanup
         timeout-minutes: 2
         run: |
@@ -63,7 +69,7 @@ jobs:
           python3 scripts/bounded_run.py --seconds 380 --rss-mib 512 --output "$RUNNER_TEMP/classic-soak-resources" -- python3 scripts/classic-run.py --home "$RUNNER_TEMP/classic-home/apache-activemq-6.3.2" --java-home "$JAVA_HOME" --output "$RUNNER_TEMP/classic-soak" --port 62618 --processors 1 --tls --soak > "$RUNNER_TEMP/classic-soak-console.txt" 2> "$RUNNER_TEMP/classic-soak-console.stderr.txt"
       - name: Export assertion whitelist, including failed or missing evidence
         if: always()
-        run: python3 scripts/export_classic_evidence.py --matrix "$RUNNER_TEMP/classic-matrix" --demo "$RUNNER_TEMP/classic-demo" --heartbeat "$RUNNER_TEMP/classic-heartbeat" --soak "$RUNNER_TEMP/classic-soak" --resources "$RUNNER_TEMP/classic-soak-resources" --async-send "$RUNNER_TEMP/classic-async" --output "$RUNNER_TEMP/classic-public"
+        run: python3 scripts/export_classic_evidence.py --matrix "$RUNNER_TEMP/classic-matrix" --demo "$RUNNER_TEMP/classic-demo" --heartbeat "$RUNNER_TEMP/classic-heartbeat" --heartbeat1000 "$RUNNER_TEMP/classic-heartbeat1000" --soak "$RUNNER_TEMP/classic-soak" --resources "$RUNNER_TEMP/classic-soak-resources" --async-send "$RUNNER_TEMP/classic-async" --output "$RUNNER_TEMP/classic-public"
       - name: Preserve public assertion summary only
         if: ${{ false }} # No artifact storage billing in this Draft.
         uses: actions/upload-artifact@v4

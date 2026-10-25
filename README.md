@@ -8,7 +8,7 @@
 
 核心不碰 socket，只吃字节、吐字节和事件，所以能放进任何运行时；仓库另带一个 Node TCP/TLS 适配器、`send` / `subscribe` 命令行和一条命令就能跑的场景示例。
 
-当前正式包为0.3.0。本分支含尚未发布的心跳相位/调度余量修复，拟作为0.3.1补丁；registry 0.3.0仍保留旧行为。[根因、取舍与本地验证](docs/heartbeat-phase-margin.zh-CN.md)。
+0.3.1 修复心跳检查相位与调度余量；0.3.0仍保留旧行为。[版本内容与发布核验条件](docs/release-0.3.1.zh-CN.md)及[根因、取舍与本地验证](docs/heartbeat-phase-margin.zh-CN.md)。是否已发布以Mooncakes和对应PR回执为准，源码文档不能代替实际registry验证。
 
 ## 快速开始
 
@@ -27,7 +27,7 @@ moon run examples/versions --target js      # 1.0 / 1.1 / 1.2 协商与边界
 在自己的 MoonBit 项目里使用：
 
 ```sh
-moon add sundaysebasidian-byte/moonstomp@0.3.0
+moon add sundaysebasidian-byte/moonstomp@0.3.1
 ```
 
 0.2.1 修正 Client 的心跳接收宽限为 R + max(100ms,R)，降低已观察到的空闲过渡误超时；公共 HeartbeatClock 默认值不变，故障检测可能较晚。真实 TLS 心跳及五分钟场景有独立回执，不能等同长期稳定性。 版本内容及验证边界见 [0.2.1 说明](docs/release-0.2.1.zh-CN.md)；实际发布状态以 Mooncakes 为准。

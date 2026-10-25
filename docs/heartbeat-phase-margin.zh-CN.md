@@ -1,5 +1,7 @@
 # Classic 心跳启动相位与接收余量
 
+> 本页保留本地修复阶段记录。当前0.3.1发布候选及状态见[版本说明](release-0.3.1.zh-CN.md)；下文“尚未改manifest/公开”等仅描述当时阶段。
+
 本地未发布修复，基于已发布0.3.0提交`93e706f696095e0d848a8d5e326f35f48bc0becb`。拟采用0.3.1补丁版本，尚未改manifest、push、建立新PR或发布；不能把本页结果归给registry0.3.0。
 
 真实registry消费者在Mac/arm64经TLS中继连接Classic6.3.2时，100ms与1000ms配置均在主动drop之前超时。协商1000,1000的时序显示：客户端收CONNECTED及尾随LF后只发出一次心跳，约2R后关闭，中继未见后续broker心跳；20ms tick没有长停顿。
