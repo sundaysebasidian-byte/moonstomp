@@ -14,6 +14,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--matrix', type=Path, required=True)
     parser.add_argument('--demo', type=Path, required=True)
+    parser.add_argument('--heartbeat', type=Path)
+    parser.add_argument('--soak', type=Path)
+    parser.add_argument('--resources', type=Path)
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     if args.output.exists():
@@ -56,6 +59,52 @@ def main():
                 good = False
         report[name] = safe
         passed.append(good)
+    for name, directory in [('heartbeat', args.heartbeat), ('soak', args.soak)]:
+        if directory is None:
+            continue
+        report['scope'] = 'Classic TLS matrix, receipt-loss demo and requested heartbeat/load checks'
+        path = directory / 'classic.json'
+        if not path.is_file():
+            report[name] = {'status': 'missing'}
+            passed.append(False)
+            continue
+        raw = json.loads(path.read_text())
+        safe = {key: raw[key] for key in ['status', 'broker', 'tls', 'mode', 'port_closed', 'elapsed_ms',
+                'heartbeat_fixture_sha256', 'soak_fixture_sha256'] if key in raw}
+        safe['private_key_removed'] = raw.get('private_key_removed') is True and not (directory / 'profile/conf/broker.p12').exists()
+        good = raw.get('status') == 'PASSED' and raw.get('tls') is True and raw.get('port_closed') is True and safe['private_key_removed']
+        data = raw.get(name, {})
+        if name == 'heartbeat':
+            allowed = ['status', 'tls', 'version', 'real_broker', 'client_heartbeats', 'broker_heartbeats',
+                       'dropped_broker_bytes', 'heartbeat_timeout', 'connections', 'no_reconnect',
+                       'open_relay_sockets', 'business_SENDs', 'upstream_tls_verified']
+            good = good and all(data.get(k) is True for k in ['tls', 'real_broker', 'heartbeat_timeout', 'no_reconnect', 'upstream_tls_verified'])
+            good = good and data.get('status') == 'PASSED' and data.get('connections') == 1 and data.get('business_SENDs') == 0 and data.get('open_relay_sockets') == 0
+            good = good and all(isinstance(data.get(k), int) and data[k] >= minimum for k, minimum in [('client_heartbeats', 2), ('broker_heartbeats', 2), ('dropped_broker_bytes', 1)])
+        else:
+            allowed = ['status', 'diagnostic', 'elapsed_ms', 'target_active_rate_per_second', 'attempted_sends',
+                       'outcome_unknown', 'sent', 'received', 'acked', 'receipts', 'errors', 'timeouts', 'duplicates',
+                       'unique_payloads', 'expected_negative_observation_timeouts', 'outgoing_heartbeats',
+                       'incoming_heartbeats', 'latency_scope', 'cleanup']
+            count = data.get('sent')
+            good = good and data.get('status') == 'PASSED' and data.get('diagnostic') is False and data.get('cleanup') is True
+            duration = data.get('elapsed_ms')
+            good = good and isinstance(duration, (int, float)) and duration >= 300000
+            good = good and isinstance(count, int) and count > 0 and all(data.get(k) == count for k in ['attempted_sends', 'received', 'acked', 'receipts', 'unique_payloads'])
+            good = good and all(data.get(k) == 0 for k in ['outcome_unknown', 'errors', 'timeouts', 'duplicates'])
+            windows = data.get('idle_windows', [])
+            good = good and len(windows) == 5 and all(isinstance(w.get(k), int) and w[k] > 0 for w in windows for k in ['outgoing_delta', 'incoming_delta'])
+            safe['idle_windows'] = [{k: w[k] for k in ['window', 'start_ms', 'end_ms', 'outgoing_delta', 'incoming_delta'] if k in w} for w in windows]
+            safe['latency_ms'] = {k: data.get('latency_ms', {})[k] for k in ['mean', 'max'] if k in data.get('latency_ms', {})}
+        safe['assertions'] = {key: data[key] for key in allowed if key in data}
+        report[name] = safe
+        passed.append(good)
+    if args.resources is not None:
+        path = args.resources / 'summary.json'
+        resource = json.loads(path.read_text()) if path.is_file() else {}
+        report['resources'] = {key: resource[key] for key in ['status', 'exit_code', 'stop_reason', 'elapsed_seconds',
+                'sampled_process_tree_rss_peak_bytes', 'rss_limit_bytes', 'note'] if key in resource}
+        passed.append(resource.get('status') == 'passed' and resource.get('exit_code') == 0 and resource.get('stop_reason') is None)
     report['status'] = 'passed' if all(passed) else 'failed'
     (args.output / 'summary.json').write_text(json.dumps(report, indent=2))
     return 0 if report['status'] == 'passed' else 1

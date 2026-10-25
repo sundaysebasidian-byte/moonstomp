@@ -49,9 +49,17 @@ jobs:
         run: |
           python3 scripts/classic-run.py --home "$RUNNER_TEMP/classic-home/apache-activemq-6.3.2" --java-home "$JAVA_HOME" --output "$RUNNER_TEMP/classic-matrix" --port 62614 --processors 1 --tls > "$RUNNER_TEMP/classic-matrix-console.txt" 2> "$RUNNER_TEMP/classic-matrix-console.stderr.txt"
           python3 scripts/classic-run.py --home "$RUNNER_TEMP/classic-home/apache-activemq-6.3.2" --java-home "$JAVA_HOME" --output "$RUNNER_TEMP/classic-demo" --port 62616 --processors 1 --tls --demo > "$RUNNER_TEMP/classic-demo-console.txt" 2> "$RUNNER_TEMP/classic-demo-console.stderr.txt"
+      - name: Real TLS heartbeat timeout and cleanup
+        timeout-minutes: 2
+        run: |
+          python3 scripts/classic-run.py --home "$RUNNER_TEMP/classic-home/apache-activemq-6.3.2" --java-home "$JAVA_HOME" --output "$RUNNER_TEMP/classic-heartbeat" --port 62617 --processors 1 --tls --heartbeat > "$RUNNER_TEMP/classic-heartbeat-console.txt" 2> "$RUNNER_TEMP/classic-heartbeat-console.stderr.txt"
+      - name: Five-minute real TLS load with bounded resources
+        timeout-minutes: 7
+        run: |
+          python3 scripts/bounded_run.py --seconds 380 --rss-mib 512 --output "$RUNNER_TEMP/classic-soak-resources" -- python3 scripts/classic-run.py --home "$RUNNER_TEMP/classic-home/apache-activemq-6.3.2" --java-home "$JAVA_HOME" --output "$RUNNER_TEMP/classic-soak" --port 62618 --processors 1 --tls --soak > "$RUNNER_TEMP/classic-soak-console.txt" 2> "$RUNNER_TEMP/classic-soak-console.stderr.txt"
       - name: Export assertion whitelist, including failed or missing evidence
         if: always()
-        run: python3 scripts/export_classic_evidence.py --matrix "$RUNNER_TEMP/classic-matrix" --demo "$RUNNER_TEMP/classic-demo" --output "$RUNNER_TEMP/classic-public"
+        run: python3 scripts/export_classic_evidence.py --matrix "$RUNNER_TEMP/classic-matrix" --demo "$RUNNER_TEMP/classic-demo" --heartbeat "$RUNNER_TEMP/classic-heartbeat" --soak "$RUNNER_TEMP/classic-soak" --resources "$RUNNER_TEMP/classic-soak-resources" --output "$RUNNER_TEMP/classic-public"
       - name: Preserve public assertion summary only
         if: ${{ false }} # No artifact storage billing in this Draft.
         uses: actions/upload-artifact@v4

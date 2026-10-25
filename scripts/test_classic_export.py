@@ -33,14 +33,16 @@ class ExportControls(unittest.TestCase):
                       broker_command=['synthetic-private-command'])
         return dict(common, interop=dict(status='PASSED', tls=True, results=versions+controls)), dict(common, demo=demo)
 
-    def invoke(self, root, matrix, demo):
-        for name, content in [('matrix', matrix), ('demo', demo)]:
+    def invoke(self, root, matrix, demo, extra=None):
+        documents = dict(matrix=matrix, demo=demo, **(extra or {}))
+        for name, content in documents.items():
             folder = root/name
             folder.mkdir()
-            (folder/'classic.json').write_text(json.dumps(content))
+            (folder/('summary.json' if name == 'resources' else 'classic.json')).write_text(json.dumps(content))
         output = root/'public'
+        flags = [arg for name in (extra or {}) for arg in ['--'+name, str(root/name)]]
         result = subprocess.run([sys.executable, str(SCRIPT), '--matrix', str(root/'matrix'),
-                                 '--demo', str(root/'demo'), '--output', str(output)], capture_output=True)
+                                 '--demo', str(root/'demo'), *flags, '--output', str(output)], capture_output=True)
         return result, (output/'summary.json').read_text()
 
     def test_only_whitelisted_assertions_exported(self):
@@ -66,6 +68,34 @@ class ExportControls(unittest.TestCase):
             result, output = self.invoke(Path(temp), matrix, demo)
             self.assertEqual(result.returncode, 1)
             self.assertEqual(json.loads(output)['status'], 'failed')
+
+    def test_new_modes_cannot_export_sensitive_data_or_short_run_success(self):
+        common = dict(status='PASSED', tls=True, port_closed=True, private_key_removed=True,
+                      broker_command='synthetic-private-command')
+        heartbeat = dict(status='PASSED', tls=True, real_broker=True, heartbeat_timeout=True,
+                         no_reconnect=True, upstream_tls_verified=True, connections=1,
+                         business_SENDs=0, open_relay_sockets=0, client_heartbeats=2,
+                         broker_heartbeats=2, dropped_broker_bytes=1, raw_frame='synthetic-do-not-export')
+        soak = dict(status='PASSED', diagnostic=False, cleanup=True, elapsed_ms=300001,
+                    sent=2, attempted_sends=2, received=2, acked=2, receipts=2, unique_payloads=2,
+                    errors=0, timeouts=0, duplicates=0, outcome_unknown=0,
+                    heartbeatTimes='synthetic-do-not-export',
+                    latency_ms=dict(mean=1, max=2, raw_frame='synthetic-do-not-export'),
+                    idle_windows=[dict(window=i, outgoing_delta=1, incoming_delta=1,
+                                       raw_frame='synthetic-do-not-export') for i in range(5)])
+        resources = dict(status='passed', exit_code=0, stop_reason=None,
+                         command='synthetic-private-command')
+        extra = dict(heartbeat=dict(common, heartbeat=heartbeat), soak=dict(common, soak=soak), resources=resources)
+        for failure in [None, 'duration', 'key', 'resources']:
+            candidate = json.loads(json.dumps(extra))
+            if failure == 'duration': candidate['soak']['soak']['elapsed_ms'] = 6500
+            if failure == 'key': candidate['heartbeat']['private_key_removed'] = False
+            if failure == 'resources': candidate['resources']['status'] = 'partial/failed'
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as temp:
+                result, output = self.invoke(Path(temp), *self.fixture(), extra=candidate)
+                self.assertEqual(result.returncode, 0 if failure is None else 1, result.stderr)
+                for marker in ['synthetic-private-command', 'synthetic-do-not-export', 'heartbeatTimes']:
+                    self.assertNotIn(marker, output)
 
 
 if __name__ == '__main__':
