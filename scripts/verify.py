@@ -119,7 +119,7 @@ def main():
         run('offline-example', [moon, 'run', 'examples/offline', '--target', 'js', '-j', '1'])
         run('versions-example', [sys.executable, '-E', 'scripts/versions-example-test.py'])
         run('demos-and-cli', [sys.executable, '-E', 'scripts/usability-test.py'])
-        report['demos_and_cli'] = 'PASSED: 7 demos (golden output) + CLI send/subscribe/login/TLS/error cases against the built-in demo broker and a scripted local TLS peer; test peers, not broker interoperability evidence'
+        report['demos_and_cli'] = 'PASSED: 8 demos (golden output, including unpublished async SEND) + CLI send/subscribe/login/TLS/error cases against the built-in demo broker and a scripted local TLS peer; test peers, not broker interoperability evidence'
         run('js-bridge', ['node', 'scripts/bridge-test.cjs'])
         run('differential', ['node', 'scripts/differential.cjs'])
         consumer_command = [sys.executable, 'scripts/downstream.py', '--output', str(out / 'downstream')]

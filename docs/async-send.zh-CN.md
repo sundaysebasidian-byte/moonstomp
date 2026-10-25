@@ -1,5 +1,14 @@
 # 有界异步 SEND（未发布开发分支）
 
+在包含本特性的源码根目录，使用已有MoonBit SDK和Node即可运行完整的[三条合成记录示例](../examples/demo/08-async-send.cjs)：
+
+```sh
+moon build --target js --frozen -j 1
+node examples/demo/08-async-send.cjs
+```
+
+示例自带内存demo peer，仅监听随机回环端口；展示导入、连接、配置队列上限、一个有界批次的逐项结果、观察订阅消息及finally清理，不下载broker或npm依赖。三次本机写入成功均为`brokerReceipt:false`；随后观察到三条有序消息是另一项应用观察，不是持久化或逐条receipt证明。失败时检查每项`outcomeUnknown`且不重发整批；传输队列有界不代表调用方可以无限创建Promise和消息体，应用批次也须有界。慢读、取消与超时覆盖仍由下文专用测试提供。`moon add ...@0.2.1`安装的是MoonBit包，不会安装或导出这里的Node源码适配器，也不包含`sendAsync`。
+
 `await client.sendAsync(destination, body, {headers, timeoutMs: 5000, signal})` 只发送 SEND，FIFO 串行处理，复制输入，等待本机写回调，并在 `socket.write()` 返回 false 时等 drain。成功返回 `{localWriteComplete:true, brokerReceipt:false}`，不代表 broker 接受、持久化或业务完成。默认最多64项、4MiB待发预算、每帧保守估算1MiB；通过构造参数 `maxPendingSends/maxPendingSendBytes/maxSendFrameBytes` 调整，单帧最多2MiB，自定义头最多126项；实际socket待写字节加新帧仍不得超过2MiB。估算含头转义上界，可能保守拒绝。
 
 `timeoutMs` 包含排队与写入等待，范围1..30000ms。取消/超时在尝试 socket.write 前为 outcomeUnknown=false；尝试后为 true 并关闭连接，取消所有待发项，绝不重发/重连。队列上限和预取消拒绝不会关闭健康会话。`pendingSends/pendingSendBytes` 包括当前活动项，完成后归零。每项自有期限、AbortSignal监听均清除。
