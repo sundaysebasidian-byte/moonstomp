@@ -4,6 +4,8 @@
 
 `timeoutMs` 包含排队与写入等待，范围1..30000ms。取消/超时在尝试 socket.write 前为 outcomeUnknown=false；尝试后为 true 并关闭连接，取消所有待发项，绝不重发/重连。队列上限和预取消拒绝不会关闭健康会话。`pendingSends/pendingSendBytes` 包括当前活动项，完成后归零。每项自有期限、AbortSignal监听均清除。
 
+期限使用单调时钟，写前（包含编码后）及本机完成边界都会检查，不能仅靠可能延迟的定时器回调。事件循环被同步工作占住时，恢复后不会发送已经过期的排队项；已经尝试写入但完成观察逾期则保持未知结果。Node 不能抢占调用方同步工作，这不是实时调度保证。
+
 同步 send/ack/receipt 在异步队列存在时以 STOMP_ASYNC_BUSY 拒绝，调用者先 await 队列再做控制操作；Subscription/Transaction在busy预检时保留原状态和未完成读取，队列清空后可重试。disconnect 的 finally 会 stop，故排队时调用 disconnect 会取消全部待发项。同步原有2MiB缓冲保护保留。心跳在没有背压时可穿插在完整帧之后；tick始终检查入站死亡检测。若发送心跳到期而socket仍needDrain，则以STOMP_HEARTBEAT_BACKPRESSURE关闭，绝不追加字节或无限推迟检测；因此心跳可能早于SEND期限结束会话。该规则也覆盖仅由原同步写入产生的背压。
 
 需要逐条 broker 回执时，队列清空后把现有 `receipt('SEND', ...)` 作为该消息的唯一发送；它会实际发送另一条 SEND，不能对已 sendAsync 的同一消息补发以追认，否则可能重复业务。sendAsync 不接收 receipt 头，本机完成不当作 broker 回执。broker 测试的 receipt-fence 是另一个标记消息，只有该标记的回执，不是前16条的逐条回执。核心 MoonBit sans-I/O 状态机不变。
