@@ -6,7 +6,9 @@
 
 用 MoonBit 写的 STOMP 客户端：**无 I/O 的增量编解码 + 会话状态机**，支持 STOMP 1.0 / 1.1 / 1.2，并已和 Apache Artemis、ActiveMQ Classic 两个真实 broker 互通。
 
-核心不碰 socket，只吃字节、吐字节和事件，所以能放进任何运行时；仓库另带一个 Node TCP/TLS 适配器、`send` / `subscribe` 命令行和 7 个一条命令就能跑的场景示例。
+核心不碰 socket，只吃字节、吐字节和事件，所以能放进任何运行时；仓库另带一个 Node TCP/TLS 适配器、`send` / `subscribe` 命令行和一条命令就能跑的场景示例。
+
+本地开发候选为0.3.0（有界异步SEND），尚未公开或发布；当前可安装版本仍为0.2.1。[候选变更与发布条件](docs/release-0.3.0.zh-CN.md)。
 
 ## 快速开始
 
@@ -15,7 +17,7 @@
 ```sh
 git clone https://github.com/sundaysebasidian-byte/moonstomp.git
 cd moonstomp
-moon test                                   # 71 个单元 / 属性 / 对抗测试
+moon test                                   # 单元 / 属性 / 对抗测试
 moon build --target js                      # 构建 Node 用的 bridge
 node tools/stomp-cli.cjs demo               # 进程内 demo broker：发一条、收一条
 node examples/demo/01-pubsub.cjs            # 最后一行输出 PASS pubsub
@@ -70,7 +72,7 @@ node tools/stomp-cli.cjs send --port 61613 --destination /queue/jobs --body hell
 # sent destination=/queue/jobs bytes=5 receipt=confirmed
 ```
 
-### 7 个场景示例
+### 场景示例
 
 每个都自带回环 demo broker，退出码 0 即通过，输出与 [examples/demo/expected](examples/demo/expected) 逐字节一致。
 
@@ -83,6 +85,7 @@ node tools/stomp-cli.cjs send --port 61613 --destination /queue/jobs --body hell
 | 心跳与断线检测 | `node examples/demo/05-heartbeat.cjs` |
 | 1.0 / 1.1 / 1.2 协商 | `node examples/demo/06-versions.cjs` |
 | 认证与结构化错误 | `node examples/demo/07-auth-errors.cjs` |
+| 有界异步批量发送（仅未发布开发源码） | `node examples/demo/08-async-send.cjs` |
 
 ## 规范覆盖（STOMP 1.2，兼容 1.0 / 1.1）
 
@@ -119,9 +122,9 @@ node tools/stomp-cli.cjs send --port 61613 --destination /queue/jobs --body hell
 
 ## 测试
 
-- 71 个 MoonBit 测试：编解码、头部转义、心跳、会话状态、版本矩阵、属性测试和对抗输入。
+- MoonBit 测试覆盖编解码、头部转义、心跳、会话状态、版本矩阵、属性测试和对抗输入；实际执行结果以对应提交的验收回执为准。
 - 与 stomp.js 7.2.0 解析器的差分测试（`scripts/differential.cjs`，按不同分段长度喂入），Node 适配器的生命周期 / TLS / 凭据测试。
-- CI：[ci.yml](.github/workflows/ci.yml) 在官方 SDK 上跑完整验证（`scripts/verify.py --transport`）；[fresh-clone.yml](.github/workflows/fresh-clone.yml) 模拟新用户 `git clone` 后直接 `moon test`、本页快速开始和 7 个示例，并在最新 SDK 上同样跑一遍。
+- CI：[ci.yml](.github/workflows/ci.yml) 在官方 SDK 上跑完整验证（`scripts/verify.py --transport`）；[fresh-clone.yml](.github/workflows/fresh-clone.yml) 模拟新用户 `git clone` 后直接 `moon test`、本页快速开始和场景示例，并在最新 SDK 上同样跑一遍。本地新增异步示例尚无远端CI回执。
 
 本地完整验证：`python3 scripts/verify.py --output ../moonstomp-verification`。
 各轮验证的命令、环境和结果见 [docs/verification-20261022.zh-CN.md](docs/verification-20261022.zh-CN.md) 与 `evidence/`。
@@ -141,3 +144,5 @@ node tools/stomp-cli.cjs send --port 61613 --destination /queue/jobs --body hell
 
 代码 MIT（[LICENSE](LICENSE)）。参考测试文件 Apache-2.0，STOMP 规范 CC BY 3.0，来源与使用范围见 [docs/reference.zh-CN.md](docs/reference.zh-CN.md)。
 开发中 AI 的参与方式见 [AI_USAGE.md](AI_USAGE.md)，技术方案见 [Proposal.md](Proposal.md)。
+
+开发分支新增的 Node `sendAsync` 用法、限制与回执边界见[异步 SEND](docs/async-send.zh-CN.md)；尚未发布到上面的 0.2.1 包。

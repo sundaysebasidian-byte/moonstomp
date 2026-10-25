@@ -119,7 +119,7 @@ def main():
         run('offline-example', [moon, 'run', 'examples/offline', '--target', 'js', '-j', '1'])
         run('versions-example', [sys.executable, '-E', 'scripts/versions-example-test.py'])
         run('demos-and-cli', [sys.executable, '-E', 'scripts/usability-test.py'])
-        report['demos_and_cli'] = 'PASSED: 7 demos (golden output) + CLI send/subscribe/login/TLS/error cases against the built-in demo broker and a scripted local TLS peer; test peers, not broker interoperability evidence'
+        report['demos_and_cli'] = 'PASSED: 8 demos (golden output, including unpublished async SEND) + CLI send/subscribe/login/TLS/error cases against the built-in demo broker and a scripted local TLS peer; test peers, not broker interoperability evidence'
         run('js-bridge', ['node', 'scripts/bridge-test.cjs'])
         run('differential', ['node', 'scripts/differential.cjs'])
         consumer_command = [sys.executable, 'scripts/downstream.py', '--output', str(out / 'downstream')]
@@ -134,6 +134,8 @@ def main():
             run('loopback-tls', ['node', 'scripts/tls-transport-test.cjs'])
             run('loopback-handles', ['node', 'scripts/handles-test.cjs'])
             run('loopback-transport', ['node', 'scripts/transport-test.cjs'])
+            run('loopback-async-send', ['node', 'scripts/async-send-test.cjs'])
+            run('loopback-async-send-deadlines', ['node', '--test', 'scripts/async-send-deadline-test.cjs'])
             run('loopback-transport-quality', ['node', 'scripts/transport-quality-test.cjs'])
             run('loopback-control-timeouts', ['node', 'scripts/transport-timeout-test.cjs'])
             report['transport'] = 'PASSED: credentials, scoped handles, TLS trust/hostname, 10 lifecycle + 4 control/predicate/host + 6 three-version control-timeout cases; scripted loopback peers, not a broker'

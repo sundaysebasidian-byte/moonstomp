@@ -1,0 +1,4 @@
+local      3 writes completed; broker receipts not requested
+observed   sample-1,sample-2,sample-3 in order at the demo subscriber
+cleanup    client closed and demo listener stopped
+PASS async-send (unpublished source; demo peer only)
