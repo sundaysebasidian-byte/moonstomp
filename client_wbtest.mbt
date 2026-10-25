@@ -226,9 +226,11 @@ test "client heartbeat tick and partial data keepalive" {
   assert_eq(c.tick(10), b"\n")
   ignore(c.receive(b"M", 100))
   assert_eq(c.tick(110), b"\n")
+  assert_eq(c.tick(220), b"\n")
+  assert_eq(c.state(), Active)
   assert_true(
     try {
-      ignore(c.tick(211))
+      ignore(c.tick(221))
       false
     } catch {
       _ => true

@@ -78,7 +78,8 @@ def main():
         if name == 'heartbeat':
             allowed = ['status', 'tls', 'version', 'real_broker', 'client_heartbeats', 'broker_heartbeats',
                        'dropped_broker_bytes', 'heartbeat_timeout', 'connections', 'no_reconnect',
-                       'open_relay_sockets', 'business_SENDs', 'upstream_tls_verified']
+                       'open_relay_sockets', 'business_SENDs', 'upstream_tls_verified',
+                       'negotiated_period_ms', 'broker_heartbeat_header', 'broker_total_eols', 'excluded_early_eols', 'idle_window_after_ms']
             good = good and all(data.get(k) is True for k in ['tls', 'real_broker', 'heartbeat_timeout', 'no_reconnect', 'upstream_tls_verified'])
             good = good and data.get('status') == 'PASSED' and data.get('connections') == 1 and data.get('business_SENDs') == 0 and data.get('open_relay_sockets') == 0
             good = good and all(isinstance(data.get(k), int) and data[k] >= minimum for k, minimum in [('client_heartbeats', 2), ('broker_heartbeats', 2), ('dropped_broker_bytes', 1)])
