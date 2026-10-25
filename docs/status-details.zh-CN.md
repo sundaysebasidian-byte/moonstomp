@@ -1,5 +1,7 @@
 # MoonSTOMP 详细状态、对照与资源上限(原 README 全文,2026-10-18 整改版)
 
+> 当前状态提示（2026-10-25）：0.2.0已正式发布，1.0/1.1/1.2与真实Classic TLS远端CI已通过。下文带旧日期、0.1.2或“候选未发布”的行均为历史记录，不是当前状态。当前复审入口为QUARTER_REVIEW_DRAFT.zh-CN.md。
+
 2026-10-22：本页保留历史状态与来源，不把旧表“本轮通过”更新为今天通过。当前 Linux 候选与准备材料见 [README](../README.md)、[审计](linux-audit-20261022.zh-CN.md) 和 [此次贡献说明](submission-preparation.zh-CN.md)；Wasm/Wasm GC 与正式打包的缺口在那里明确列出。
 
 > 本文件是 2026-10-20 可用性整理前的 README 全文,内容未删改,仅修正相对链接；**2026-10-20 合并 core 补强后**，状态一览表、真实 broker 与 go-stomp 对照表中的凭据、TLS、Classic 行已同步，其余历史段落（含标注“本轮”的 2026-10-18 记录）保持原样。入口与摘要见仓库根目录 [README.md](../README.md);上手见 [guide.zh-CN.md](guide.zh-CN.md)。

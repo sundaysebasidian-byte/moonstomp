@@ -99,7 +99,10 @@ def main():
                         help='Bound Java active processors; manual CI uses one, historical default remains two')
     parser.add_argument('--tls', action='store_true', help='Ephemeral localhost certificate, verified STOMP TLS plus authentication; no plaintext connector')
     parser.add_argument('--demo', action='store_true', help='One focused STOMP 1.2 TLS/transaction/receipt-loss demonstration; requires --tls; does not run broker matrix')
+    parser.add_argument('--heartbeat', action='store_true', help='Bounded real TLS heartbeat timeout fixture; no business SEND')
     args = parser.parse_args()
+    if args.heartbeat and (not args.tls or args.demo):
+        parser.error('--heartbeat requires --tls and cannot combine with --demo')
     if args.demo and not args.tls:
         parser.error('--demo requires --tls')
     if not 1 <= args.port <= 65535:
@@ -114,7 +117,7 @@ def main():
               'profile': 'test-only credentials, no persistence/JMX/web or system service'}
     process = None
     start_clock = time.monotonic()
-    report['mode'] = 'three-minute-demo' if args.demo else 'interop-matrix'
+    report['mode'] = 'heartbeat-timeout' if args.heartbeat else ('three-minute-demo' if args.demo else 'interop-matrix')
     def run(name, command, env=None):
         p = subprocess.run(command, cwd=ROOT, env=env, capture_output=True, timeout=20 if args.demo else 90)
         (out / (name + '.stdout.txt')).write_bytes(p.stdout)
@@ -184,7 +187,14 @@ def main():
         child_env.pop('STOMP_TLS_CA', None)
         if args.tls:
             child_env['STOMP_TLS_CA'] = str(conf / 'broker-cert.pem')
-        if args.demo:
+        if args.heartbeat:
+            child_env['STOMP_DEMO_PFX'] = str(key_store)
+            report['heartbeat'] = json.loads(run('classic-heartbeat', ['node', 'scripts/classic-heartbeat-test.cjs'], child_env))
+            report['heartbeat_fixture_sha256'] = hashlib.sha256((ROOT / 'scripts/classic-heartbeat-test.cjs').read_bytes()).hexdigest()
+            h = report['heartbeat']
+            if not (h.get('status') == 'PASSED' and h.get('tls') is True and h.get('heartbeat_timeout') is True and h.get('no_reconnect') is True and h.get('open_relay_sockets') == 0 and h.get('business_SENDs') == 0):
+                raise RuntimeError('incomplete real heartbeat evidence')
+        elif args.demo:
             child_env['STOMP_DEMO_PFX'] = str(key_store)
             tests = run('classic-three-minute', ['node', 'examples/classic-three-minute.cjs'], child_env)
             # Public demo output is a whitelist of assertions, never raw broker ERROR/cause.
@@ -223,6 +233,7 @@ def main():
         report['elapsed_ms'] = round((time.monotonic() - start_clock) * 1000)
         if args.demo and report['status'] == 'PASSED' and report['elapsed_ms'] >= 180000:
             report.update(status='FAILED', error='demo exceeded three-minute budget')
+        report['private_key_removed'] = not key_file.exists()
         report['finished_utc'] = datetime.now(timezone.utc).isoformat()
         (out / 'classic.json').write_text(json.dumps(report, indent=2) + '\n')
     if args.demo:

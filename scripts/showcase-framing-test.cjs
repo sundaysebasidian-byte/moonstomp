@@ -30,3 +30,10 @@ test('demo relay fails closed on malformed, oversized or truncated frames', () =
   const reader = frameStream(() => assert.fail('truncated frame forwarded'));
   reader.feed(Buffer.from('RECEIPT\nreceipt-id:part')); assert.throws(() => reader.finish(), /truncated/);
 });
+
+test('heartbeat observer excludes fragmented header newlines and sees coalesced beats', () => {
+  const frames=[],beats=[];
+  const stream=frameStream(b=>frames.push(b),b=>beats.push(b));
+  for(const byte of Buffer.from('CONNECTED\nversion:1.2\n\n\0\n\r\n'))stream.feed(Buffer.from([byte]));
+  stream.finish();assert.equal(frames.length,1);assert.equal(beats.length,2);
+});
