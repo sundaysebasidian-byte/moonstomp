@@ -101,7 +101,10 @@ def main():
     parser.add_argument('--demo', action='store_true', help='One focused STOMP 1.2 TLS/transaction/receipt-loss demonstration; requires --tls; does not run broker matrix')
     parser.add_argument('--heartbeat', action='store_true', help='Bounded real TLS heartbeat timeout fixture; no business SEND')
     parser.add_argument('--soak', action='store_true', help='Fixed five-minute real TLS load/heartbeat window')
+    parser.add_argument('--async-send', action='store_true', help='Short real TLS async SEND integration; no load benchmark')
     args = parser.parse_args()
+    if args.async_send and (not args.tls or args.demo or args.heartbeat or args.soak):
+        parser.error('--async-send requires --tls and excludes other fixture modes')
     if args.soak and (not args.tls or args.demo or args.heartbeat):
         parser.error('--soak requires --tls and excludes --demo/--heartbeat')
     if args.heartbeat and (not args.tls or args.demo):
@@ -120,7 +123,7 @@ def main():
               'profile': 'test-only credentials, no persistence/JMX/web or system service'}
     process = None
     start_clock = time.monotonic()
-    report['mode'] = 'five-minute-soak' if args.soak else 'heartbeat-timeout' if args.heartbeat else ('three-minute-demo' if args.demo else 'interop-matrix')
+    report['mode'] = 'async-send' if args.async_send else 'five-minute-soak' if args.soak else 'heartbeat-timeout' if args.heartbeat else ('three-minute-demo' if args.demo else 'interop-matrix')
     def run(name, command, env=None):
         p = subprocess.run(command, cwd=ROOT, env=env, capture_output=True, timeout=340 if args.soak else (20 if args.demo else 90))
         (out / (name + '.stdout.txt')).write_bytes(p.stdout)
@@ -190,7 +193,11 @@ def main():
         child_env.pop('STOMP_TLS_CA', None)
         if args.tls:
             child_env['STOMP_TLS_CA'] = str(conf / 'broker-cert.pem')
-        if args.soak:
+        if args.async_send:
+            report['async_send'] = json.loads(run('classic-async-send', ['node', 'scripts/async-send-broker-test.cjs'], child_env))
+            if report['async_send'].get('status') != 'PASSED':
+                raise RuntimeError('async SEND integration failed')
+        elif args.soak:
             report['soak'] = json.loads(run('classic-soak', ['node', 'scripts/classic-soak-test.cjs'], child_env))
             report['soak_fixture_sha256'] = hashlib.sha256((ROOT / 'scripts/classic-soak-test.cjs').read_bytes()).hexdigest()
             if report['soak'].get('status') != 'PASSED' or report['soak'].get('elapsed_ms', 0) < 300000:

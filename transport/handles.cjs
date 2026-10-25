@@ -35,7 +35,7 @@ class Subscription {
   ack(message, {transaction} = {}) { this.#acknowledge(message, false, transaction); }
   nack(message, {transaction} = {}) { this.#acknowledge(message, true, transaction); }
   async unsubscribe() {
-    this.#active(); this.#state = 'closing';
+    this.#active(); this.#client._requireSyncTurn(); this.#state = 'closing';
     // Cancel only this handle's pending reads; other subscriptions stay live.
     this.#cancel.abort();
     try { return await this.#client.receipt('UNSUBSCRIBE', [['id', this.id]]); }
@@ -61,7 +61,7 @@ class Transaction {
     this.#client.send('SEND', [['destination', destination], ['transaction', this.id], ...headers], body);
   }
   async #finish(command, state) {
-    Transaction.idFor(this, this.#client); this.#state = 'finishing';
+    Transaction.idFor(this, this.#client); this.#client._requireSyncTurn(); this.#state = 'finishing';
     try { const receipt = await this.#client.receipt(command, [['transaction', this.id]]); this.#state = state; return receipt; }
     catch (error) { this.#state = 'failed'; throw error; }
   }

@@ -134,6 +134,7 @@ def main():
             run('loopback-tls', ['node', 'scripts/tls-transport-test.cjs'])
             run('loopback-handles', ['node', 'scripts/handles-test.cjs'])
             run('loopback-transport', ['node', 'scripts/transport-test.cjs'])
+            run('loopback-async-send', ['node', 'scripts/async-send-test.cjs'])
             run('loopback-transport-quality', ['node', 'scripts/transport-quality-test.cjs'])
             run('loopback-control-timeouts', ['node', 'scripts/transport-timeout-test.cjs'])
             report['transport'] = 'PASSED: credentials, scoped handles, TLS trust/hostname, 10 lifecycle + 4 control/predicate/host + 6 three-version control-timeout cases; scripted loopback peers, not a broker'

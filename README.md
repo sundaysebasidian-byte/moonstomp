@@ -141,3 +141,5 @@ node tools/stomp-cli.cjs send --port 61613 --destination /queue/jobs --body hell
 
 代码 MIT（[LICENSE](LICENSE)）。参考测试文件 Apache-2.0，STOMP 规范 CC BY 3.0，来源与使用范围见 [docs/reference.zh-CN.md](docs/reference.zh-CN.md)。
 开发中 AI 的参与方式见 [AI_USAGE.md](AI_USAGE.md)，技术方案见 [Proposal.md](Proposal.md)。
+
+开发分支新增的 Node `sendAsync` 用法、限制与回执边界见[异步 SEND](docs/async-send.zh-CN.md)；尚未发布到上面的 0.2.1 包。

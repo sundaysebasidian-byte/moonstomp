@@ -4,14 +4,18 @@ const net = require('node:net');
 const tls = require('node:tls');
 const {performance} = require('node:perf_hooks');
 const {transportError, receiptFailure} = require('./errors.cjs');
+const {AsyncSends} = require('./async-send.cjs');
 const {Subscription, Transaction, extraHeaders, handleError} = require('./handles.cjs');
 require('../_build/js/debug/build/bridge/bridge.js');
 const protocol = globalThis.MoonSTOMP;
 class TcpClient {
   #writeSequence = 0n;
-  constructor({host = '127.0.0.1', port = 61613, tickMs = 25, maxQueue = 1024, maxWaiters = 256, maxQueueBytes = 4*1024*1024, tlsOptions = null, controlTimeoutMs = 5000} = {}) {
+  #asyncSends;
+  constructor({host = '127.0.0.1', port = 61613, tickMs = 25, maxQueue = 1024, maxWaiters = 256, maxQueueBytes = 4*1024*1024, tlsOptions = null, controlTimeoutMs = 5000, maxPendingSends = 64, maxPendingSendBytes = 4*1024*1024, maxSendFrameBytes = 1024*1024} = {}) {
     if (typeof host !== 'string' || !host.trim().length || !Number.isInteger(port) || port < 1 || port > 65535 || !Number.isInteger(tickMs) || tickMs < 1 || tickMs > 2147483647 || !Number.isInteger(maxQueue) || maxQueue < 1 || !Number.isInteger(maxWaiters) || maxWaiters < 1 || !Number.isInteger(maxQueueBytes) || maxQueueBytes < 1) throw new Error('invalid TCP configuration');
     if (!Number.isInteger(controlTimeoutMs) || controlTimeoutMs < 1 || controlTimeoutMs > 2147483647) throw new Error('invalid control timeout');
+    if (![maxPendingSends,maxPendingSendBytes,maxSendFrameBytes].every(n=>Number.isSafeInteger(n)&&n>0)||maxSendFrameBytes>2*1024*1024) throw new Error('invalid async SEND limits');
+    this.#asyncSends = new AsyncSends(this,{count:maxPendingSends,bytes:maxPendingSendBytes,frame:maxSendFrameBytes});
     Object.defineProperty(this, 'controlTimeoutMs', {value: controlTimeoutMs, enumerable: true});
     this.options = {host, port};
     if (tlsOptions !== null && (typeof tlsOptions !== 'object' || Array.isArray(tlsOptions) || tlsOptions.rejectUnauthorized === false || tlsOptions.socket !== undefined)) throw new Error('invalid TLS configuration; certificate verification is required');
@@ -25,6 +29,7 @@ class TcpClient {
   version() { return protocol.version(this.core); }
   stop(error = null) {
     if (error && !this.error) this.error = error;
+    this.#asyncSends.close(this.error || error);
     clearInterval(this.timer); this.timer = null;
     protocol.close(this.core);
     for (const w of this.waiters.splice(0)) { w.cleanup(); w.reject(this.error || transportError('STOMP_CONNECTION_CLOSED', 'connection closed')); }
@@ -86,11 +91,18 @@ class TcpClient {
     this.#writeSequence++; // The command may reach the peer after this boundary.
     this.socket.write(bytes, error => { if (error) this.stop(error); });
   }
+  get pendingSends() { return this.#asyncSends.items.length; }
+  get pendingSendBytes() { return this.#asyncSends.bytes; }
+  async sendAsync(destination, body = Buffer.alloc(0), options = {}) { return this.#asyncSends.enqueue(destination,body,options); }
+  _asyncSendWire(headers,body) { return protocol.send(this.core,'SEND',headers,body,this.now()); }
+  _requireSyncTurn() { if(this.pendingSends) throw transportError('STOMP_ASYNC_BUSY','await queued SENDs before synchronous/control writes',{outcomeUnknown:false}); }
   send(command, headers = [], body = Buffer.alloc(0)) {
+    this._requireSyncTurn();
     try { this.write(protocol.send(this.core, command, headers, body, this.now())); }
     catch (e) { this.stop(e); throw e; }
   }
   acknowledge(message, {negative = false, transaction = ''} = {}) {
+    this._requireSyncTurn();
     if (!message || message.command !== 'MESSAGE') throw handleError('acknowledgement requires MESSAGE');
     try { this.write(protocol.acknowledge(this.core, message.headers, negative, transaction, this.now())); }
     catch (error) { this.stop(error); throw error; }
@@ -159,11 +171,16 @@ class TcpClient {
       this.stop(error); throw error;
     }
     this.timer = setInterval(() => {
-      try { this.write(protocol.tick(this.core, this.now())); } catch(e) { this.stop(e); }
+      try {
+        const beat = protocol.tick(this.core, this.now()); // Always check receive death, even under write backpressure.
+        if (beat.length && this.socket?.writableNeedDrain) throw transportError('STOMP_HEARTBEAT_BACKPRESSURE','heartbeat cannot be written before drain');
+        this.write(beat);
+      } catch(e) { this.stop(e); }
     }, this.tickMs);
     return this;
   }
   async receipt(command, headers = [], body = Buffer.alloc(0), id = 'r-' + (++TcpClient.sequence)) {
+    this._requireSyncTurn();
     if (!['SEND', 'SUBSCRIBE', 'UNSUBSCRIBE', 'BEGIN', 'COMMIT', 'ABORT', 'ACK', 'NACK', 'DISCONNECT'].includes(command))
       throw transportError('STOMP_ARGUMENT', 'invalid receipt command', {operation: 'receipt'});
     if (typeof id !== 'string' || !id.length || !Array.isArray(headers) || headers.some(h => !Array.isArray(h) || h.length !== 2 || h.some(v => typeof v !== 'string')) || !(body instanceof Uint8Array)) throw new Error('invalid receipt arguments');
