@@ -2,15 +2,15 @@
 // Demonstration-only, loopback TLS relay. Never use this as a production proxy.
 const tls = require('node:tls');
 
-function frameStream(onFrame) {
+function frameStream(onFrame, onHeartbeat = () => {}) {
   let pending = Buffer.alloc(0);
   return {
     feed(chunk) {
       pending = Buffer.concat([pending, chunk]);
       if (pending.length > 1024 * 1024) throw new Error('demo relay frame budget');
       while (pending.length) {
-        if (pending[0] === 10) { pending = pending.subarray(1); continue; }
-        if (pending[0] === 13 && pending[1] === 10) { pending = pending.subarray(2); continue; }
+        if (pending[0] === 10) { onHeartbeat(pending.subarray(0, 1)); pending = pending.subarray(1); continue; }
+        if (pending[0] === 13 && pending[1] === 10) { onHeartbeat(pending.subarray(0, 2)); pending = pending.subarray(2); continue; }
         const lf = pending.indexOf('\n\n'), crlf = pending.indexOf('\r\n\r\n');
         if (lf < 0 && crlf < 0) return;
         const crlfFirst = crlf >= 0 && (lf < 0 || crlf < lf);
@@ -75,4 +75,5 @@ async function receiptLossRelay({brokerPort, ca, pfx, parse, receiptId}) {
     return sockets.size;
   }};
 }
-module.exports = {frameStream, receiptLossRelay};
+function frameCommand(bytes) { return bytes.subarray(0, bytes.indexOf(10)).toString().replace(/\r$/, ''); }
+module.exports = {frameStream, receiptLossRelay, frameCommand};

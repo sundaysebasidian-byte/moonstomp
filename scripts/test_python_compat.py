@@ -16,9 +16,13 @@ spec.loader.exec_module(runner)
 
 class Compatibility(unittest.TestCase):
     def test_actual_manifest_identity_without_tomllib(self):
+        text = (downstream.ROOT / 'moon.mod').read_text()
+        expected = downstream.manifest_identity(text)
         with patch.object(downstream, 'tomllib', None):
-            self.assertEqual(downstream.manifest_identity((downstream.ROOT / 'moon.mod').read_text()),
-                             ('sundaysebasidian-byte/moonstomp', '0.2.0'))
+            actual = downstream.manifest_identity(text)
+            self.assertEqual(actual, expected)
+            self.assertEqual(actual[0], 'sundaysebasidian-byte/moonstomp')
+            self.assertRegex(actual[1], r'^\d+\.\d+\.\d+$')
 
     def test_literal_prefix_and_comments(self):
         with patch.object(downstream, 'tomllib', None):

@@ -25,8 +25,10 @@ moon run examples/versions --target js      # 1.0 / 1.1 / 1.2 协商与边界
 在自己的 MoonBit 项目里使用：
 
 ```sh
-moon add sundaysebasidian-byte/moonstomp@0.2.0
+moon add sundaysebasidian-byte/moonstomp@0.2.1
 ```
+
+0.2.1 修正 Client 的心跳接收宽限为 R + max(100ms,R)，降低已观察到的空闲过渡误超时；公共 HeartbeatClock 默认值不变，故障检测可能较晚。真实 TLS 心跳及五分钟场景有独立回执，不能等同长期稳定性。 版本内容及验证边界见 [0.2.1 说明](docs/release-0.2.1.zh-CN.md)；实际发布状态以 Mooncakes 为准。
 
 > **[0.2.0 已发布到 Mooncakes](https://mooncakes.io/docs/sundaysebasidian-byte/moonstomp)。** Registry 实际版本、metadata 和发布 ZIP checksum 均已核对；全新 registry 消费者通过核心 API、多版本及模拟 TCP/TLS 验证。历史 0.1.2 仅支持 STOMP 1.2。精确发布 commit、CI、校验和与未验范围见[0.2.0 回执](docs/release-0.2.0.zh-CN.md)。
 
