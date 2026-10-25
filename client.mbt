@@ -428,13 +428,10 @@ fn Client::accept_frame(
     if version != V10 {
       let (sx, sy) = heartbeat_pair(f.header("heart-beat").unwrap_or("0,0"))
       let plan = negotiate_heartbeat(self.cx, self.cy, sx, sy)
-      // Real broker idle checks may occur once per negotiated interval. Allow
-      // one interval of scheduling margin, with the historical 100ms floor.
-      let tolerance = if plan.receive_ms > 100 {
-        plan.receive_ms.to_int64()
-      } else {
-        100L
-      }
+      // A broker may skip its first idle check after CONNECTED, making the
+      // first keepalive due near 2R. Keep scheduling slack in addition to that
+      // check phase, rather than consuming the 100ms slack with the phase.
+      let tolerance = Int64::min(plan.receive_ms.to_int64() + 100L, 2147483647L)
       self.clock = Some(HeartbeatClock::new(plan, now, tolerance_ms=tolerance))
     }
     self.state = Active

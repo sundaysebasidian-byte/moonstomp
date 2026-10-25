@@ -38,6 +38,8 @@ class ExportControls(unittest.TestCase):
         for name, content in documents.items():
             folder = root/name
             folder.mkdir()
+            if content is None:
+                continue
             (folder/('summary.json' if name == 'resources' else 'classic.json')).write_text(json.dumps(content))
         output = root/'public'
         flags = [arg for name in (extra or {}) for arg in ['--'+name, str(root/name)]]
@@ -60,6 +62,27 @@ class ExportControls(unittest.TestCase):
             result, output = self.invoke(Path(temp), matrix, demo)
             self.assertEqual(result.returncode, 1)
             self.assertEqual(json.loads(output)['status'], 'failed')
+
+    def test_second_heartbeat_period_is_required_and_whitelisted(self):
+        common = dict(status='PASSED', tls=True, port_closed=True, private_key_removed=True)
+        heartbeat = dict(status='PASSED', tls=True, real_broker=True, heartbeat_timeout=True,
+                         no_reconnect=True, upstream_tls_verified=True, connections=1,
+                         business_SENDs=0, open_relay_sockets=0, client_heartbeats=2,
+                         broker_heartbeats=4, dropped_broker_bytes=2, negotiated_period_ms=1000,
+                         broker_heartbeat_header='1000,1000', idle_window_after_ms=1000,
+                         broker_total_eols=5, excluded_early_eols=1,
+                         raw_frame='synthetic-do-not-export')
+        for failure in [None, 'period', 'header', 'cleanup', 'missing']:
+            candidate = dict(common, heartbeat=dict(heartbeat))
+            if failure == 'period': candidate['heartbeat']['negotiated_period_ms'] = 100
+            if failure == 'header': candidate['heartbeat']['broker_heartbeat_header'] = '100,100'
+            if failure == 'cleanup': candidate['private_key_removed'] = False
+            if failure == 'missing': candidate = None
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as temp:
+                result, output = self.invoke(Path(temp), *self.fixture(), extra={'heartbeat1000': candidate})
+                self.assertEqual(result.returncode, 0 if failure is None else 1, result.stderr)
+                self.assertEqual(json.loads(output)['status'], 'passed' if failure is None else 'failed')
+                self.assertNotIn('synthetic-do-not-export', output)
 
     def test_missing_tls_negative_control_fails(self):
         matrix, demo = self.fixture()

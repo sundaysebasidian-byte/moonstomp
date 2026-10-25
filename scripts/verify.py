@@ -82,6 +82,7 @@ def main():
         stage['status'] = 'PASSED'
         return result.stdout.decode('utf-8').strip()
     try:
+        run('classic-export-guards', [sys.executable, '-m', 'unittest', 'discover', '-s', 'scripts', '-p', 'test_classic_export.py'])
         run('classic-profile-guards', [sys.executable, '-m', 'unittest', 'discover', '-s', 'scripts', '-p', 'test_classic_profile.py'])
         run('adapter-unit-faults', ['node', '--test', 'scripts/adapter-unit-test.cjs'])
         if not moon:

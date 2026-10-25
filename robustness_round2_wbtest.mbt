@@ -194,11 +194,12 @@ test "modern heartbeat empty chunks do not refresh while partial frames do" {
       ),
     )
     ignore(c.receive(b"M", 100))
-    ignore(c.receive(b"", 209))
-    assert_eq(c.tick(210), b"")
+    ignore(c.receive(b"", 219))
+    assert_eq(c.tick(220), b"")
+    assert_eq(c.state(), Active)
     assert_true(
       try {
-        ignore(c.tick(211))
+        ignore(c.tick(221))
         false
       } catch {
         _ => true

@@ -362,10 +362,11 @@ test "1.1 heartbeat negotiation reuses send liveness and receive timeout" {
   assert_eq(client.tick(39), b"")
   assert_eq(client.tick(40), b"\n")
   ignore(client.receive(b"\n", 100))
-  assert_eq(client.tick(230), b"\n")
+  assert_eq(client.tick(260), b"\n")
+  assert_eq(client.state(), Active)
   assert_true(
     try {
-      ignore(client.tick(231))
+      ignore(client.tick(261))
       false
     } catch {
       _ => true
