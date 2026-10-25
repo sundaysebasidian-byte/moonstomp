@@ -37,3 +37,8 @@ test('heartbeat observer excludes fragmented header newlines and sees coalesced 
   for(const byte of Buffer.from('CONNECTED\nversion:1.2\n\n\0\n\r\n'))stream.feed(Buffer.from([byte]));
   stream.finish();assert.equal(frames.length,1);assert.equal(beats.length,2);
 });
+test('command observation counts both LF and CRLF SEND without reading bodies',()=>{
+ const {frameCommand}=require('../examples/receipt-loss-relay.cjs');
+ assert.equal(frameCommand(Buffer.from('SEND\ndestination:/q\n\nx\0')),'SEND');
+ assert.equal(frameCommand(Buffer.from('SEND\r\ndestination:/q\r\n\r\nx\0')),'SEND');
+});

@@ -100,7 +100,10 @@ def main():
     parser.add_argument('--tls', action='store_true', help='Ephemeral localhost certificate, verified STOMP TLS plus authentication; no plaintext connector')
     parser.add_argument('--demo', action='store_true', help='One focused STOMP 1.2 TLS/transaction/receipt-loss demonstration; requires --tls; does not run broker matrix')
     parser.add_argument('--heartbeat', action='store_true', help='Bounded real TLS heartbeat timeout fixture; no business SEND')
+    parser.add_argument('--soak', action='store_true', help='Fixed five-minute real TLS load/heartbeat window')
     args = parser.parse_args()
+    if args.soak and (not args.tls or args.demo or args.heartbeat):
+        parser.error('--soak requires --tls and excludes --demo/--heartbeat')
     if args.heartbeat and (not args.tls or args.demo):
         parser.error('--heartbeat requires --tls and cannot combine with --demo')
     if args.demo and not args.tls:
@@ -117,9 +120,9 @@ def main():
               'profile': 'test-only credentials, no persistence/JMX/web or system service'}
     process = None
     start_clock = time.monotonic()
-    report['mode'] = 'heartbeat-timeout' if args.heartbeat else ('three-minute-demo' if args.demo else 'interop-matrix')
+    report['mode'] = 'five-minute-soak' if args.soak else 'heartbeat-timeout' if args.heartbeat else ('three-minute-demo' if args.demo else 'interop-matrix')
     def run(name, command, env=None):
-        p = subprocess.run(command, cwd=ROOT, env=env, capture_output=True, timeout=20 if args.demo else 90)
+        p = subprocess.run(command, cwd=ROOT, env=env, capture_output=True, timeout=340 if args.soak else (20 if args.demo else 90))
         (out / (name + '.stdout.txt')).write_bytes(p.stdout)
         (out / (name + '.stderr.txt')).write_bytes(p.stderr)
         report['stages'].append({'name': name, 'command': command, 'exit_code': p.returncode})
@@ -187,7 +190,12 @@ def main():
         child_env.pop('STOMP_TLS_CA', None)
         if args.tls:
             child_env['STOMP_TLS_CA'] = str(conf / 'broker-cert.pem')
-        if args.heartbeat:
+        if args.soak:
+            report['soak'] = json.loads(run('classic-soak', ['node', 'scripts/classic-soak-test.cjs'], child_env))
+            report['soak_fixture_sha256'] = hashlib.sha256((ROOT / 'scripts/classic-soak-test.cjs').read_bytes()).hexdigest()
+            if report['soak'].get('status') != 'PASSED' or report['soak'].get('elapsed_ms', 0) < 300000:
+                raise RuntimeError('five-minute load did not complete')
+        elif args.heartbeat:
             child_env['STOMP_DEMO_PFX'] = str(key_store)
             report['heartbeat'] = json.loads(run('classic-heartbeat', ['node', 'scripts/classic-heartbeat-test.cjs'], child_env))
             report['heartbeat_fixture_sha256'] = hashlib.sha256((ROOT / 'scripts/classic-heartbeat-test.cjs').read_bytes()).hexdigest()

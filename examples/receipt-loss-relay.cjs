@@ -75,4 +75,5 @@ async function receiptLossRelay({brokerPort, ca, pfx, parse, receiptId}) {
     return sockets.size;
   }};
 }
-module.exports = {frameStream, receiptLossRelay};
+function frameCommand(bytes) { return bytes.subarray(0, bytes.indexOf(10)).toString().replace(/\r$/, ''); }
+module.exports = {frameStream, receiptLossRelay, frameCommand};

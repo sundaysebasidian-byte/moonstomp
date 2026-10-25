@@ -427,9 +427,15 @@ fn Client::accept_frame(
     self.version = Some(version)
     if version != V10 {
       let (sx, sy) = heartbeat_pair(f.header("heart-beat").unwrap_or("0,0"))
-      self.clock = Some(
-        HeartbeatClock::new(negotiate_heartbeat(self.cx, self.cy, sx, sy), now),
-      )
+      let plan = negotiate_heartbeat(self.cx, self.cy, sx, sy)
+      // Real broker idle checks may occur once per negotiated interval. Allow
+      // one interval of scheduling margin, with the historical 100ms floor.
+      let tolerance = if plan.receive_ms > 100 {
+        plan.receive_ms.to_int64()
+      } else {
+        100L
+      }
+      self.clock = Some(HeartbeatClock::new(plan, now, tolerance_ms=tolerance))
     }
     self.state = Active
     return Connected
