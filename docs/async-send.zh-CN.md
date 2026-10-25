@@ -6,7 +6,7 @@
 
 同步 send/ack/receipt 在异步队列存在时以 STOMP_ASYNC_BUSY 拒绝，调用者先 await 队列再做控制操作；Subscription/Transaction在busy预检时保留原状态和未完成读取，队列清空后可重试。disconnect 的 finally 会 stop，故排队时调用 disconnect 会取消全部待发项。同步原有2MiB缓冲保护保留。心跳在没有背压时可穿插在完整帧之后；tick始终检查入站死亡检测。若发送心跳到期而socket仍needDrain，则以STOMP_HEARTBEAT_BACKPRESSURE关闭，绝不追加字节或无限推迟检测；因此心跳可能早于SEND期限结束会话。该规则也覆盖仅由原同步写入产生的背压。
 
-需要 broker 回执时仍使用独立 `receipt('SEND', ...)`（队列清空后）；sendAsync 不接收 receipt 头，避免把本机完成当 broker 回执。核心 MoonBit sans-I/O 状态机不变。
+需要逐条 broker 回执时，队列清空后把现有 `receipt('SEND', ...)` 作为该消息的唯一发送；它会实际发送另一条 SEND，不能对已 sendAsync 的同一消息补发以追认，否则可能重复业务。sendAsync 不接收 receipt 头，本机完成不当作 broker 回执。broker 测试的 receipt-fence 是另一个标记消息，只有该标记的回执，不是前16条的逐条回执。核心 MoonBit sans-I/O 状态机不变。
 
 真实 TCP 暂停读取/恢复、持续不读、取消、断线与限制：`node scripts/async-send-test.cjs`。短真实 TLS broker 案例：既有 `classic-run.py --tls --async-send`，需合法缓存broker/JDK与新输出目录。二者不等于生产采用或长期稳定性。
 
