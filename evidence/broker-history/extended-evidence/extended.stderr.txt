@@ -1,5 +1,0 @@
-{
-  "passed": false,
-  "results": [],
-  "error": "options is not a function"
-}

@@ -8,7 +8,7 @@
 
 核心接收字节，输出待发送字节和事件；宿主负责 socket 和时钟。仓库提供 Node TCP/TLS 适配器、`send` / `subscribe` 命令行及可运行示例。
 
-**0.3.1 已正式发布**，含有界异步 SEND 及心跳检查相位修复。全新 registry 消费者的真实 Classic TLS 100/1000ms 心跳正负控制均通过；0.3.0 的原失败记录保留。[发布回执与边界](docs/release-0.3.1.zh-CN.md)；[评审问题证据索引](docs/REVIEW_EVIDENCE_INDEX.zh-CN.md)；[技术补审草稿（供用户审阅）](docs/REVIEW_RESUBMISSION_DRAFT.zh-CN.md)。
+**0.3.1 已发布到 mooncakes**，含有界异步 SEND 和心跳修复，版本说明见 [release-0.3.1](docs/release-0.3.1.zh-CN.md)。
 
 ## 快速开始
 
@@ -30,13 +30,7 @@ moon run examples/versions --target js      # 1.0 / 1.1 / 1.2 协商与边界
 moon add sundaysebasidian-byte/moonstomp@0.3.1
 ```
 
-0.3.1 的 Client 接收容差为 `min(R + 100ms, 2147483647ms)`，严格在 `elapsed > R + tolerance` 时关闭；公共 HeartbeatClock 默认值不变。故障检测略晚，不能保证任意调度延迟。历史 [0.2.1 说明](docs/release-0.2.1.zh-CN.md)保留当时策略与证据。
-
-> **[当前安装版本 0.3.1](https://mooncakes.io/docs/sundaysebasidian-byte/moonstomp@0.3.1/)。** 历史 0.2.0 的 Registry 实际版本、metadata 和发布 ZIP checksum 均已核对；全新 registry 消费者通过核心 API、多版本及模拟 TCP/TLS 验证。历史 0.1.2 仅支持 STOMP 1.2。精确发布 commit、CI、校验和与未验范围见[0.2.0 回执](docs/release-0.2.0.zh-CN.md)。
-
-当前源码将`Client`、`Decoder`、`HeartbeatClock`字段收为抽象类型，依赖字段的外部代码需要迁移。因此版本从0.1.x提升为0.2.0，不覆盖旧0.1.2；升级前请读[迁移说明](docs/migration-master-20261023.zh-CN.md)。该历史说明固定于变更基线，发布状态以0.2.0发布回执为准。
-
-固定 master `636ef52…` 的本地接入续验已覆盖干净消费者6/6、真实Classic TLS三版本、receipt丢失不重发及真实心跳关闭。精确源码、SDK、命令与未测范围见 [历史源码接入回执](docs/integration-master636-20261023.zh-CN.md)；这与旧v5和已发布0.1.2分开报告。
+> [mooncakes 上的 0.3.1](https://mooncakes.io/docs/sundaysebasidian-byte/moonstomp@0.3.1/)。从 0.1.x 升级时注意 `Client`、`Decoder`、`HeartbeatClock` 已改为抽象类型，见[迁移说明](docs/migration-master-20261023.zh-CN.md)。
 
 ## 用法
 
@@ -63,7 +57,7 @@ ignore(client.send(@stomp.acknowledge("a1"), 0))
 
 ### Node：连真实 broker
 
-`transport/tcp.cjs` 把核心接到 `net` / `tls`，支持 `login` / `passcode`、证书校验始终开启的 TLS、Subscription / Transaction 句柄和带 `code` 的结构化错误。用法速查见 [docs/guide.zh-CN.md](docs/guide.zh-CN.md)。
+`transport/tcp.cjs` 把核心接到 `net` / `tls`，支持 `login` / `passcode`、证书校验始终开启的 TLS、Subscription / Transaction 句柄和带 `code` 的结构化错误。用法速查见 [docs/guide.zh-CN.md](docs/guide.zh-CN.md)；0.3.0 起的有界 `sendAsync` 见[异步 SEND](docs/async-send.zh-CN.md)。Node 适配器按源码使用，不是 npm 包。
 
 ```sh
 node tools/demo-broker.cjs --port 61613 &
@@ -109,7 +103,7 @@ node tools/stomp-cli.cjs send --port 61613 --destination /queue/jobs --body hell
 | Apache Artemis 2.57.0（另以 go-stomp 为对端） | 1.0 / 1.1 / 1.2 收发、分段二进制正文、receipt、ACK / 累计 ACK / NACK、事务 SEND、双向心跳、真实 ERROR |
 | Apache ActiveMQ Classic 6.3.2 | login/passcode 认证、TLS、三版本二进制收发、版本化 ACK、事务 SEND 提交 / 中止、COMMIT 前断线不重放 |
 
-已知差异：Artemis 不回滚事务内的 ACK，NACK 表现为丢弃。复现命令（脚本只校验本地已有的官方发行包，不联网下载）和完整矩阵见 [docs/broker-interop.zh-CN.md](docs/broker-interop.zh-CN.md)。
+已知差异：Artemis 不回滚事务内的 ACK，NACK 表现为丢弃。复现命令（脚本只校验本地已有的官方发行包，不联网下载）和完整矩阵见 [docs/broker-interop.zh-CN.md](docs/broker-interop.zh-CN.md)；与 go-stomp 的功能对照见 [docs/FAIR_GO_STOMP_COMPARISON.zh-CN.md](docs/FAIR_GO_STOMP_COMPARISON.zh-CN.md)。
 
 ## 设计取舍
 
@@ -127,7 +121,6 @@ node tools/stomp-cli.cjs send --port 61613 --destination /queue/jobs --body hell
 - CI：[ci.yml](.github/workflows/ci.yml) 在官方 SDK 上跑完整验证（`scripts/verify.py --transport`）；[fresh-clone.yml](.github/workflows/fresh-clone.yml) 模拟新用户 `git clone` 后直接 `moon test`、本页快速开始和场景示例，并在最新 SDK 上同样跑一遍。异步示例和期限检查已在 [0.3.1 精确 head 常规 CI](https://github.com/sundaysebasidian-byte/moonstomp/actions/runs/40225200831)通过；真实 Classic TLS 心跳、短异步与五分钟源码场景见[固定 broker CI](https://github.com/sundaysebasidian-byte/moonstomp/actions/runs/40225233529)。源码 CI 与已安装 registry 消费验证分列于版本说明。
 
 本地完整验证：`python3 scripts/verify.py --output ../moonstomp-verification`。
-各轮验证的命令、环境和结果见 [docs/verification-20261022.zh-CN.md](docs/verification-20261022.zh-CN.md) 与 `evidence/`。
 
 ## 目录
 
@@ -144,5 +137,3 @@ node tools/stomp-cli.cjs send --port 61613 --destination /queue/jobs --body hell
 
 代码 MIT（[LICENSE](LICENSE)）。参考测试文件 Apache-2.0，STOMP 规范 CC BY 3.0，来源与使用范围见 [docs/reference.zh-CN.md](docs/reference.zh-CN.md)。
 开发中 AI 的参与方式见 [AI_USAGE.md](AI_USAGE.md)，技术方案见 [Proposal.md](Proposal.md)。
-
-0.3.0 起的 Node `sendAsync` 用法、限制与回执边界见[异步 SEND](docs/async-send.zh-CN.md)。`moon add` 添加 MoonBit 依赖；Node 适配器按对应版本源码使用，不是 npm 包或 MoonBit 根包异步 API。

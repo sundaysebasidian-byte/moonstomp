@@ -1,6 +1,6 @@
 // Offline walkthrough of STOMP 1.0 / 1.1 / 1.2 behaviour. The server frames are
 // supplied by this example to show the API and the version differences; this is
-// not broker evidence (see docs/verified-multiversion-20261015.zh-CN.md for the
+// not broker evidence (see https://github.com/sundaysebasidian-byte/moonstomp/blob/32090a84c0d4fd31359f764b4c92ffa16db7671c/docs/verified-multiversion-20261015.zh-CN.md for the
 // separate Go <-> Artemis <-> MoonBit interop record).
 
 ///|

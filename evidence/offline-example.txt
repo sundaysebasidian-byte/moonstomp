@@ -1,4 +1,0 @@
-1 task producer/consumer: binary task accepted
-2 reliable processing: ACK success and NACK failure sent
-3 transactions: staged send aborted, second transaction committed
-disconnect receipt consumed, connection closed
