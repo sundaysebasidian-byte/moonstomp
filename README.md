@@ -9,7 +9,7 @@
 
 核心接收字节，输出待发送字节和事件；宿主负责 socket 和时钟。仓库提供 Node TCP/TLS 适配器、`send` / `subscribe` 命令行及可运行示例。
 
-**0.3.1 已发布到 mooncakes**，含有界异步 SEND 和心跳修复，版本说明见 [release-0.3.1](docs/release-0.3.1.zh-CN.md)。
+**0.3.1 已发布到 mooncakes**，含有界异步 SEND 和心跳修复，版本说明见 [release-0.3.1](docs/release-0.3.1.zh-CN.md)，复审入口见[技术证据索引](docs/TECHNICAL_EVIDENCE.zh-CN.md)。
 
 ## 快速开始
 
@@ -103,7 +103,7 @@ node tools/stomp-cli.cjs send --port 61613 --destination /queue/jobs --body hell
 | --- | --- |
 | Apache Artemis 2.57.0（另以 go-stomp 为对端） | 1.0 / 1.1 / 1.2 收发、分段二进制正文、receipt、ACK / 累计 ACK / NACK、事务 SEND、双向心跳、真实 ERROR |
 | Apache ActiveMQ Classic 6.3.2 | login/passcode 认证、TLS、三版本二进制收发、版本化 ACK、事务 SEND 提交 / 中止、COMMIT 前断线不重放 |
-| RabbitMQ 4.1.8（STOMP 插件，每次推送在 [CI](.github/workflows/rabbitmq.yml) 里跑） | login/passcode 认证与错误口令、1.0 / 1.1 / 1.2 二进制收发、转义头往返、事务 SEND 提交 / 中止、NACK 后重投递、双向心跳、20 条异步 SEND 按序到达 |
+| RabbitMQ 4.1.8（STOMP 插件，每次推送在 [CI](.github/workflows/rabbitmq.yml) 里跑） | login/passcode 认证与错误口令、1.0 / 1.1 / 1.2 二进制收发、转义头往返、事务 SEND 提交 / 中止、NACK 后重投递、以 `1000,1000` 请求心跳并收到两次服务端心跳、20 条异步 SEND 按序到达 |
 
 已知差异：Artemis 不回滚事务内的 ACK，NACK 表现为丢弃；RabbitMQ 的 NACK 默认重新入队，消息带 `redelivered:true` 再次投递。复现命令（脚本只校验本地已有的官方发行包，不联网下载）和完整矩阵见 [docs/broker-interop.zh-CN.md](docs/broker-interop.zh-CN.md)；与 go-stomp 的功能对照见 [docs/FAIR_GO_STOMP_COMPARISON.zh-CN.md](docs/FAIR_GO_STOMP_COMPARISON.zh-CN.md)。
 
