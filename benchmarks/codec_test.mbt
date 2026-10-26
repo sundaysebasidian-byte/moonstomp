@@ -12,7 +12,10 @@ fn message_frame(index : Int, body : Bytes) -> @stomp.Frame {
 }
 
 ///|
-fn message_stream(count : Int, body : Bytes) -> Bytes raise @stomp.ProtocolError {
+fn message_stream(
+  count : Int,
+  body : Bytes,
+) -> Bytes raise @stomp.ProtocolError {
   let out : Array[Byte] = []
   for i = 0; i < count; i = i + 1 {
     for byte in @stomp.encode(message_frame(i, body)) {
@@ -66,9 +69,7 @@ test "encode and decode 100 MESSAGE frames with 1 KiB bodies" (b : @bench.T) {
     fn() {
       for i = 0; i < 100; i = i + 1 {
         b.keep(
-          try {
-            @stomp.encode(message_frame(i, body))
-          } catch {
+          @stomp.encode(message_frame(i, body)) catch {
             _ => abort("benchmark frame must encode")
           },
         )

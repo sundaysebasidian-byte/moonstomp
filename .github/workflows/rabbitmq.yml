@@ -38,12 +38,15 @@ jobs:
           docker run -d --name rabbitmq -p 127.0.0.1:${STOMP_PORT}:61613 \
             -e RABBITMQ_DEFAULT_USER="$STOMP_LOGIN" -e RABBITMQ_DEFAULT_PASS="$STOMP_PASSCODE" \
             -v "$RUNNER_TEMP/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro" "$RABBITMQ_IMAGE"
+          # Wait on the broker log: docker-proxy accepts TCP before RabbitMQ
+          # listens, and an early `docker exec` as root would create the Erlang
+          # cookie with the wrong owner and stop the broker from booting.
           for i in $(seq 1 60); do
-            if docker exec rabbitmq rabbitmq-diagnostics -q check_port_listener 61613 >/dev/null 2>&1; then break; fi
+            if docker logs rabbitmq 2>&1 | grep -q 'Server startup complete'; then break; fi
             sleep 2
           done
-          docker exec rabbitmq rabbitmq-diagnostics -q check_port_listener 61613
-          echo "RABBITMQ_VERSION=RabbitMQ $(docker exec rabbitmq rabbitmqctl -q version)" >> "$GITHUB_ENV"
+          docker logs rabbitmq 2>&1 | grep 'Server startup complete'
+          echo "RABBITMQ_VERSION=RabbitMQ $(docker exec --user rabbitmq rabbitmq rabbitmqctl -q version)" >> "$GITHUB_ENV"
       - name: STOMP 1.0/1.1/1.2, binary, transactions, NACK, heartbeat, async SEND
         run: node scripts/rabbitmq-interop-test.cjs
       - name: Broker log on failure
