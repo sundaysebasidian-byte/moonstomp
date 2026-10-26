@@ -6,7 +6,7 @@
 
 用 MoonBit 写的 STOMP 客户端：**无 I/O 的增量编解码 + 会话状态机**，支持 STOMP 1.0 / 1.1 / 1.2，并已和 Apache Artemis、ActiveMQ Classic 两个真实 broker 互通。
 
-核心不碰 socket，只吃字节、吐字节和事件，所以能放进任何运行时；仓库另带一个 Node TCP/TLS 适配器、`send` / `subscribe` 命令行和一条命令就能跑的场景示例。
+核心接收字节，输出待发送字节和事件；宿主负责 socket 和时钟。仓库提供 Node TCP/TLS 适配器、`send` / `subscribe` 命令行及可运行示例。
 
 **0.3.1 已正式发布**，含有界异步 SEND 及心跳检查相位修复。全新 registry 消费者的真实 Classic TLS 100/1000ms 心跳正负控制均通过；0.3.0 的原失败记录保留。[发布回执与边界](docs/release-0.3.1.zh-CN.md)；[评审问题证据索引](docs/REVIEW_EVIDENCE_INDEX.zh-CN.md)；[技术补审草稿（供用户审阅）](docs/REVIEW_RESUBMISSION_DRAFT.zh-CN.md)。
 
