@@ -8,7 +8,7 @@
 
 核心不碰 socket，只吃字节、吐字节和事件，所以能放进任何运行时；仓库另带一个 Node TCP/TLS 适配器、`send` / `subscribe` 命令行和一条命令就能跑的场景示例。
 
-**0.3.1 已正式发布**，含有界异步 SEND 及心跳检查相位修复。全新 registry 消费者的真实 Classic TLS 100/1000ms 心跳正负控制均通过；0.3.0 的原失败记录保留。[发布回执与边界](docs/release-0.3.1.zh-CN.md)；[评审问题证据索引](docs/REVIEW_EVIDENCE_INDEX.zh-CN.md)。
+**0.3.1 已正式发布**，含有界异步 SEND 及心跳检查相位修复。全新 registry 消费者的真实 Classic TLS 100/1000ms 心跳正负控制均通过；0.3.0 的原失败记录保留。[发布回执与边界](docs/release-0.3.1.zh-CN.md)；[评审问题证据索引](docs/REVIEW_EVIDENCE_INDEX.zh-CN.md)；[技术补审草稿（供用户审阅）](docs/REVIEW_RESUBMISSION_DRAFT.zh-CN.md)。
 
 ## 快速开始
 

@@ -2,6 +2,8 @@
 
 核对日期 2026-10-26。供用户审阅和改写，未发送、未提交比赛；AI 辅助范围见 [AI_USAGE.md](../AI_USAGE.md)。不把测试通过当作评委认可或获奖概率。
 
+供审阅的简明技术正文见[当前补审草稿](REVIEW_RESUBMISSION_DRAFT.zh-CN.md)，不包含个人经历或诚信声明。
+
 当前已发布 **0.3.1**：[精确安装、提交、checksum 与验证范围](release-0.3.1.zh-CN.md)。当前源码链接固定到发布提交 `dde74d2c0fb1a0ca60ec7bdab4c983065af7f5b7`，真实 broker CI 固定到同一候选 head `5b5c99653aaa0ce8e4771d6d79ee4a7f750afedc`；两者 tree 相同。
 
 | 原始顾虑 | 已有证据与复现入口 | 仍有边界 |
