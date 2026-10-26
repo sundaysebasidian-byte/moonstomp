@@ -1,0 +1,30 @@
+name: Benchmarks
+on:
+  push:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  bench:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      MOONBIT_VERSION: 0.10.14+7d59c7ec9
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install exact official SDK
+        env:
+          MOON_HOME: ${{ runner.temp }}/moon-sdk
+        run: |
+          curl -fSL --max-time 60 https://cli.moonbitlang.com/install/unix.sh -o "$RUNNER_TEMP/install-moonbit.sh"
+          bash "$RUNNER_TEMP/install-moonbit.sh" "$MOONBIT_VERSION"
+          echo "MOON_HOME=$MOON_HOME" >> "$GITHUB_ENV"
+          echo "$MOON_HOME/bin" >> "$GITHUB_PATH"
+      - name: Runner
+        run: |
+          moon version --all
+          lscpu | grep -E 'Model name|^CPU\(s\)'
+      - name: JS release build
+        run: moon bench benchmarks --target js --release --no-parallelize -j 1
+      - name: Native release build
+        run: moon bench benchmarks --target native --release --no-parallelize -j 1
