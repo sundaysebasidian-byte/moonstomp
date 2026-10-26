@@ -2,9 +2,10 @@
 
 [![CI](https://github.com/sundaysebasidian-byte/moonstomp/actions/workflows/ci.yml/badge.svg)](https://github.com/sundaysebasidian-byte/moonstomp/actions/workflows/ci.yml)
 [![Fresh clone](https://github.com/sundaysebasidian-byte/moonstomp/actions/workflows/fresh-clone.yml/badge.svg)](https://github.com/sundaysebasidian-byte/moonstomp/actions/workflows/fresh-clone.yml)
+[![RabbitMQ](https://github.com/sundaysebasidian-byte/moonstomp/actions/workflows/rabbitmq.yml/badge.svg)](https://github.com/sundaysebasidian-byte/moonstomp/actions/workflows/rabbitmq.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-用 MoonBit 写的 STOMP 客户端：**无 I/O 的增量编解码 + 会话状态机**，支持 STOMP 1.0 / 1.1 / 1.2，并已和 Apache Artemis、ActiveMQ Classic 两个真实 broker 互通。
+用 MoonBit 写的 STOMP 客户端：**无 I/O 的增量编解码 + 会话状态机**，支持 STOMP 1.0 / 1.1 / 1.2，并已和 Apache Artemis、ActiveMQ Classic、RabbitMQ 三个真实 broker 互通。
 
 核心接收字节，输出待发送字节和事件；宿主负责 socket 和时钟。仓库提供 Node TCP/TLS 适配器、`send` / `subscribe` 命令行及可运行示例。
 
@@ -102,25 +103,39 @@ node tools/stomp-cli.cjs send --port 61613 --destination /queue/jobs --body hell
 | --- | --- |
 | Apache Artemis 2.57.0（另以 go-stomp 为对端） | 1.0 / 1.1 / 1.2 收发、分段二进制正文、receipt、ACK / 累计 ACK / NACK、事务 SEND、双向心跳、真实 ERROR |
 | Apache ActiveMQ Classic 6.3.2 | login/passcode 认证、TLS、三版本二进制收发、版本化 ACK、事务 SEND 提交 / 中止、COMMIT 前断线不重放 |
+| RabbitMQ 4.1.8（STOMP 插件，每次推送在 [CI](.github/workflows/rabbitmq.yml) 里跑） | login/passcode 认证与错误口令、1.0 / 1.1 / 1.2 二进制收发、转义头往返、事务 SEND 提交 / 中止、NACK 后重投递、双向心跳、20 条异步 SEND 按序到达 |
 
-已知差异：Artemis 不回滚事务内的 ACK，NACK 表现为丢弃。复现命令（脚本只校验本地已有的官方发行包，不联网下载）和完整矩阵见 [docs/broker-interop.zh-CN.md](docs/broker-interop.zh-CN.md)；与 go-stomp 的功能对照见 [docs/FAIR_GO_STOMP_COMPARISON.zh-CN.md](docs/FAIR_GO_STOMP_COMPARISON.zh-CN.md)。
+已知差异：Artemis 不回滚事务内的 ACK，NACK 表现为丢弃；RabbitMQ 的 NACK 默认重新入队，消息带 `redelivered:true` 再次投递。复现命令（脚本只校验本地已有的官方发行包，不联网下载）和完整矩阵见 [docs/broker-interop.zh-CN.md](docs/broker-interop.zh-CN.md)；与 go-stomp 的功能对照见 [docs/FAIR_GO_STOMP_COMPARISON.zh-CN.md](docs/FAIR_GO_STOMP_COMPARISON.zh-CN.md)。
 
 ## 设计取舍
 
 - **sans-I/O**：核心只做协议，I/O、定时器、重连策略都留给宿主。同一套核心可接 Node、Wasm 或别的运行时。
 - **失败即关闭**：协议错误、时钟倒退、超限都会让会话进入 `Closed`，不会带着坏状态继续收发。
 - **不自动重发**：receipt 丢失时报告“结果未知”，由调用方决定，避免重复投递。
-- 不做：服务端、WebSocket、自动重连、持久化 outbox、exactly-once。RabbitMQ 尚未实测。
+- 不做：服务端、WebSocket、自动重连、持久化 outbox、exactly-once。
 
 详细边界见 [docs/boundaries.zh-CN.md](docs/boundaries.zh-CN.md)，公开接口见 [pkg.generated.mbti](pkg.generated.mbti)。
 
 ## 测试
 
-- MoonBit 测试覆盖编解码、头部转义、心跳、会话状态、版本矩阵、属性测试和对抗输入；实际执行结果以对应提交的验收回执为准。
+- MoonBit 测试覆盖编解码、头部转义、心跳、会话状态、版本矩阵、属性测试和对抗输入。
 - 与 stomp.js 7.2.0 解析器的差分测试（`scripts/differential.cjs`，按不同分段长度喂入），Node 适配器的生命周期 / TLS / 凭据测试。
-- CI：[ci.yml](.github/workflows/ci.yml) 在官方 SDK 上跑完整验证（`scripts/verify.py --transport`）；[fresh-clone.yml](.github/workflows/fresh-clone.yml) 模拟新用户 `git clone` 后直接 `moon test`、本页快速开始和场景示例，并在最新 SDK 上同样跑一遍。异步示例和期限检查已在 [0.3.1 精确 head 常规 CI](https://github.com/sundaysebasidian-byte/moonstomp/actions/runs/40225200831)通过；真实 Classic TLS 心跳、短异步与五分钟源码场景见[固定 broker CI](https://github.com/sundaysebasidian-byte/moonstomp/actions/runs/40225233529)。源码 CI 与已安装 registry 消费验证分列于版本说明。
+- CI：[ci.yml](.github/workflows/ci.yml) 在官方 SDK 上跑完整验证（`scripts/verify.py --transport`）；[fresh-clone.yml](.github/workflows/fresh-clone.yml) 模拟新用户 `git clone` 后直接 `moon test`、本页快速开始和场景示例，并在最新 SDK 上同样跑一遍。异步示例和期限检查已在 [0.3.1 精确 head 常规 CI](https://github.com/sundaysebasidian-byte/moonstomp/actions/runs/40225200831)通过；真实 Classic TLS 心跳、短异步与五分钟源码场景见[固定 broker CI](https://github.com/sundaysebasidian-byte/moonstomp/actions/runs/40225233529)。[rabbitmq.yml](.github/workflows/rabbitmq.yml) 每次推送都在 Docker 里起 RabbitMQ 跑互通测试（`scripts/rabbitmq-interop-test.cjs`）。
 
 本地完整验证：`python3 scripts/verify.py --output ../moonstomp-verification`。
+
+## 性能
+
+`moon bench --release` 实测，每项 5 组取平均；GitHub Actions ubuntu-24.04（Intel Xeon 6973P-C，4 核），moonc v0.10.14。负载为 100 条 MESSAGE 帧，每条正文 1 KiB，线上共 111,090 字节。
+
+| 操作 | JS | native |
+| --- | --- | --- |
+| 编码 100 帧 | 942 µs | 254 µs |
+| 解码，一次喂入 | 2.11 ms | 468 µs |
+| 解码，按 64 字节分段喂入 | 2.31 ms | 490 µs |
+| 客户端会话接收 100 帧（含状态机校验） | 2.54 ms | 485 µs |
+
+native 解码吞吐约 238 MB/s，JS 约 53 MB/s；分段喂入只慢约 5–10%。数字只说明数量级，换机器会变。复现：`moon bench benchmarks --target native --release`；CI 见 [bench.yml](.github/workflows/bench.yml)，本表来自[这次运行](https://github.com/sundaysebasidian-byte/moonstomp/actions/runs/40287603480)。
 
 ## 目录
 
@@ -132,8 +147,9 @@ node tools/stomp-cli.cjs send --port 61613 --destination /queue/jobs --body hell
 | `transport/` | Node TCP / TLS 适配器与句柄 |
 | `tools/` | 命令行与 demo broker |
 | `examples/` | MoonBit 与 Node 示例 |
+| `benchmarks/` | `moon bench` 基准 |
 
 ## 许可与来源
 
 代码 MIT（[LICENSE](LICENSE)）。参考测试文件 Apache-2.0，STOMP 规范 CC BY 3.0，来源与使用范围见 [docs/reference.zh-CN.md](docs/reference.zh-CN.md)。
-开发中 AI 的参与方式见 [AI_USAGE.md](AI_USAGE.md)，技术方案见 [Proposal.md](Proposal.md)。
+开发中 AI 的参与方式见 [AI_USAGE.md](AI_USAGE.md)。
