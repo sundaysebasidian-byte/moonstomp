@@ -19,7 +19,7 @@ moon add sundaysebasidian-byte/moonstomp@0.3.1
 
 0.3.0 的 Mac 真实 registry TLS 消费者在主动 drop 前超时；独立观察器看到 Classic 6.3.2 首个空闲心跳约在 2R 后，再加调度延迟，原 Client 的 2R 期限可能先关闭。0.3.1 改为 `tolerance=min(R+100ms,2147483647ms)`，严格在 `elapsed > R+tolerance` 时关闭。常见 R 下为 2R+100ms；公共 HeartbeatClock 默认 100ms、方向禁用和重连/重发策略不变。代价是故障检测略晚，不保证任意调度延迟。
 
-测试夹具仍转发全部 EOL，仅在 CONNECTED 至少一个协商周期后的空闲窗口计数，排除尾随换行。100/1000ms 均先观察双向心跳，再主动丢弃 broker 心跳，检查超时、无重连及清理。原 0.3.0 失败和发布包保持不变；[根因记录](heartbeat-phase-margin.zh-CN.md)保留本地诊断阶段身份。
+测试夹具仍转发全部 EOL，仅在 CONNECTED 至少一个协商周期后的空闲窗口计数，排除尾随换行。100/1000ms 均先观察双向心跳，再主动丢弃 broker 心跳，检查超时、无重连及清理。原 0.3.0 失败和发布包保持不变；[根因记录](https://github.com/sundaysebasidian-byte/moonstomp/blob/32090a84c0d4fd31359f764b4c92ffa16db7671c/docs/heartbeat-phase-margin.zh-CN.md)保留本地诊断阶段身份。
 
 0.3.0 起的有界 Node `sendAsync` 已随源码与归档发布，0.3.1 保留。`moon add` 添加 MoonBit 依赖，Node 适配器按对应源码构建 bridge 后使用；不是 npm 包或根包 MoonBit 异步 API。详见[异步 SEND](async-send.zh-CN.md)。
 
@@ -40,4 +40,4 @@ moon add sundaysebasidian-byte/moonstomp@0.3.1
 
 ## 未验证边界
 
-native/普通 Wasm/Windows 消费者、生产 PKI、mTLS、故障转移、长期稳定性、事务 ACK 回滚/NACK 重投递完整语义未验证。脚本 peer、真实 broker、源码 CI、registry 消费分别记录。没有生产采用或获奖概率证明；[评审证据索引](REVIEW_EVIDENCE_INDEX.zh-CN.md)列出剩余缺口。没有比赛提交。
+native/普通 Wasm/Windows 消费者、生产 PKI、mTLS、故障转移、长期稳定性、事务 ACK 回滚/NACK 重投递完整语义未验证。脚本 peer、真实 broker、源码 CI、registry 消费分别记录。没有生产采用或获奖概率证明；[评审证据索引](https://github.com/sundaysebasidian-byte/moonstomp/blob/32090a84c0d4fd31359f764b4c92ffa16db7671c/docs/REVIEW_EVIDENCE_INDEX.zh-CN.md)列出剩余缺口。没有比赛提交。

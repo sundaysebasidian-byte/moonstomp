@@ -1,10 +1,10 @@
 # MoonSTOMP 客观技术事实（AI 辅助，非最终申报书；2026-10-18 重写，2026-10-20 同步凭据/TLS/句柄/Classic 事实）
 
-> 历史文档提示（2026-10-26）：正文保留原日期的 0.1.2、候选未发布/CI 未跑、真实 broker TLS 尚未开始等状态，不是当前状态。**当前 0.3.1 已正式发布，真实 Classic TLS、三版本、两档心跳及异步已有精确 CI 与实际 registry 消费证据**，请先读[当前评审证据索引](docs/REVIEW_EVIDENCE_INDEX.zh-CN.md)及[发布回执](docs/release-0.3.1.zh-CN.md)。未验范围仍单列；不改写旧失败，不把历史测量归给新版本。本文件未提交比赛。
+> 历史文档提示（2026-10-26）：正文保留原日期的 0.1.2、候选未发布/CI 未跑、真实 broker TLS 尚未开始等状态，不是当前状态。**当前 0.3.1 已正式发布，真实 Classic TLS、三版本、两档心跳及异步已有精确 CI 与实际 registry 消费证据**，请先读[当前评审证据索引](https://github.com/sundaysebasidian-byte/moonstomp/blob/32090a84c0d4fd31359f764b4c92ffa16db7671c/docs/REVIEW_EVIDENCE_INDEX.zh-CN.md)及[发布回执](docs/release-0.3.1.zh-CN.md)。未验范围仍单列；不改写旧失败，不把历史测量归给新版本。本文件未提交比赛。
 
 本文只列事实，按状态分栏，申报时请逐项对应，不要把“已实现”和“拟实现”混写。申报书须由申请人人工撰写并按当期官方模板，本文不是申报书。
 
-2026-10-22 当前候选的新增贡献、订单场景和设计取舍请先读 [提交准备](docs/submission-preparation.zh-CN.md)，支持/失败状态以 [Linux 审计](docs/linux-audit-20261022.zh-CN.md) 为准；本文保留原日期记录，历史通过不代替本次私有包验收。
+2026-10-22 当前候选的新增贡献、订单场景和设计取舍请先读 [提交准备](https://github.com/sundaysebasidian-byte/moonstomp/blob/32090a84c0d4fd31359f764b4c92ffa16db7671c/docs/submission-preparation.zh-CN.md)，支持/失败状态以 [Linux 审计](https://github.com/sundaysebasidian-byte/moonstomp/blob/32090a84c0d4fd31359f764b4c92ffa16db7671c/docs/linux-audit-20261022.zh-CN.md) 为准；本文保留原日期记录，历史通过不代替本次私有包验收。
 
 ## 项目是什么
 

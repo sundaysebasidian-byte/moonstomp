@@ -91,7 +91,7 @@ node tools/stomp-cli.cjs send --destination /queue/jobs --body 'hello 你好'   
 
 ## 5. 对真实 broker
 
-`examples/1-tasks.cjs`、`2-reliable.cjs`、`3-transactions.cjs` 与 CLI 都可指向你自己的本地 STOMP broker（默认 `127.0.0.1:61613`，环境变量 `STOMP_PORT` 可改端口，命令行用 `--port`）。本项目验证过的真实 broker 有两个：Apache Artemis 2.57.0 的无认证、无持久化 profile，以及 Apache ActiveMQ Classic 6.3.2 的认证 profile（见 [broker-interop](broker-interop.zh-CN.md)）；可复现的启动与验证命令见 [README](../README.md#真实-broker-复现) 与 [broker-plan](broker-plan.zh-CN.md)。
+`examples/1-tasks.cjs`、`2-reliable.cjs`、`3-transactions.cjs` 与 CLI 都可指向你自己的本地 STOMP broker（默认 `127.0.0.1:61613`，环境变量 `STOMP_PORT` 可改端口，命令行用 `--port`）。本项目验证过的真实 broker 有两个：Apache Artemis 2.57.0 的无认证、无持久化 profile，以及 Apache ActiveMQ Classic 6.3.2 的认证 profile（见 [broker-interop](broker-interop.zh-CN.md)）；可复现的启动与验证命令见 [README](../README.md#真实-broker-复现) 与 [broker-plan](https://github.com/sundaysebasidian-byte/moonstomp/blob/32090a84c0d4fd31359f764b4c92ffa16db7671c/docs/broker-plan.zh-CN.md)。
 
 用 Docker 起一个 Artemis 只是常见做法，**本项目没有验证过任何 Docker 镜像**，所以不把它写成已验证路径；已验证路径是 `scripts/verify.py … --broker-archive` 那条（官方发行包 + 已有 Java 17，仅回环）。
 

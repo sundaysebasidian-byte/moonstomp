@@ -34,4 +34,4 @@ sensor-feed: readings=2, values=25/26, duplicate-first, heartbeat=LF
 ledger-batch: staged=2, abort-restored=2, commit-pending=0, receipts=2
 ```
 
-`--frozen`禁止同步依赖，`--no-mbti`避免check时用另一SDK重写候选的接口索引；所需core已随现有SDK准备。输入server帧由fixture明确提供，没有连接真实broker。真实TLS订单场景使用源码根目录的 `scripts/classic-run.py --tls --demo`，见 [提交准备](../../docs/submission-preparation.zh-CN.md)。消费者运行后可删除这个独立模块；不会改全局SDK、配置或服务。
+`--frozen`禁止同步依赖，`--no-mbti`避免check时用另一SDK重写候选的接口索引；所需core已随现有SDK准备。输入server帧由fixture明确提供，没有连接真实broker。真实TLS订单场景使用源码根目录的 `scripts/classic-run.py --tls --demo`，见 [提交准备](https://github.com/sundaysebasidian-byte/moonstomp/blob/32090a84c0d4fd31359f764b4c92ffa16db7671c/docs/submission-preparation.zh-CN.md)。消费者运行后可删除这个独立模块；不会改全局SDK、配置或服务。

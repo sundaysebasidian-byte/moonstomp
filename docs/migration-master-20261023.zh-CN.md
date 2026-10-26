@@ -6,7 +6,7 @@
 
 | 来源 | 应如何理解 |
 |---|---|
-| 历史发布的 0.1.2 | 仅 STOMP 1.2；见 [原发布记录](publication-0.1.2.zh-CN.md)。安装旧包不会取得新 master 的多版本功能或接口变更 |
+| 历史发布的 0.1.2 | 仅 STOMP 1.2；见 [原发布记录](https://github.com/sundaysebasidian-byte/moonstomp/blob/32090a84c0d4fd31359f764b4c92ffa16db7671c/docs/publication-0.1.2.zh-CN.md)。安装旧包不会取得新 master 的多版本功能或接口变更 |
 | 旧候选 / Library v5 | 提交 `907bea9ed4b483426dada3cc1f080e743b8cb7d9`；保留当时源码、哈希和回执，不因合并自动变成新源码包 |
 | 本文固定的 master | 已包含后续多版本开发与整理；`moon.mod` **仍写 0.1.2**，但没有因此发布新包，也不表示兼容旧包所有源码用法 |
 
@@ -65,6 +65,6 @@ test "migration: public constructors and observations" {
 - [checks 39932161429](https://github.com/sundaysebasidian-byte/moonstomp/actions/runs/39932161429)：本文 SHA 的 master push，completed / success；锁定 SDK 的 `scripts/verify.py --transport`，没有运行真实 broker。
 - [fresh clone 39932161423](https://github.com/sundaysebasidian-byte/moonstomp/actions/runs/39932161423)：同 SHA 的 master push，completed / success。job 日志显示锁定 `moonc v0.10.14+7d59c7ec9`、当次最新 `v0.10.17+093cb8f9c` 均71/71，七个进程内 demo 各 PASS；锁定 job 格式/API 索引检查成功，latest 按配置跳过该检查。
 
-“latest”只表示该次运行版本，不保证以后 SDK 都兼容。这是master的既有远端回执，后续review文档提交的CI必须对应其新的精确SHA另行核验。10月22日的70/70、消费者6/6、Classic TLS/receipt/真实心跳及当时0.10.16工具链失败属于[历史审计](linux-audit-20261022.zh-CN.md)，不能改写成此文档校验的新运行；后续当前源码的真实broker续验另见[接入回执](integration-master636-20261023.zh-CN.md)，不包含plain Wasm/native验收。
+“latest”只表示该次运行版本，不保证以后 SDK 都兼容。这是master的既有远端回执，后续review文档提交的CI必须对应其新的精确SHA另行核验。10月22日的70/70、消费者6/6、Classic TLS/receipt/真实心跳及当时0.10.16工具链失败属于[历史审计](https://github.com/sundaysebasidian-byte/moonstomp/blob/32090a84c0d4fd31359f764b4c92ffa16db7671c/docs/linux-audit-20261022.zh-CN.md)，不能改写成此文档校验的新运行；后续当前源码的真实broker续验另见[接入回执](https://github.com/sundaysebasidian-byte/moonstomp/blob/32090a84c0d4fd31359f764b4c92ffa16db7671c/docs/integration-master636-20261023.zh-CN.md)，不包含plain Wasm/native验收。
 
 Node 适配器继续使用方法边界；抽象类型不改变 receipt 的知识语义：确认丢失仍可能结果未知，不自动重发，不承诺 exactly-once。生产 PKI、mTLS、代理、耐久性、故障转移、长时 soak 和性能基准也不能由这些 CI 推出。

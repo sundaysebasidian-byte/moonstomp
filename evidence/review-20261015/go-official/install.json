@@ -1,7 +1,0 @@
-{
-  "source": "https://go.dev/dl/go1.26.8.linux-amd64.tar.gz",
-  "sha256": "d0f743b33e8d8945e6b1f432edd15785c70507121d6e2a723b21285eddf8b57b",
-  "official_metadata_sha256": "e69a2c3effdcfb9f41c15305b1d959524f1ff5f8e8500bac4548e6e355bda0dc",
-  "scope": "task-private extraction; no credentials or system/profile changes",
-  "status": "EXTRACTED_HASH_VERIFIED"
-}
