@@ -1,5 +1,7 @@
 # MoonSTOMP 0.3.0 发布候选
 
+> 历史候选记录（2026-10-26 状态指针更新）：下文保留发布前条件，不是当前状态。0.3.0 已经由 [PR #9](https://github.com/sundaysebasidian-byte/moonstomp/pull/9) 合并并发布，但其 Mac 实际 registry 心跳消费曾失败；修复后的当前版本为 [0.3.1](release-0.3.1.zh-CN.md)，两档真实 TLS 心跳及 drop 控制已通过。旧包和旧失败保持不变。请以[当前证据索引](REVIEW_EVIDENCE_INDEX.zh-CN.md)区分源码 CI、registry 消费与未验项。
+
 状态：本地候选，尚未push、建立版本PR、合并或发布。当前Mooncakes最新包仍是0.2.1；不覆盖既有版本。
 
 相对0.2.1新增Node源码适配器`sendAsync`：有界FIFO、等待write callback/drain、复制输入、单调期限、逐项取消/超时和未知结果，无自动重连/重发。保留同步接口与MoonBit sans-I/O核心；新增调用入口采用minor版本0.3.0。详见[异步SEND](async-send.zh-CN.md)。Mooncakes安装MoonBit包，Node适配器仍按源码使用，不冒充npm包或MoonBit根包异步API。
