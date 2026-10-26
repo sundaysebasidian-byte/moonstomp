@@ -1,4 +1,8 @@
-# Artemis 2.57.0 实际互操作 profile
+# Broker 互操作记录
+
+当前安装版、Classic TLS 与源码 RabbitMQ CI 的证据见[技术索引](TECHNICAL_EVIDENCE.zh-CN.md)。以下各节按原测试日期记录；历史未测项不覆盖后续结果。
+
+## Artemis 2.57.0（2026-10-01）
 
 2026-10-01。使用官方校验过的真实 Apache Artemis 与现有 Java 17.0.20；不是自造 peer。仅无凭据回环 TCP、无持久化、ANYCAST 默认路由配置。全部串行，完整复验记录在 `verification/broker/`。
 
@@ -28,4 +32,4 @@ NACK 由 [2.57.0 onNack 源码](https://github.com/apache/artemis/blob/2.57.0/ar
 
 ## RabbitMQ 4.1.8（2026-10-26，认证，CI 常驻）
 
-官方 Docker 镜像 `rabbitmq:4.1.8`，只启用 `rabbitmq_stomp` 插件，端口只绑定回环，测试专用账号。由 [rabbitmq.yml](../.github/workflows/rabbitmq.yml) 在每次推送时启动，`scripts/rabbitmq-interop-test.cjs` 驱动。已测：错误口令收到 ERROR 并关闭；STOMP 1.0/1.1/1.2 各一次带认证的二进制收发（含 NUL 与 CR/LF）；1.1/1.2 转义头往返；事务 SEND 提交前不可见、提交后到达、中止后不到达；1.1/1.2 的 NACK 后消息带 `redelivered:true` 重投递；1.2 双向心跳下收到两次服务端心跳；20 条异步 SEND 按序到达。**未测**：TLS、事务 ACK、持久化、高负载。
+官方 Docker 镜像 `rabbitmq:4.1.8`，只启用 `rabbitmq_stomp` 插件，端口只绑定回环，测试专用账号。由 [rabbitmq.yml](../.github/workflows/rabbitmq.yml) 在每次推送时启动，`scripts/rabbitmq-interop-test.cjs` 驱动。已测：错误口令收到 ERROR 并关闭；STOMP 1.0/1.1/1.2 各一次带认证的二进制收发（含 NUL 与 CR/LF）；1.1/1.2 转义头往返；事务 SEND 提交前不可见、提交后到达、中止后不到达；1.1/1.2 的 NACK 后消息带 `redelivered:true` 重投递；1.2 以 `1000,1000` 请求心跳并收到两次服务端心跳；20 条异步 SEND 按序到达。**未测**：客户端心跳的独立线上计数、定向心跳断流、TLS、事务 ACK、持久化、高负载。
