@@ -16,4 +16,4 @@
 
 尚缺 native/普通 Wasm/Windows 消费、生产 PKI/mTLS、故障转移、持久化及长期负载证据。receipt 不保证业务持久化，不提供自动重连/重发或 exactly-once。辅助工具披露见 [AI_USAGE](../AI_USAGE.md)。
 
-当前文档基线：[c085ff6](https://github.com/sundaysebasidian-byte/moonstomp/commit/c085ff69083872a91b3a3ed6d3eaa11259ffa1c9)（[文档 PR #15](https://github.com/sundaysebasidian-byte/moonstomp/pull/15)）。上述运行记录保持原适用提交，此次文档核对没有重跑功能测试。
+2026-10-27 文档修订：[PR #16](https://github.com/sundaysebasidian-byte/moonstomp/pull/16)（合并提交 [c7664a4](https://github.com/sundaysebasidian-byte/moonstomp/commit/c7664a4ea9eb2ab5d8860a2f236510ff5675d122)）。各项测试记录仍按对应运行提交引用。

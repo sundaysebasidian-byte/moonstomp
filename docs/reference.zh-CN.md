@@ -2,7 +2,7 @@
 
 核心 MoonBit 实现原创，MIT，代码与测试由 Codex 辅助设计、编写和修复，见 AI_USAGE.md。
 
-本页保留历史测试记录；当前私有候选的支持/失败矩阵以 README 和 https://github.com/sundaysebasidian-byte/moonstomp/blob/32090a84c0d4fd31359f764b4c92ffa16db7671c/docs/linux-audit-20261022.zh-CN.md 为准。开发工具、外部测试服务与库运行依赖分开列出，不能把外部组件算成 MoonSTOMP 的原创实现。
+已发布 0.3.1 的能力与验证范围见 [README](../README.md)、[技术证据索引](TECHNICAL_EVIDENCE.zh-CN.md)及[版本说明](release-0.3.1.zh-CN.md)。先前私有候选的 [Linux 审计](https://github.com/sundaysebasidian-byte/moonstomp/blob/32090a84c0d4fd31359f764b4c92ffa16db7671c/docs/linux-audit-20261022.zh-CN.md)保留原阶段记录。开发工具、外部测试服务与库运行依赖分开列出，不能把外部组件算成 MoonSTOMP 的原创实现。
 
 - STOMP 1.2 官方规范：https://stomp.github.io/stomp-specification-1.2.html ，CC BY 3.0。参考帧语法、转义、字节长度、命令、协商、心跳与 ACK/事务语义。规范文档未整篇复制进仓库；用例为自行编写的协议字节向量，来源在文档明确归因。
 - MoonBit core 随固定 SDK 提供，Apache-2.0；仅用 UTF-8、JSON 及基础集合，没有复制 core 源码进发布包。
@@ -20,6 +20,6 @@
 
 2026-10-20/22 的 Classic 6.3.2 续验使用 Apache 官方完整发行物（Apache-2.0 及发行物内第三方 LICENSE/NOTICE）：https://archive.apache.org/dist/activemq/6.3.2/apache-activemq-6.3.2-bin.tar.gz ，校验文件为同地址追加 `.sha512`。归档 SHA256 `543e9ca8a234d118a8c195d802a110994a59b7973d75ae0a7ccd47dc2cc2c5c1`，官方 SHA512 及 jar 哈希见 Linux 审计。只运行临时、无持久化、无 JMX/web 的回环 profile，真实测试不等于把 broker 作为库运行依赖；完整 LICENSE/NOTICE 保留在私有证据，broker 二进制未打包。
 
-当前兼容 SDK 的官方方法：https://www.moonbitlang.com/blog/moonbit-wasm-toolchain ；固定发行物：https://github.com/moonbitlang/moonbit-compiler/releases/tag/v0.10.16%2Bb1a0e846e ，Wasm 归档 SHA256 `59295638e4009e5cdd103520a2766a351bd7d6c98301acef1f5b674f1fd19fbb`。配套 `moon`/`moonrun` 来自官方 https://github.com/moonbitlang/moon 的 `6691f1825d7b8f3b9a43334f27ce5daf9d51f861`（仓库 Apache-2.0）；core 随该发行物。没有复制或重新分发 SDK，不能将编译器发行物整体的许可混称为本项目 MIT；完整 SDK 与 mooncake 未恢复的限制保留。
+历史隔离工具链采用的官方方法：https://www.moonbitlang.com/blog/moonbit-wasm-toolchain ；固定发行物：https://github.com/moonbitlang/moonbit-compiler/releases/tag/v0.10.16%2Bb1a0e846e ，Wasm 归档 SHA256 `59295638e4009e5cdd103520a2766a351bd7d6c98301acef1f5b674f1fd19fbb`。配套 `moon`/`moonrun` 来自官方 https://github.com/moonbitlang/moon 的 `6691f1825d7b8f3b9a43334f27ce5daf9d51f861`（仓库 Apache-2.0）；core 随该发行物。没有复制或重新分发 SDK，不能将编译器发行物整体的许可混称为本项目 MIT。当时完整 SDK 与 mooncake 未恢复，属于该阶段的环境限制；现行固定工具链与运行流程见[常规 CI](../.github/workflows/ci.yml)及 [fresh clone](../.github/workflows/fresh-clone.yml)。
 
 历史 go-stomp 互操作使用 tests/interop/go-peer/main.go 的项目自有 glue 调用固定上游 `github.com/go-stomp/stomp/v3`，固定提交和构建步骤见 https://github.com/sundaysebasidian-byte/moonstomp/blob/32090a84c0d4fd31359f764b4c92ffa16db7671c/docs/broker-plan.zh-CN.md、https://github.com/sundaysebasidian-byte/moonstomp/blob/32090a84c0d4fd31359f764b4c92ffa16db7671c/docs/status-details.zh-CN.md；该 Go 包不是 MoonBit 库的依赖，也未将其 parser 移植进核心。本轮没有重跑 go-stomp，不将旧回执改写为本轮通过。
