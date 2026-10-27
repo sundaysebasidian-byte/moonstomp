@@ -5,9 +5,9 @@
 [![RabbitMQ](https://github.com/sundaysebasidian-byte/moonstomp/actions/workflows/rabbitmq.yml/badge.svg)](https://github.com/sundaysebasidian-byte/moonstomp/actions/workflows/rabbitmq.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-用 MoonBit 写的 STOMP 客户端：**无 I/O 的增量编解码 + 会话状态机**，支持 STOMP 1.0 / 1.1 / 1.2，并已和 Apache Artemis、ActiveMQ Classic、RabbitMQ 三个真实 broker 互通。
+MoonBit STOMP 协议核心与 Node.js 客户端工具：**sans-I/O 增量编解码与会话状态机**，支持 STOMP 1.0 / 1.1 / 1.2，并已和 Apache Artemis、ActiveMQ Classic、RabbitMQ 三个真实 broker 互通。
 
-核心接收字节，输出待发送字节和事件；宿主负责 socket 和时钟。仓库提供 Node TCP/TLS 适配器、`send` / `subscribe` 命令行及可运行示例。
+MoonBit 核心接收字节，输出待发送字节和事件，维护协议会话；Node 适配器负责 socket 和时钟。仓库提供 Node TCP/TLS 适配器、`send` / `subscribe` 命令行及可运行示例。
 
 **0.3.1 已发布到 mooncakes**，含有界异步 SEND 和心跳修复，版本说明见 [release-0.3.1](docs/release-0.3.1.zh-CN.md)，复审入口见[技术证据索引](docs/TECHNICAL_EVIDENCE.zh-CN.md)。
 
@@ -143,7 +143,7 @@ native 解码吞吐约 238 MB/s，JS 约 53 MB/s；分段喂入只慢约 5–10%
 | --- | --- |
 | `frame.mbt` `headers.mbt` `decoder.mbt` | 帧、头部转义、增量解码 |
 | `client.mbt` `heartbeat.mbt` `version.mbt` `api.mbt` | 会话状态机、心跳、版本协商、帧构造函数 |
-| `bridge/` | MoonBit ↔ JS 边界 |
+| `bridge/main.mbt` | MoonBit 实现的 JS bridge 边界 |
 | `transport/` | Node TCP / TLS 适配器与句柄 |
 | `tools/` | 命令行与 demo broker |
 | `examples/` | MoonBit 与 Node 示例 |
