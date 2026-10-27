@@ -1,6 +1,6 @@
 # MoonSTOMP 技术证据索引
 
-核对日期：2026-10-26。当前安装版 **0.3.1**。复审重点是完整版本支持、成熟实现对照及真实互通，已实现与未验证范围分列。
+核对日期：2026-10-27。当前安装版 **0.3.1**。复审重点是完整版本支持、成熟实现对照及真实互通，已实现与未验证范围分列。
 
 | 项目 | 内容与证据 |
 | --- | --- |
@@ -14,4 +14,6 @@
 
 当前 RabbitMQ 源码测试以 `1000,1000` 请求心跳，直接收到两次服务端心跳，并检查 20 条异步 SEND 有序到达；没有独立统计客户端线上心跳或定向截断方向。NACK 重投递只适用于该 RabbitMQ profile。[其他 broker 记录](broker-interop.zh-CN.md)按日期区分。
 
-尚缺 native/普通 Wasm/Windows 消费、生产 PKI/mTLS、故障转移、持久化及长期负载证据。receipt 不保证业务持久化，不提供自动重连/重发或 exactly-once。竞赛表单和个人说明由用户完成；辅助工具披露见 [AI_USAGE](../AI_USAGE.md)。
+尚缺 native/普通 Wasm/Windows 消费、生产 PKI/mTLS、故障转移、持久化及长期负载证据。receipt 不保证业务持久化，不提供自动重连/重发或 exactly-once。辅助工具披露见 [AI_USAGE](../AI_USAGE.md)。
+
+当前文档基线：[c085ff6](https://github.com/sundaysebasidian-byte/moonstomp/commit/c085ff69083872a91b3a3ed6d3eaa11259ffa1c9)（[文档 PR #15](https://github.com/sundaysebasidian-byte/moonstomp/pull/15)）。上述运行记录保持原适用提交，此次文档核对没有重跑功能测试。
