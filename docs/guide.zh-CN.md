@@ -91,10 +91,10 @@ node tools/stomp-cli.cjs send --destination /queue/jobs --body 'hello 你好'   
 
 ## 5. 对真实 broker
 
-`examples/1-tasks.cjs`、`2-reliable.cjs`、`3-transactions.cjs` 与 CLI 都可指向你自己的本地 STOMP broker（默认 `127.0.0.1:61613`，环境变量 `STOMP_PORT` 可改端口，命令行用 `--port`）。本项目验证过的真实 broker 有两个：Apache Artemis 2.57.0 的无认证、无持久化 profile，以及 Apache ActiveMQ Classic 6.3.2 的认证 profile（见 [broker-interop](broker-interop.zh-CN.md)）；可复现的启动与验证命令见 [README](../README.md#真实-broker-复现) 与 [broker-plan](https://github.com/sundaysebasidian-byte/moonstomp/blob/32090a84c0d4fd31359f764b4c92ffa16db7671c/docs/broker-plan.zh-CN.md)。
+`examples/1-tasks.cjs`、`2-reliable.cjs`、`3-transactions.cjs` 与 CLI 都可指向你自己的本地 STOMP broker（默认 `127.0.0.1:61613`，环境变量 `STOMP_PORT` 可改端口，命令行用 `--port`）。已验证 Apache Artemis 2.57.0、Apache ActiveMQ Classic 6.3.2 和 RabbitMQ 4.1.8 三种真实 broker；各自的认证、TLS、心跳和事务测试范围见 [README](../README.md#真实-broker-互通) 与 [互操作记录](broker-interop.zh-CN.md)。
 
-用 Docker 起一个 Artemis 只是常见做法，**本项目没有验证过任何 Docker 镜像**，所以不把它写成已验证路径；已验证路径是 `scripts/verify.py … --broker-archive` 那条（官方发行包 + 已有 Java 17，仅回环）。
+Artemis 的已验证启动路径使用官方发行包和已有 Java 17，仅监听回环地址；本项目未验证 Artemis Docker 镜像。RabbitMQ 则通过官方 `rabbitmq:4.1.8` Docker 镜像在 CI 中启动，启用 STOMP 插件并绑定回环端口，见 [workflow](../.github/workflows/rabbitmq.yml) 与[通过记录](https://github.com/sundaysebasidian-byte/moonstomp/actions/runs/40288647089)。
 
 ## 6. demo broker 是什么、不是什么
 
-`tools/demo-broker.cjs` 是几百行 JS 的内存 STOMP 测试对端：支持 1.0/1.1/1.2 协商、queue（轮转分发）、topic（扇出）、三种 ACK 模式、事务、receipt、心跳。它**不是**一致性参照，不是本项目的产品功能，也**不能**证明与真实 broker 互通（那由 Artemis + go-stomp 的记录负责）。它的 NACK 策略默认“重新入队”（`--nack discard` 可改），而已记录的 Artemis 2.57.0 profile 是“丢弃”，所以 `03-ack-nack` 同时展示了两种。解析器刻意独立于被测的 MoonBit 编解码。
+`tools/demo-broker.cjs` 是几百行 JS 的内存 STOMP 测试对端：支持 1.0/1.1/1.2 协商、queue（轮转分发）、topic（扇出）、三种 ACK 模式、事务、receipt、心跳。它**不是**一致性参照，不是本项目的产品功能，也**不能**证明与真实 broker 互通（真实互通见三种 broker 的[测试记录](broker-interop.zh-CN.md)）。它的 NACK 策略默认“重新入队”（`--nack discard` 可改），而已记录的 Artemis 2.57.0 profile 是“丢弃”，所以 `03-ack-nack` 同时展示了两种。解析器刻意独立于被测的 MoonBit 编解码。
