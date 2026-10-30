@@ -66,3 +66,8 @@ AI 辅助实现与测试；人工最终审阅及提交尚未完成。
 ## 追加功能检查：CLI正文来源
 
 多个或重复正文参数过去静默采用最后一个，现改为拒绝歧义且不先读取stdin或文件。新增回归覆盖16个有序冲突、4个单来源、缺来源和两个保持stdin开放的真实CLI拒绝场景；全部通过。严格本地完整验收新增该项后29阶段通过；本次未重跑真实broker，不将旧broker证据改为新运行。
+
+
+## 固定SDK格式门禁修复
+
+公开97505c6的Fresh clone工作流中安装、moon check、moon test及README quick start均实际通过；仅moon fmt --check发现旧Int/可选参数标记与0.10.18格式输出不一致，后续moon info未执行。现按该锁定SDK实际格式化12个MoonBit文件，四后端各79/79及全部README demo重跑通过；moon fmt --check、moon info及已跟踪mbti零差异通过。没有删掉格式门禁，也不把这些局部复验称为真实broker故障重测；新公开head的CI需以其实际回执为准。

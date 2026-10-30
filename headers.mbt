@@ -85,7 +85,7 @@ fn unescape_versioned(
 fn raw_header(
   s : String,
   key : Bool,
-  version? : Version = V12,
+  version~ : Version = V12,
 ) -> String raise ProtocolError {
   for c in s {
     if c == '\u0000' ||

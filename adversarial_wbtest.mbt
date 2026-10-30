@@ -43,7 +43,7 @@ test "deterministic arbitrary multipart splits agree with fixed external wire ex
     let mut seed = run
     while pos < wire.length() {
       seed = (seed * 17 + 31) % 997
-      let next = Int::min(wire.length(), pos + seed % 11 + 1)
+      let next = Int32::min(wire.length(), pos + seed % 11 + 1)
       for event in d.feed(slice(wire, pos, next)) {
         out.push(event)
       }

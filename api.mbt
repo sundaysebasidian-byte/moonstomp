@@ -4,7 +4,7 @@
 /// CONNECT values are literal. encode/send validates forbidden delimiters.
 pub fn connect(
   host : String,
-  heartbeat? : String = "0,0",
+  heartbeat~ : String = "0,0",
   login? : String,
   passcode? : String,
 ) -> Frame {
@@ -26,8 +26,8 @@ pub fn connect(
 pub fn send_message(
   destination : String,
   body : Bytes,
-  transaction? : String = "",
-  receipt? : String = "",
+  transaction~ : String = "",
+  receipt~ : String = "",
 ) -> Frame {
   let h = [
     ("destination", destination),
@@ -46,7 +46,7 @@ pub fn send_message(
 pub fn subscribe(
   id : String,
   destination : String,
-  ack? : String = "auto",
+  ack~ : String = "auto",
 ) -> Frame {
   Frame::new("SUBSCRIBE", [
     ("id", id),
@@ -63,8 +63,8 @@ pub fn unsubscribe(id : String) -> Frame {
 ///|
 pub fn acknowledge(
   id : String,
-  negative? : Bool = false,
-  transaction? : String = "",
+  negative~ : Bool = false,
+  transaction~ : String = "",
 ) -> Frame {
   let h = [("id", id)]
   if transaction != "" {
@@ -79,7 +79,7 @@ pub fn begin_transaction(id : String) -> Frame {
 }
 
 ///|
-pub fn finish_transaction(id : String, commit? : Bool = true) -> Frame {
+pub fn finish_transaction(id : String, commit~ : Bool = true) -> Frame {
   Frame::new(if commit { "COMMIT" } else { "ABORT" }, [("transaction", id)])
 }
 
@@ -94,7 +94,7 @@ pub fn disconnect(receipt : String) -> Frame {
 pub fn connect_versions(
   host : String,
   versions : Array[Version],
-  heartbeat? : String = "0,0",
+  heartbeat~ : String = "0,0",
   login? : String,
   passcode? : String,
 ) -> Frame raise ProtocolError {
@@ -131,8 +131,8 @@ pub fn connect_versions(
 pub fn subscribe_versioned(
   version : Version,
   destination : String,
-  id? : String = "",
-  ack? : String = "auto",
+  id~ : String = "",
+  ack~ : String = "auto",
 ) -> Frame raise ProtocolError {
   if ack != "auto" &&
     ack != "client" &&
@@ -159,8 +159,8 @@ pub fn unsubscribe_destination(destination : String) -> Frame {
 pub fn acknowledge_message(
   version : Version,
   message : Frame,
-  negative? : Bool = false,
-  transaction? : String = "",
+  negative~ : Bool = false,
+  transaction~ : String = "",
 ) -> Frame raise ProtocolError {
   if message.command != "MESSAGE" {
     raise Invalid("acknowledgement requires MESSAGE")

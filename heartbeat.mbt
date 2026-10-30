@@ -1,15 +1,15 @@
 ///|
 pub struct HeartbeatPlan {
-  send_ms : Int
-  receive_ms : Int
+  send_ms : Int32
+  receive_ms : Int32
 } derive(Debug, Eq)
 
 ///|
 pub fn negotiate_heartbeat(
-  cx : Int,
-  cy : Int,
-  sx : Int,
-  sy : Int,
+  cx : Int32,
+  cy : Int32,
+  sx : Int32,
+  sy : Int32,
 ) -> HeartbeatPlan raise ProtocolError {
   if cx < 0 || cy < 0 || sx < 0 || sy < 0 {
     raise Invalid("negative heartbeat")
@@ -18,18 +18,18 @@ pub fn negotiate_heartbeat(
     send_ms: if cx == 0 || sy == 0 {
       0
     } else {
-      Int::max(cx, sy)
+      Int32::max(cx, sy)
     },
     receive_ms: if sx == 0 || cy == 0 {
       0
     } else {
-      Int::max(sx, cy)
+      Int32::max(sx, cy)
     },
   }
 }
 
 ///|
-fn heartbeat_pair(s : String) -> (Int, Int) raise ProtocolError {
+fn heartbeat_pair(s : String) -> (Int32, Int32) raise ProtocolError {
   let pieces = s.split(",").to_array()
   if pieces.length() != 2 {
     raise Invalid("invalid heartbeat pair")
@@ -54,7 +54,7 @@ struct HeartbeatClock {
 pub fn HeartbeatClock::new(
   plan : HeartbeatPlan,
   now : Int64,
-  tolerance_ms? : Int64 = 100,
+  tolerance_ms~ : Int64 = 100,
 ) -> HeartbeatClock raise ProtocolError {
   if now < 0 || tolerance_ms < 0 || tolerance_ms > 2147483647L {
     raise Invalid("invalid clock")

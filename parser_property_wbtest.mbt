@@ -73,7 +73,7 @@ test "bounded generated binary frames retain ordered headers across every split"
       while pos < wire.length() {
         assert_eq(d.feed(b"").length(), 0)
         seed = (seed * 17 + 31) % 997
-        let end = Int::min(wire.length(), pos + seed % 13 + 1)
+        let end = Int32::min(wire.length(), pos + seed % 13 + 1)
         for event in d.feed(slice(wire, pos, end)) {
           actual.push(event)
         }

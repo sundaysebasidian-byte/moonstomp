@@ -1,5 +1,5 @@
 ///|
-fn slice(b : Bytes, start : Int, end : Int) -> Bytes {
+fn slice(b : Bytes, start : Int32, end : Int32) -> Bytes {
   Bytes::from_array(b.to_array()[start:end].to_owned())
 }
 

@@ -16,7 +16,7 @@ pub struct Frame {
 pub fn Frame::new(
   command : String,
   headers : Array[(String, String)],
-  body? : Bytes = b"",
+  body~ : Bytes = b"",
 ) -> Frame {
   { command, headers: headers.copy(), body, }
 }
@@ -65,7 +65,7 @@ fn unescaped(command : String) -> Bool {
 
 ///|
 /// Decimal only, bounded before multiplying; no sign, whitespace or overflow.
-fn decimal(s : String, limit : Int) -> Int raise ProtocolError {
+fn decimal(s : String, limit : Int32) -> Int32 raise ProtocolError {
   if s.length() == 0 {
     raise Invalid("empty decimal")
   }

@@ -7,10 +7,10 @@ pub enum WireEvent {
 ///|
 /// Resource limits apply while data arrives, before allocating an entire frame.
 pub struct Limits {
-  max_line : Int
-  max_headers : Int
-  max_body : Int
-  max_events : Int
+  max_line : Int32
+  max_headers : Int32
+  max_body : Int32
+  max_events : Int32
 } derive(Debug)
 
 ///|
@@ -29,16 +29,16 @@ struct Decoder {
   line : Array[Byte]
   headers : Array[(String, String)]
   body : Array[Byte]
-  mut phase : Int // 0 command, 1 headers, 2 body, 3 terminator
+  mut phase : Int32 // 0 command, 1 headers, 2 body, 3 terminator
   mut command : String
-  mut length : Int // -1 means NUL terminated
+  mut length : Int32 // -1 means NUL terminated
   mut failed : Bool
 }
 
 ///|
 pub fn Decoder::new(
-  limits? : Limits = Limits::default(),
-  version? : Version = V12,
+  limits~ : Limits = Limits::default(),
+  version~ : Version = V12,
 ) -> Decoder raise ProtocolError {
   if limits.max_line < 1 ||
     limits.max_headers < 0 ||
@@ -332,10 +332,10 @@ fn Decoder::discard(self : Decoder) -> Unit {
 ///|
 /// Public configuration constructor; limits are bytes, counts and events per feed.
 pub fn Limits::new(
-  max_line? : Int = 8192,
-  max_headers? : Int = 128,
-  max_body? : Int = 1048576,
-  max_events? : Int = 1024,
+  max_line~ : Int32 = 8192,
+  max_headers~ : Int32 = 128,
+  max_body~ : Int32 = 1048576,
+  max_events~ : Int32 = 1024,
 ) -> Limits raise ProtocolError {
   if max_line < 1 || max_headers < 0 || max_body < 0 || max_events < 1 {
     raise Invalid("invalid decoder limits")

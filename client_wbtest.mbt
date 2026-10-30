@@ -1,8 +1,8 @@
 ///|
 fn active(
-  capacity? : Int = 256,
-  max_pending? : Int = 1024,
-  heart? : String = "0,0",
+  capacity~ : Int32 = 256,
+  max_pending~ : Int32 = 1024,
+  heart~ : String = "0,0",
 ) -> Client raise ProtocolError {
   let c = Client::new(capacity~, max_pending~)
   ignore(

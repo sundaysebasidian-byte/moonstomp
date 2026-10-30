@@ -28,8 +28,8 @@ priv struct Delivery {
 /// A sans-I/O client. Caller writes returned bytes and calls `fail` on write failure.
 struct Client {
   decoder : Decoder
-  capacity : Int
-  max_pending : Int
+  capacity : Int32
+  max_pending : Int32
   subscriptions : Array[(String, String)]
   destinations : Array[(String, String)] // internal subscription key, destination
   mut offered : Array[Version]
@@ -41,15 +41,15 @@ struct Client {
   mut state : State
   mut clock : HeartbeatClock?
   mut last_now : Int64
-  mut cx : Int
-  mut cy : Int
+  mut cx : Int32
+  mut cy : Int32
   mut disconnect_receipt : String?
 }
 
 ///|
 pub fn Client::new(
-  capacity? : Int = 256,
-  max_pending? : Int = 1024,
+  capacity~ : Int32 = 256,
+  max_pending~ : Int32 = 1024,
 ) -> Client raise ProtocolError {
   if capacity < 1 || max_pending < 1 {
     raise Invalid("invalid client capacity")
@@ -156,7 +156,7 @@ fn remove_string(a : Array[String], s : String) -> Unit {
 }
 
 ///|
-fn Client::check_ack(self : Client, f : Frame) -> Int raise ProtocolError {
+fn Client::check_ack(self : Client, f : Frame) -> Int32 raise ProtocolError {
   let version = self.version.unwrap_or(V12)
   let id = required(f, if version == V12 { "id" } else { "message-id" })
   let subscription = if version == V11 {
@@ -180,7 +180,7 @@ fn Client::check_ack(self : Client, f : Frame) -> Int raise ProtocolError {
 }
 
 ///|
-fn Client::settle(self : Client, index : Int, tx : String?) -> Unit {
+fn Client::settle(self : Client, index : Int32, tx : String?) -> Unit {
   let selected = self.deliveries[index]
   let cumulative = selected.cumulative
   let mut i = index
@@ -572,12 +572,12 @@ pub fn Client::end(self : Client) -> Unit raise ProtocolError {
 }
 
 ///|
-pub fn Client::pending_deliveries(self : Client) -> Int {
+pub fn Client::pending_deliveries(self : Client) -> Int32 {
   self.deliveries.length()
 }
 
 ///|
-pub fn Client::pending_receipts(self : Client) -> Int {
+pub fn Client::pending_receipts(self : Client) -> Int32 {
   self.receipts.length()
 }
 

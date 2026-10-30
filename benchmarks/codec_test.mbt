@@ -1,5 +1,5 @@
 ///|
-fn message_frame(index : Int, body : Bytes) -> @stomp.Frame {
+fn message_frame(index : Int32, body : Bytes) -> @stomp.Frame {
   @stomp.Frame::new(
     "MESSAGE",
     [
@@ -13,7 +13,7 @@ fn message_frame(index : Int, body : Bytes) -> @stomp.Frame {
 
 ///|
 fn message_stream(
-  count : Int,
+  count : Int32,
   body : Bytes,
 ) -> Bytes raise @stomp.ProtocolError {
   let out : Array[Byte] = []
@@ -26,12 +26,12 @@ fn message_stream(
 }
 
 ///|
-fn split(stream : Bytes, size : Int) -> Array[Bytes] {
+fn split(stream : Bytes, size : Int32) -> Array[Bytes] {
   let bytes = stream.to_array()
   let chunks = []
   let mut start = 0
   while start < bytes.length() {
-    let end = Int::min(bytes.length(), start + size)
+    let end = Int32::min(bytes.length(), start + size)
     chunks.push(Bytes::from_array(bytes[start:end].to_owned()))
     start = end
   }
@@ -40,7 +40,7 @@ fn split(stream : Bytes, size : Int) -> Array[Bytes] {
 
 ///|
 /// Returns the number of decoded frames; aborts if the fixed stream is rejected.
-fn decode_chunks(chunks : Array[Bytes], limits : @stomp.Limits) -> Int {
+fn decode_chunks(chunks : Array[Bytes], limits : @stomp.Limits) -> Int32 {
   try {
     let decoder = @stomp.Decoder::new(limits~)
     let mut frames = 0
