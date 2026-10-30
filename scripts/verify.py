@@ -141,6 +141,8 @@ def main():
             run('loopback-async-send-deadlines', ['node', '--test', 'scripts/async-send-deadline-test.cjs'])
             run('loopback-transport-quality', ['node', 'scripts/transport-quality-test.cjs'])
             run('transaction-outcome', ['node', 'scripts/transaction-outcome-test.cjs'])
+            run('unsubscribe-prewrite-retry', ['node', 'scripts/unsubscribe-retry-test.cjs'])
+            run('unsubscribe-lifecycle-controls', ['node', 'scripts/unsubscribe-lifecycle-test.cjs'])
             run('loopback-control-timeouts', ['node', 'scripts/transport-timeout-test.cjs'])
             report['transport'] = 'PASSED: credentials, scoped handles, TLS trust/hostname, 10 lifecycle + 4 control/predicate/host + 6 three-version control-timeout cases + 30 transaction-outcome scenarios; scripted loopback peers, not a broker'
         if all(broker_args):

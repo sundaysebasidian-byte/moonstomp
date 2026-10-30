@@ -38,8 +38,21 @@ class Subscription {
     this.#active(); this.#client._requireSyncTurn(); this.#state = 'closing';
     // Cancel only this handle's pending reads; other subscriptions stay live.
     this.#cancel.abort();
-    try { return await this.#client.receipt('UNSUBSCRIBE', [['id', this.id]]); }
-    finally { this.#state = 'closed'; }
+    try {
+      const receipt = await this.#client.receipt('UNSUBSCRIBE', [['id', this.id]]);
+      this.#state = 'closed';
+      return receipt;
+    } catch (error) {
+      // Only a proven pre-write refusal on a healthy connection is retryable.
+      // Prior next() calls remain cancelled; new reads receive a fresh signal.
+      if (error?.outcomeUnknown === false && this.#client.state() === 'active') {
+        this.#cancel = new AbortController();
+        this.#state = 'active';
+      } else {
+        this.#state = 'closed';
+      }
+      throw error;
+    }
   }
 }
 

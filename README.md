@@ -163,3 +163,5 @@ native 解码吞吐约 238 MB/s，JS 约 53 MB/s；分段喂入只慢约 5–10%
 
 代码 MIT（[LICENSE](LICENSE)）。参考测试文件 Apache-2.0，STOMP 规范 CC BY 3.0，来源与使用范围见 [docs/reference.zh-CN.md](docs/reference.zh-CN.md)。
 开发中 AI 的参与方式见 [AI_USAGE.md](AI_USAGE.md)。
+
+For unsubscribe pre-write refusal and safe retry boundaries, see [Unsubscribe retry](docs/UNSUBSCRIBE_RETRY.md).
