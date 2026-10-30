@@ -1,0 +1,14 @@
+{
+  "candidate": "review-20261030-unpublished",
+  "base_commit": "0e60fe353127260da105e82ccd683bfda535b27c",
+  "moonc": "v0.10.18+6c83a7f62 (2026-10-28)",
+  "moon": "0.1.20261028 (e1e1f15)",
+  "node": "v24.22.1",
+  "python": "3.12.14",
+  "platform": "Linux x86_64",
+  "sdk_sha256": "0e4cde1ace98e8ef00552a937738b59c6901c4b8a004ebad71ea0e63688f63f1",
+  "core_sha256": "30a8ae1c1e1e8fde478ea742cbc928c8f4ae1f5c00090afe3f10c97be9e5da64",
+  "runtime_dependencies": "SDK bundled core; Node built-ins",
+  "historic_lock": "toolchain.lock.json now binds the current review-branch CI environment; previous 0.10.14 evidence remains historical",
+  "broker": "ActiveMQ Classic 6.3.2 official release; SHA512 scripts/classic-release.sha512; JDK21"
+}

@@ -346,7 +346,8 @@ pub fn Client::send(
       if item.cumulative {
         for j = 0; j <= i; j = j + 1 {
           if self.deliveries[j].subscription == item.subscription &&
-            self.deliveries[j].staged != None {
+            self.deliveries[j].staged != None &&
+            self.deliveries[j].staged != f.header("transaction") {
             raise Invalid("cumulative ack overlaps transaction")
           }
         }

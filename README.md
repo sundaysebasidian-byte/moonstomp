@@ -11,9 +11,15 @@ MoonBit 核心接收字节，输出待发送字节和事件，维护协议会话
 
 **0.3.1 已发布到 mooncakes**，含有界异步 SEND 和心跳修复，版本说明见 [release-0.3.1](docs/release-0.3.1.zh-CN.md)，复审入口见[技术证据索引](docs/TECHNICAL_EVIDENCE.zh-CN.md)。
 
-## 快速开始
+## 2026-10-30 复审分支源码（非默认分支）
 
-需要 MoonBit 工具链（CI 锁定 `moonc v0.10.14+7d59c7ec9`，见 [toolchain.lock.json](toolchain.lock.json)）和 Node.js（CI 用 24），**不需要外部 broker**。
+本源码用于 `review/moonbit-20261030` 复审分支，尚未发布新的 Mooncakes 版本，不代表默认分支或新 release。此目录基于公开提交 `0e60fe353127260da105e82ccd683bfda535b27c`，新增同事务累计确认修复、回归矩阵与真实 Classic 验证。**不能通过安装旧 0.3.1 获取本次修复**；下文旧发包和 CI 记录仅属于其原版本。本候选源码四后端各 79/79，Classic 6.3.2 TLS 新增 14 场景通过，详情见[逐项回应](docs/review-response-20261030.zh-CN.md)。
+
+本候选实际验证工具链是 MoonBit 0.10.18、Node 24.22.1/Linux，见 [review-toolchain.lock.json](review-toolchain.lock.json)。根目录 toolchain.lock.json 与本分支固定 CI 已同步至0.10.18；旧0.10.14性能/发布回执仅属于历史版本。固定SDK/core从官方HTTPS下载并校验记录SHA256（非另行厂商签名）。使用本分支源码而非重新 clone 默认分支来复现新修复；四后端命令与 broker 范围见[复现说明](docs/reproduce-review-20261030.md)。
+
+## 历史发布版快速开始
+
+以下仅展示旧默认分支的快速开始，旧发布测试用0.10.14及Node24；复审分支使用上文0.10.18锁，**不需要外部 broker**。
 
 ```sh
 git clone https://github.com/sundaysebasidian-byte/moonstomp.git
@@ -32,6 +38,10 @@ moon add sundaysebasidian-byte/moonstomp@0.3.1
 ```
 
 > [mooncakes 上的 0.3.1](https://mooncakes.io/docs/sundaysebasidian-byte/moonstomp@0.3.1/)。从 0.1.x 升级时注意 `Client`、`Decoder`、`HeartbeatClock` 已改为抽象类型，见[迁移说明](docs/migration-master-20261023.zh-CN.md)。
+
+## 可查询的事务本地结束结果
+
+Node `Transaction.outcome` 提供只读冻结快照，区分结束命令未请求、等待、receipt已确认、写前未发送与结果未知。关闭会话或重复调用不会把未知误写为回滚；不自动重放，也不声称查询到了broker/业务真实状态。详情及运行证据见[使用指南](docs/guide.zh-CN.md#transactionoutcome可查询只读的本地结果)。此新增能力来自当前源码，旧Mooncakes版本不会因此变化。
 
 ## 用法
 
@@ -58,7 +68,7 @@ ignore(client.send(@stomp.acknowledge("a1"), 0))
 
 ### Node：连真实 broker
 
-`transport/tcp.cjs` 把核心接到 `net` / `tls`，支持 `login` / `passcode`、证书校验始终开启的 TLS、Subscription / Transaction 句柄和带 `code` 的结构化错误。用法速查见 [docs/guide.zh-CN.md](docs/guide.zh-CN.md)；0.3.0 起的有界 `sendAsync` 见[异步 SEND](docs/async-send.zh-CN.md)。Node 适配器按源码使用，不是 npm 包。
+`transport/tcp.cjs` 把核心接到 `net` / `tls`，支持 `login` / `passcode`、强制证书链校验、默认主机名校验的 TLS、Subscription / Transaction 句柄和带 `code` 的结构化错误。用法速查见 [docs/guide.zh-CN.md](docs/guide.zh-CN.md)；0.3.0 起的有界 `sendAsync` 见[异步 SEND](docs/async-send.zh-CN.md)。Node 适配器按源码使用，不是 npm 包。高级 `tlsOptions.checkServerIdentity` 可替换默认主机名检查，调用方必须维护身份验证；详见[信任边界](docs/boundaries.zh-CN.md)。
 
 ```sh
 node tools/demo-broker.cjs --port 61613 &
@@ -110,7 +120,7 @@ node tools/stomp-cli.cjs send --port 61613 --destination /queue/jobs --body hell
 ## 设计取舍
 
 - **sans-I/O**：核心只做协议，I/O、定时器、重连策略都留给宿主。同一套核心可接 Node、Wasm 或别的运行时。
-- **失败即关闭**：协议错误、时钟倒退、超限都会让会话进入 `Closed`，不会带着坏状态继续收发。
+- **分层失败行为**：接收侧解码/协议错误、时钟倒退或接收资源超限会关闭会话；本地 `send` 参数、事务归属或容量校验失败则拒绝本次操作、不登记新意图，原状态保持（前提是调用中的时钟推进尚未触发致命关闭）。不要把可修正的本地验证失败都解释成断线。
 - **不自动重发**：receipt 丢失时报告“结果未知”，由调用方决定，避免重复投递。
 - 不做：服务端、WebSocket、自动重连、持久化 outbox、exactly-once。
 

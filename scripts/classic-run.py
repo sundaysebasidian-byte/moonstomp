@@ -102,7 +102,10 @@ def main():
     parser.add_argument('--heartbeat', action='store_true', help='Bounded real TLS heartbeat timeout fixture; no business SEND')
     parser.add_argument('--soak', action='store_true', help='Fixed five-minute real TLS load/heartbeat window')
     parser.add_argument('--async-send', action='store_true', help='Short real TLS async SEND integration; no load benchmark')
+    parser.add_argument('--review-ack-matrix', action='store_true', help='New real TLS ACK transaction and subscription matrix')
     args = parser.parse_args()
+    if args.review_ack_matrix and (not args.tls or args.demo or args.heartbeat or args.soak or args.async_send):
+        parser.error('--review-ack-matrix requires --tls and normal interop mode')
     if args.async_send and (not args.tls or args.demo or args.heartbeat or args.soak):
         parser.error('--async-send requires --tls and excludes other fixture modes')
     if args.soak and (not args.tls or args.demo or args.heartbeat):
@@ -221,6 +224,17 @@ def main():
             tests = run('classic-interop', ['node', 'scripts/classic-interop-test.cjs'], child_env)
             report['interop'] = json.loads(tests)
             validate_interop(report['interop'], args.tls)
+        if args.review_ack_matrix:
+            report['review_ack_matrix'] = json.loads(run('review-ack-matrix', ['node', 'scripts/review-classic-ack-matrix.cjs'], child_env))
+            review = report['review_ack_matrix']
+            if review.get('status') != 'PASSED' or len(review.get('results', [])) != 14 or any(row.get('status') != 'PASSED' for row in review['results']):
+                raise RuntimeError('incomplete review ACK/subscription matrix')
+            expected = {(v, m, tx, None) for v in ['1.1','1.2'] for m in ['client','client-individual'] for tx in ['COMMIT','ABORT']}
+            expected |= {(v,m,None,'only-second-message-ACK') for v in ['1.1','1.2'] for m in ['client','client-individual']}
+            expected |= {(v,None,None,'multi-subscription-auto-individual-cancel-isolation') for v in ['1.1','1.2']}
+            actual = {(r.get('version'),r.get('mode'),r.get('transaction'),r.get('case')) for r in review['results']}
+            if actual != expected or any(r.get('actual_version') != r.get('version') for r in review['results']):
+                raise RuntimeError('review matrix coverage or negotiated version mismatch')
         report['status'] = 'PASSED'
     except Exception as error:
         report['error'] = str(error)

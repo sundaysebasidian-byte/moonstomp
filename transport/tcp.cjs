@@ -180,15 +180,21 @@ class TcpClient {
     return this;
   }
   async receipt(command, headers = [], body = Buffer.alloc(0), id = 'r-' + (++TcpClient.sequence)) {
-    this._requireSyncTurn();
+    // Reject before contextual wrapping: never retain an unvalidated command object/text.
     if (!['SEND', 'SUBSCRIBE', 'UNSUBSCRIBE', 'BEGIN', 'COMMIT', 'ABORT', 'ACK', 'NACK', 'DISCONNECT'].includes(command))
       throw transportError('STOMP_ARGUMENT', 'invalid receipt command', {operation: 'receipt'});
-    if (typeof id !== 'string' || !id.length || !Array.isArray(headers) || headers.some(h => !Array.isArray(h) || h.length !== 2 || h.some(v => typeof v !== 'string')) || !(body instanceof Uint8Array)) throw new Error('invalid receipt arguments');
-    if (headers.some(h => h[0] === 'receipt')) throw new Error('receipt() controls the receipt header');
-    if (this.error || this.state() !== 'active') throw this.error || new Error('connection is not active');
-    // Registering a failed waiter must never send an unobservable command.
-    if (this.waiters.length >= this.maxWaiters) throw new Error('waiter limit');
-    if (this.queue.some(e => e.event === 'receipt' && e.id === id)) throw new Error('unconsumed receipt id');
+    try {
+      this._requireSyncTurn();
+      if (typeof id !== 'string' || !id.length || !Array.isArray(headers) || headers.some(h => !Array.isArray(h) || h.length !== 2 || h.some(v => typeof v !== 'string')) || !(body instanceof Uint8Array)) throw new Error('invalid receipt arguments');
+      if (headers.some(h => h[0] === 'receipt')) throw new Error('receipt() controls the receipt header');
+      if (this.error || this.state() !== 'active') throw this.error || new Error('connection is not active');
+      // Registering a failed waiter must never send an unobservable command.
+      if (this.waiters.length >= this.maxWaiters) throw new Error('waiter limit');
+      if (this.queue.some(e => e.event === 'receipt' && e.id === id)) throw new Error('unconsumed receipt id');
+    } catch (error) {
+      // These checks precede the socket write boundary; do not close a healthy session.
+      throw receiptFailure(error, command, typeof id === 'string' ? id : null, false);
+    }
     const wait = this._waitFor(e => e.event === 'receipt' && e.id === id, this.controlTimeoutMs, true);
     wait.catch(() => {});
     let writeAttempted = false;

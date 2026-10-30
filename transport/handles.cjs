@@ -45,10 +45,13 @@ class Subscription {
 
 class Transaction {
   #client; #state = 'open';
+  #outcome = Object.freeze({status: 'not-requested', operation: null, receiptId: null, errorCode: null});
   constructor(client, id) {
     this.#client = client; Object.defineProperty(this, 'id', {value: id, enumerable: true});
   }
   get state() { return this.#state === 'open' && this.#client.state() === 'closed' ? 'failed' : this.#state; }
+  // Local finish receipt evidence only; never a broker/business-state query.
+  get outcome() { return this.#outcome; }
   static idFor(transaction, client) {
     if (!(transaction instanceof Transaction) || transaction.#client !== client) throw handleError('transaction belongs to another client');
     if (transaction.#state !== 'open' || client.state() !== 'active') throw handleError('transaction is not open');
@@ -62,8 +65,22 @@ class Transaction {
   }
   async #finish(command, state) {
     Transaction.idFor(this, this.#client); this.#client._requireSyncTurn(); this.#state = 'finishing';
-    try { const receipt = await this.#client.receipt(command, [['transaction', this.id]]); this.#state = state; return receipt; }
-    catch (error) { this.#state = 'failed'; throw error; }
+    this.#outcome = Object.freeze({status: 'pending', operation: command, receiptId: null, errorCode: null});
+    try {
+      const receipt = await this.#client.receipt(command, [['transaction', this.id]]);
+      this.#state = state;
+      this.#outcome = Object.freeze({status: 'confirmed', operation: command, receiptId: receipt.id, errorCode: null});
+      return receipt;
+    } catch (error) {
+      this.#state = 'failed';
+      this.#outcome = Object.freeze({
+        status: error?.outcomeUnknown === false ? 'not-sent' : 'unknown',
+        operation: command,
+        receiptId: typeof error?.receiptId === 'string' ? error.receiptId : null,
+        errorCode: typeof error?.code === 'string' ? error.code : null,
+      });
+      throw error;
+    }
   }
   commit() { return this.#finish('COMMIT', 'committed'); }
   abort() { return this.#finish('ABORT', 'aborted'); }

@@ -1,4 +1,8 @@
+> 本页部分互通描述为历史范围；本轮事务累计ACK/NACK修复及Classic6.3.2真实验证见[复审回应](review-response-20261030.zh-CN.md)，不扩大为其他broker的实测。
+
 # 支持边界与失败行为（0.3.1）
+
+> **候选版本说明（2026-10-30）**：以下发布版记录保留其原日期；本目录未发布修复及新测试以 [本轮逐条回应](review-response-20261030.zh-CN.md) 和 [复现说明](reproduce-review-20261030.md) 为准。源码四后端 79/79 不等于旧 registry 包新增后端消费验证。
 
 当前安装版为 [MoonSTOMP 0.3.1](https://mooncakes.io/docs/sundaysebasidian-byte/moonstomp@0.3.1/)。支持 STOMP 1.0、1.1、1.2；Node 适配器提供 TCP/TLS、有界异步 SEND。发布提交、registry 消费与源码 CI 分别见[发布回执](release-0.3.1.zh-CN.md)和[技术证据索引](TECHNICAL_EVIDENCE.zh-CN.md)。
 
@@ -11,7 +15,7 @@
 | 协议 | 按协商版本处理 CONNECT、头部转义及 ACK/NACK；正文是 Bytes，支持 NUL/二进制与 LF/CRLF。重复 header 保存、按首值解释。版本差异见[版本示例](../examples/versions/main.mbt)。 |
 | codec 与会话 | encode/Decoder 检查帧语法；必需 header、方向和时序由 Client 检查。单独 encode 不受 Client 的容量预算保护。 |
 | 核心后端 | 0.3.1 干净 registry 消费验证 JS、Wasm GC；native、普通 Wasm、Windows 消费者未验证。Node bridge 只用于 JS，不能把整个含 JS extern 的工程直接切换为其他后端。 |
-| Node 适配器 | 支持认证、证书校验始终开启的 TLS、Subscription/Transaction 句柄、结构化错误及 `sendAsync`。没有 WebSocket、自动重连或自动重发；按对应源码构建使用，不是 npm 包。 |
+| Node 适配器 | 支持认证、强制证书链校验、默认主机名校验的 TLS、Subscription/Transaction 句柄、结构化错误及 `sendAsync`。没有 WebSocket、自动重连或自动重发；按对应源码构建使用，不是 npm 包。 |
 | Classic 6.3.2 | 真实回环 TLS 三版本、认证负控制、receipt-loss、100/1000ms 心跳观察及主动 drop 后关闭、短异步发送和清理已验证；源码另跑过五分钟场景。两类证据不能互相替代。 |
 | RabbitMQ 4.1.8 | 当前源码 CI 验证三版本二进制/头部、事务 SEND、1.1/1.2 NACK 重投递；以 `1000,1000` 请求心跳，收到两次服务端心跳；20 条异步 SEND 有序到达。未定向截断任一心跳方向，也未做 TLS/持久化测试。 |
 | Artemis 2.57.0 | 历史回环 TCP/go-stomp 互通记录见[对应 profile](broker-interop.zh-CN.md)。其 NACK 丢弃和事务 ACK 不回滚属于该配置，不能推成其他 broker 的行为。 |
@@ -38,3 +42,7 @@
 | 用户 predicate | 必须快速、同步返回 Boolean。已有队列匹配失败保留队列；接收路径匹配失败会关闭。没有任意回调隔离或线程安全保证。 |
 
 完整 STOMP 一致性认证、事务 ACK 回滚、跨 broker 一致重投递、持久化和生产负载仍不在已验证范围。协议来源见 [STOMP 1.0](https://stomp.github.io/stomp-specification-1.0.html)、[1.1](https://stomp.github.io/stomp-specification-1.1.html)、[1.2](https://stomp.github.io/stomp-specification-1.2.html)；实现对照及归因见[对照文档](FAIR_GO_STOMP_COMPARISON.zh-CN.md)。
+
+## TLS高级选项的信任边界
+
+适配器拒绝 `rejectUnauthorized:false` 并强制设为true，因此证书链校验不能用该选项关闭；Node默认执行主机名校验。但高级 `tlsOptions.checkServerIdentity` 会传入Node，可由调用方替换主机名检查，不能声称所有配置下身份校验均不可弱化。高级TLS回调和信任CA由调用方负责；本轮真实TLS负控使用标准主机名校验配置。参考 [Node TLS checkServerIdentity](https://nodejs.org/api/tls.html#tlscheckserveridentityhostname-cert)。

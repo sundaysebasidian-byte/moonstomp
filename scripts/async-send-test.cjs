@@ -42,8 +42,18 @@ async function fixture(run,options={},heartbeat="0,0"){
   c.socket.cork();const a=c.sendAsync('/x',Buffer.alloc(128*1024));const b=c.sendAsync('/x',Buffer.alloc(8));const result=Promise.allSettled([a,b]);await delay(5);peer().destroy();const r=await result;assert(r.every(x=>x.status==='rejected'));assert.equal(r[1].reason.outcomeUnknown,false);
  });
  await fixture(async(c,peer)=>{
-  peer().pause();const pending=Array.from({length:48},()=>c.sendAsync('/q',Buffer.alloc(256*1024),{timeoutMs:150}));
-  const result=await Promise.allSettled(pending);assert(result.some(r=>r.status==='rejected'&&r.reason.code==='STOMP_SEND_TIMEOUT'&&r.reason.outcomeUnknown===true));assert(result.some(r=>r.status==='rejected'&&r.reason.outcomeUnknown===false));assert.equal(c.state(),'closed');
+  // Establish an attempted write before queuing followers: a short deadline plus
+  // large encoding cost can legitimately expire every item before socket.write.
+  // The earlier paused-reader test separately proves real OS backpressure.
+  peer().pause();c.socket.cork();
+  let wrote;const firstWrite=new Promise(resolve=>{wrote=resolve;});
+  const write=c.socket.write.bind(c.socket);c.socket.write=(...args)=>{const ok=write(...args);wrote();return ok;};
+  const first=c.sendAsync('/q',Buffer.alloc(128*1024),{timeoutMs:5000});
+  const firstResult=Promise.allSettled([first]);
+  let timer;try{await Promise.race([firstWrite,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('first SEND never reached socket.write')),6000);})]);}finally{clearTimeout(timer);c.socket.write=write;}
+  const pending=Array.from({length:47},()=>c.sendAsync('/q',Buffer.alloc(256*1024),{timeoutMs:10000}));
+  const followersResult=Promise.allSettled(pending);
+  const result=[...(await firstResult),...(await followersResult)];assert(result.some(r=>r.status==='rejected'&&r.reason.code==='STOMP_SEND_TIMEOUT'&&r.reason.outcomeUnknown===true));assert(result.some(r=>r.status==='rejected'&&r.reason.outcomeUnknown===false));assert.equal(c.state(),'closed');
  });
  for(const limits of [{maxPendingSends:1},{maxPendingSendBytes:200*1024}])await fixture(async(c)=>{
   c.socket.cork();const first=c.sendAsync('/q',Buffer.alloc(128*1024));const result=Promise.allSettled([first]);await assert.rejects(c.sendAsync('/q',Buffer.alloc(128*1024)),e=>e.code==='STOMP_SEND_LIMIT'&&!e.outcomeUnknown);await delay(5);await assert.rejects(c.disconnect(),e=>e.code==='STOMP_ASYNC_BUSY');const r=await result;assert.equal(r[0].reason.outcomeUnknown,true);

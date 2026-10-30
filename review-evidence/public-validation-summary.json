@@ -1,0 +1,56 @@
+{
+  "scope": "Historical candidate source tests from 2026-10-30; not evidence that the new public branch CI has run. Full local logs remain private.",
+  "archive_sha256": "9ff905dcd4c4bc8410f51fe3fe4792cb39bccce45cd9404e47ab3581f2b0a297",
+  "results": [
+    {
+      "name": "matrix-native",
+      "source_log_sha256": "713837de0053074304507a9c3f902920948162cabb8312a04fe8f16ed5a30522",
+      "total": 79,
+      "passed": 79,
+      "failed": 0
+    },
+    {
+      "name": "matrix-js",
+      "source_log_sha256": "713837de0053074304507a9c3f902920948162cabb8312a04fe8f16ed5a30522",
+      "total": 79,
+      "passed": 79,
+      "failed": 0
+    },
+    {
+      "name": "matrix-wasm",
+      "source_log_sha256": "713837de0053074304507a9c3f902920948162cabb8312a04fe8f16ed5a30522",
+      "total": 79,
+      "passed": 79,
+      "failed": 0
+    },
+    {
+      "name": "matrix-wasm-gc",
+      "source_log_sha256": "713837de0053074304507a9c3f902920948162cabb8312a04fe8f16ed5a30522",
+      "total": 79,
+      "passed": 79,
+      "failed": 0
+    },
+    {
+      "name": "deny-warn",
+      "source_log_sha256": "0abb3523caff609b623c0af0aaf90be88828c9e143feae1f415e43a38d1aec14",
+      "outcome": "passed",
+      "detail": "strict compile check"
+    },
+    {
+      "name": "node-handles",
+      "source_log_sha256": "1ee54c3ec1b9e613fb2403fff2b8fa804a32d67ca77805c8dee6021b1963cdcf",
+      "outcome": "passed",
+      "detail": "three protocol version handles against scripted peer"
+    },
+    {
+      "name": "pre-fix-cumulative",
+      "source_log_sha256": "1ddc72b10e87a00180196b63cde3adadb4600054283aed1b35c8a6d85187829d",
+      "stage": "before-fix",
+      "outcome": "expected historical failing regression; not final status"
+    }
+  ],
+  "tested_source_sha256": {
+    "client.mbt": "53b70c12b537a8fee6798975a9af40d4ff03928f7041ddde2720ca60b6870ff3",
+    "review_protocol_matrix_wbtest.mbt": "57e6f5fba678194293dc9c21cae2b2235aa17adc4bd77bd3f48685d4eceeb594"
+  }
+}

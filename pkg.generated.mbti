@@ -26,7 +26,7 @@ pub fn escape_header(String) -> String raise ProtocolError
 
 pub fn finish_transaction(String, commit? : Bool) -> Frame
 
-pub fn negotiate_heartbeat(Int, Int, Int, Int) -> HeartbeatPlan raise ProtocolError
+pub fn negotiate_heartbeat(Int32, Int32, Int32, Int32) -> HeartbeatPlan raise ProtocolError
 
 pub fn parse_version(String) -> Version raise ProtocolError
 
@@ -54,9 +54,9 @@ pub fn ProtocolError::to_repr(Self) -> @debug.Repr
 type Client
 pub fn Client::end(Self) -> Unit raise ProtocolError
 pub fn Client::fail(Self) -> Unit
-pub fn Client::new(capacity? : Int, max_pending? : Int) -> Self raise ProtocolError
-pub fn Client::pending_deliveries(Self) -> Int
-pub fn Client::pending_receipts(Self) -> Int
+pub fn Client::new(capacity? : Int32, max_pending? : Int32) -> Self raise ProtocolError
+pub fn Client::pending_deliveries(Self) -> Int32
+pub fn Client::pending_receipts(Self) -> Int32
 pub fn Client::receive(Self, Bytes, Int64) -> Array[ClientEvent] raise ProtocolError
 pub fn Client::send(Self, Frame, Int64) -> Bytes raise ProtocolError
 pub fn Client::state(Self) -> State
@@ -97,21 +97,21 @@ pub fn HeartbeatClock::received_data(Self, Int64) -> Unit raise ProtocolError
 pub fn HeartbeatClock::sent_data(Self, Int64) -> Unit raise ProtocolError
 
 pub struct HeartbeatPlan {
-  send_ms : Int
-  receive_ms : Int
+  send_ms : Int32
+  receive_ms : Int32
 } derive(Eq, @debug.Debug)
 pub fn HeartbeatPlan::equal(Self, Self) -> Bool
 pub fn HeartbeatPlan::not_equal(Self, Self) -> Bool
 pub fn HeartbeatPlan::to_repr(Self) -> @debug.Repr
 
 pub struct Limits {
-  max_line : Int
-  max_headers : Int
-  max_body : Int
-  max_events : Int
+  max_line : Int32
+  max_headers : Int32
+  max_body : Int32
+  max_events : Int32
 } derive(@debug.Debug)
 pub fn Limits::default() -> Self
-pub fn Limits::new(max_line? : Int, max_headers? : Int, max_body? : Int, max_events? : Int) -> Self raise ProtocolError
+pub fn Limits::new(max_line? : Int32, max_headers? : Int32, max_body? : Int32, max_events? : Int32) -> Self raise ProtocolError
 pub fn Limits::to_repr(Self) -> @debug.Repr
 
 pub enum State {

@@ -83,6 +83,7 @@ def main():
         return result.stdout.decode('utf-8').strip()
     try:
         run('classic-export-guards', [sys.executable, '-m', 'unittest', 'discover', '-s', 'scripts', '-p', 'test_classic_export.py'])
+        run('ci-bootstrap-offline-guards', [sys.executable, '-m', 'unittest', 'discover', '-s', 'scripts', '-p', 'test_ci_sdk.py'])
         run('classic-profile-guards', [sys.executable, '-m', 'unittest', 'discover', '-s', 'scripts', '-p', 'test_classic_profile.py'])
         run('adapter-unit-faults', ['node', '--test', 'scripts/adapter-unit-test.cjs'])
         if not moon:
@@ -115,6 +116,7 @@ def main():
         run('python-compatibility-controls', [sys.executable, '-E', '-m', 'unittest', 'discover', '-s', 'scripts', '-p', 'test_python_compat.py'])
         run('check-js', [moon, 'check', '--target', 'js', '-j', '1'])
         run('build-js', [moon, 'build', '--target', 'js', '-j', '1'])
+        run('cli-body-source-guards', ['node', 'scripts/review-cli-body-source-test.cjs'])
         run('test-js', [moon, 'test', '--target', 'js', '-j', '1'])
         run('test-wasm-gc', [moon, 'test', '--target', 'wasm-gc', '--package', 'sundaysebasidian-byte/moonstomp', '-j', '1'])
         run('offline-example', [moon, 'run', 'examples/offline', '--target', 'js', '-j', '1'])
@@ -124,7 +126,7 @@ def main():
         run('js-bridge', ['node', 'scripts/bridge-test.cjs'])
         run('differential', ['node', 'scripts/differential.cjs'])
         consumer_command = [sys.executable, 'scripts/downstream.py', '--output', str(out / 'downstream')]
-        if args.current_toolchain:
+        if args.current_toolchain or lock.get('consumer_dependency_mode') == 'workspace':
             consumer_command.append('--workspace-dependencies')
         if args.transport:
             consumer_command.append('--transport')
@@ -138,8 +140,9 @@ def main():
             run('loopback-async-send', ['node', 'scripts/async-send-test.cjs'])
             run('loopback-async-send-deadlines', ['node', '--test', 'scripts/async-send-deadline-test.cjs'])
             run('loopback-transport-quality', ['node', 'scripts/transport-quality-test.cjs'])
+            run('transaction-outcome', ['node', 'scripts/transaction-outcome-test.cjs'])
             run('loopback-control-timeouts', ['node', 'scripts/transport-timeout-test.cjs'])
-            report['transport'] = 'PASSED: credentials, scoped handles, TLS trust/hostname, 10 lifecycle + 4 control/predicate/host + 6 three-version control-timeout cases; scripted loopback peers, not a broker'
+            report['transport'] = 'PASSED: credentials, scoped handles, TLS trust/hostname, 10 lifecycle + 4 control/predicate/host + 6 three-version control-timeout cases + 30 transaction-outcome scenarios; scripted loopback peers, not a broker'
         if all(broker_args):
             broker_command = [sys.executable, 'scripts/broker-run.py',
                 '--archive', str(args.broker_archive.resolve()),

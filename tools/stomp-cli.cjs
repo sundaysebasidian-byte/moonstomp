@@ -28,6 +28,7 @@ function parse(argv, env = process.env) {
   const o = {command, headers: [], versions: ['1.2'], host: '127.0.0.1', port: 61613, count: 1, ack: 'auto', timeout: 5000, format: 'text', receipt: true};
   const flags = new Set(['--no-receipt', '--stdin', '--allow-remote', '--tls']);
   let passcodeEnv;
+  let bodySource;
   for (let i = 0; i < rest.length; i++) {
     const a = rest[i];
     if (!a.startsWith('--')) throw new UsageError(`unexpected argument ${a}`);
@@ -35,10 +36,13 @@ function parse(argv, env = process.env) {
     if (value === undefined) throw new UsageError(`${a} needs a value`);
     switch (a) {
       case '--destination': o.destination = value; break;
-      case '--body': o.body = Buffer.from(value, 'utf8'); break;
-      case '--body-file': o.body = fs.readFileSync(value); break;
-      case '--body-hex': if (!/^([0-9a-fA-F]{2})*$/.test(value)) throw new UsageError('--body-hex needs an even number of hex digits'); o.body = Buffer.from(value, 'hex'); break;
-      case '--stdin': o.body = fs.readFileSync(0); break;
+      case '--body':
+      case '--body-file':
+      case '--body-hex':
+      case '--stdin':
+        if (bodySource) throw new UsageError('exactly one body source is allowed');
+        bodySource = {kind: a, value};
+        break;
       case '--header': { const at = value.indexOf('='); if (at < 1) throw new UsageError('--header needs k=v'); o.headers.push([value.slice(0, at), value.slice(at + 1)]); break; }
       case '--no-receipt': o.receipt = false; break;
       case '--tx': if (!['commit', 'abort'].includes(value)) throw new UsageError('--tx is commit or abort'); o.tx = value; break;
@@ -80,6 +84,16 @@ function parse(argv, env = process.env) {
   if (!['text', 'json'].includes(o.format)) throw new UsageError('--format must be text or json');
   if (!Number.isInteger(o.count) || o.count < 1) throw new UsageError('--count must be a positive integer');
   if (!Number.isInteger(o.timeout) || o.timeout < 1) throw new UsageError('--timeout must be a positive integer (ms)');
+  if (bodySource) {
+    const {kind, value} = bodySource;
+    if (kind === '--body') o.body = Buffer.from(value, 'utf8');
+    else if (kind === '--body-file') o.body = fs.readFileSync(value);
+    else if (kind === '--stdin') o.body = fs.readFileSync(0);
+    else {
+      if (!/^([0-9a-fA-F]{2})*$/.test(value)) throw new UsageError('--body-hex needs an even number of hex digits');
+      o.body = Buffer.from(value, 'hex');
+    }
+  }
   if (o.command === 'send' && o.body === undefined) throw new UsageError('send needs --body, --body-file, --body-hex or --stdin');
   if (o.command === 'send' && o.tx && !o.receipt) throw new UsageError('--tx needs receipts (omit --no-receipt)');
   return o;

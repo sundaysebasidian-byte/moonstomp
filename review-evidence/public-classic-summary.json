@@ -1,0 +1,196 @@
+{
+  "started_utc": "2026-10-30T08:34:44.601922+00:00",
+  "finished_utc": "2026-10-30T08:34:55.940449+00:00",
+  "broker": "ActiveMQ Classic 6.3.2",
+  "tls": true,
+  "status": "PASSED",
+  "port_closed": true,
+  "private_key_removed": true,
+  "source_receipt_sha256": "cc0ad96f9608ed8170c4dfe0fdaf88d044613b00bd1282235175cd71e2a4cd0c",
+  "scope": "Historical local nonpersistent Classic 6.3.2 TLS assertions, not CI evidence for this new branch commit or a general broker/durability guarantee.",
+  "interop": {
+    "status": "PASSED",
+    "results": [
+      {
+        "name": "untrusted-tls-ca",
+        "status": "PASSED",
+        "connects": 0
+      },
+      {
+        "name": "wrong-tls-hostname",
+        "status": "PASSED",
+        "connects": 0
+      },
+      {
+        "name": "missing-credentials",
+        "status": "PASSED"
+      },
+      {
+        "name": "incorrect-credentials",
+        "status": "PASSED"
+      },
+      {
+        "status": "PASSED",
+        "version": "1.0",
+        "actual_version": "1.0",
+        "tls_verified": true,
+        "authenticated": true,
+        "versioned_ack": true,
+        "committed_send_received": true,
+        "unsubscribe_disconnect_receipts": true,
+        "abrupt_disconnect_no_replay": true,
+        "binary_octets": 5
+      },
+      {
+        "status": "PASSED",
+        "version": "1.1",
+        "actual_version": "1.1",
+        "tls_verified": true,
+        "authenticated": true,
+        "versioned_ack": true,
+        "committed_send_received": true,
+        "unsubscribe_disconnect_receipts": true,
+        "abrupt_disconnect_no_replay": true,
+        "binary_octets": 5
+      },
+      {
+        "status": "PASSED",
+        "version": "1.2",
+        "actual_version": "1.2",
+        "tls_verified": true,
+        "authenticated": true,
+        "versioned_ack": true,
+        "committed_send_received": true,
+        "unsubscribe_disconnect_receipts": true,
+        "abrupt_disconnect_no_replay": true,
+        "binary_octets": 5
+      }
+    ]
+  },
+  "review_ack_matrix": {
+    "status": "PASSED",
+    "tls_verified": true,
+    "results": [
+      {
+        "version": "1.1",
+        "actual_version": "1.1",
+        "mode": "client",
+        "transaction": "ABORT",
+        "status": "PASSED",
+        "marker_received": true,
+        "extra_observation_ms": 150
+      },
+      {
+        "version": "1.1",
+        "actual_version": "1.1",
+        "mode": "client",
+        "transaction": "COMMIT",
+        "status": "PASSED",
+        "marker_received": true,
+        "extra_observation_ms": 150
+      },
+      {
+        "version": "1.1",
+        "actual_version": "1.1",
+        "mode": "client-individual",
+        "transaction": "ABORT",
+        "status": "PASSED",
+        "marker_received": true,
+        "extra_observation_ms": 150
+      },
+      {
+        "version": "1.1",
+        "actual_version": "1.1",
+        "mode": "client-individual",
+        "transaction": "COMMIT",
+        "status": "PASSED",
+        "marker_received": true,
+        "extra_observation_ms": 150
+      },
+      {
+        "version": "1.1",
+        "actual_version": "1.1",
+        "mode": "client",
+        "case": "only-second-message-ACK",
+        "status": "PASSED",
+        "marker_received": true,
+        "extra_observation_ms": 150
+      },
+      {
+        "version": "1.1",
+        "actual_version": "1.1",
+        "mode": "client-individual",
+        "case": "only-second-message-ACK",
+        "status": "PASSED",
+        "marker_received": true,
+        "extra_observation_ms": 150
+      },
+      {
+        "version": "1.1",
+        "actual_version": "1.1",
+        "case": "multi-subscription-auto-individual-cancel-isolation",
+        "status": "PASSED"
+      },
+      {
+        "version": "1.2",
+        "actual_version": "1.2",
+        "mode": "client",
+        "transaction": "ABORT",
+        "status": "PASSED",
+        "marker_received": true,
+        "extra_observation_ms": 150
+      },
+      {
+        "version": "1.2",
+        "actual_version": "1.2",
+        "mode": "client",
+        "transaction": "COMMIT",
+        "status": "PASSED",
+        "marker_received": true,
+        "extra_observation_ms": 150
+      },
+      {
+        "version": "1.2",
+        "actual_version": "1.2",
+        "mode": "client-individual",
+        "transaction": "ABORT",
+        "status": "PASSED",
+        "marker_received": true,
+        "extra_observation_ms": 150
+      },
+      {
+        "version": "1.2",
+        "actual_version": "1.2",
+        "mode": "client-individual",
+        "transaction": "COMMIT",
+        "status": "PASSED",
+        "marker_received": true,
+        "extra_observation_ms": 150
+      },
+      {
+        "version": "1.2",
+        "actual_version": "1.2",
+        "mode": "client",
+        "case": "only-second-message-ACK",
+        "status": "PASSED",
+        "marker_received": true,
+        "extra_observation_ms": 150
+      },
+      {
+        "version": "1.2",
+        "actual_version": "1.2",
+        "mode": "client-individual",
+        "case": "only-second-message-ACK",
+        "status": "PASSED",
+        "marker_received": true,
+        "extra_observation_ms": 150
+      },
+      {
+        "version": "1.2",
+        "actual_version": "1.2",
+        "case": "multi-subscription-auto-individual-cancel-isolation",
+        "status": "PASSED"
+      }
+    ]
+  }
+}

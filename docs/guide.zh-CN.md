@@ -43,7 +43,7 @@ await c.disconnect();
 |---|---|
 | `new TcpClient({host='127.0.0.1', port=61613, tickMs=25, maxQueue=1024, maxWaiters=256, maxQueueBytes=4 MiB})` | 参数非法立即抛错；一个实例只连一次 |
 | `connect({virtualHost='localhost', versions=['1.2'], heartbeat='1000,1000', login, passcode})` | 提供 1–3 个版本；等 CONNECTED 最多 5 s；`login`/`passcode` 省略时不发送，空字符串会发送，含 CR/LF/NUL 的值在打开 socket 前被拒绝。仅提供 `['1.0']` 时默认 `heartbeat` 为 `'0,0'` |
-| `new TcpClient({…, tlsOptions})` | `tlsOptions` 非 null 时用 Node `tls.connect`，必须校验证书（`rejectUnauthorized:false` 与传入已连接 socket 被拒）；自签 CA 用 `{ca}`，IP 以外的 host 自动作 SNI，可设 `servername`。**已在脚本 peer 与真实 Classic 6.3.2 回环 TLS profile 验证；不代表生产网络验收** |
+| `new TcpClient({…, tlsOptions})` | `tlsOptions` 非 null 时用 Node `tls.connect`，必须校验证书（`rejectUnauthorized:false` 与传入已连接 socket 被拒）；自签 CA 用 `{ca}`，IP 以外的 host 自动作 SNI，可设 `servername`。默认执行主机名检查；高级 `checkServerIdentity` 回调可替换该检查，调用方承担其正确性，不能据强制证书链验证推断所有配置都安全。**已在脚本 peer 与真实 Classic 6.3.2 回环 TLS profile 验证；不代表生产网络验收** |
 | `await subscribe(destination, {id?, ack='auto', headers=[]})` | SUBSCRIBE receipt 后返回 Subscription：`next(timeout=5000)`、`ack(frame, {transaction?})`、`nack(…)`、`unsubscribe()`；`ack`/`nack` 只接受该句柄 `next` 返回的原 frame。1.0 下同 destination 的多订阅不保证区分 |
 | `await beginTransaction({id?})` | BEGIN receipt 后返回 Transaction：`send(destination, Uint8Array, headers)`、`commit()`、`abort()` |
 | `send(command, headers, body)` | 发后不管，无回执 |
@@ -56,7 +56,36 @@ await c.disconnect();
 
 `new TcpClient({controlTimeoutMs: 5000})` 同时限制 CONNECT 与每个 receipt 等待；必须是 1..2147483647 的整数，构造后只读。`waitFor`/`Subscription.next` 的观察期限独立设置。控制等待失败后会话关闭、未完成的等待被拒绝，不会自动重连或重发。原始 `event timeout` 文本保留，调用方应优先使用 code。
 
-COMMIT receipt 超时后 `Transaction.state === 'failed'` 只说明客户端没有确认结果，**不能解释成已回滚**。业务应使用业务 ID/状态查询等方式对账，再决定是否在新会话重试。STOMP receipt 只确认 broker 对帧的处理，不等于消费端业务处理或 exactly-once。
+COMMIT receipt 超时后 `Transaction.state === 'failed'` 只说明客户端没有确认结果，**不能解释成已回滚**。现在可读取 `transaction.outcome`，无需一直保存异常对象：这是**本地已观察到的结束命令回执状态**，不是向 broker 查询事务真实状态。业务仍应使用业务 ID/应用状态查询对账，再决定下一步；不会自动重试。STOMP receipt 只确认 broker 对帧的处理，不等于消费端业务处理、落盘或 exactly-once。
+
+### Transaction.outcome：可查询、只读的本地结果
+
+`transaction.outcome` 返回冻结快照 `{status, operation, receiptId, errorCode}`；不含消息正文、broker错误正文、凭据或cause。每次状态改变产生新快照，旧快照保持原值；`state` 原有值不变，兼容旧调用。
+
+| status | 精确含义 |
+|---|---|
+| `not-requested` | 此句柄尚未开始 COMMIT/ABORT；若会话先关闭，不因此声称事务已回滚 |
+| `pending` | 已开始结束流程，尚无终态；不等于已写入网络 |
+| `confirmed` | 匹配的 RECEIPT 已收到；operation 区分 COMMIT/ABORT，receiptId 为对应回执ID |
+| `not-sent` | 此次 COMMIT/ABORT 在 socket.write 边界前被拒绝；不说明之前 SEND/ACK 的结果，也不自动允许重放整个事务 |
+| `unknown` | 已尝试写入但未获确认，或缺少足够分类证据；不能当作提交失败、回滚成功或安全重试 |
+
+`operation` 初值null，其余为`COMMIT`/`ABORT`。`receiptId` 未分配/尚不可得时null，`errorCode`没有错误时null。无效/重复finish调用不会覆盖原终态；确认后disconnect不会把confirmed改为unknown。开始前的句柄/异步繁忙检查若拒绝，则保留原快照。有效命令的receipt前置参数/等待者容量检查失败的异常现在也带`outcomeUnknown=false`，仍不关闭健康会话；后续socket写缓冲容量拒绝虽然同样是`not-sent`，仍按既有适配器规则关闭会话，不能仅凭`not-sent`推断连接可复用。
+
+```js
+const transaction = await client.beginTransaction();
+transaction.send('/queue/jobs', Buffer.from('job payload'));
+try {
+  await transaction.commit();
+} catch (error) {
+  // Record only local evidence; do NOT automatically resend on failed/unknown.
+  console.error(JSON.stringify(transaction.outcome));
+  throw error;
+}
+console.log(transaction.outcome); // confirmed, operation=COMMIT
+```
+
+运行 `node scripts/transaction-outcome-test.cjs` 可复现三版本成功/回执丢失、写前容量拒绝、等待者上限、会话先关闭和快照不可变性。使用真实TCP脚本peer故意控制回执，不冒充真实broker状态查询或生产互操作验收。
 
 事件形状：`{event:'message', frame:{command, headers:[[k,v]], body:number[]}}`、`{event:'receipt', id}`、`{event:'heartbeat'}`、`{event:'error', frame}`。`frame.body` 是字节数组，用 `Buffer.from(frame.body)` 还原。
 
@@ -98,3 +127,9 @@ Artemis 的已验证启动路径使用官方发行包和已有 Java 17，仅监�
 ## 6. demo broker 是什么、不是什么
 
 `tools/demo-broker.cjs` 是几百行 JS 的内存 STOMP 测试对端：支持 1.0/1.1/1.2 协商、queue（轮转分发）、topic（扇出）、三种 ACK 模式、事务、receipt、心跳。它**不是**一致性参照，不是本项目的产品功能，也**不能**证明与真实 broker 互通（真实互通见三种 broker 的[测试记录](broker-interop.zh-CN.md)）。它的 NACK 策略默认“重新入队”（`--nack discard` 可改），而已记录的 Artemis 2.57.0 profile 是“丢弃”，所以 `03-ack-nack` 同时展示了两种。解析器刻意独立于被测的 MoonBit 编解码。
+
+### Outcome 的真实 broker 正控
+
+本轮另在隔离 Classic 6.3.2 TLS 上执行1.0/1.1/1.2 × COMMIT/ABORT六项正控：收到真实RECEIPT后 `confirmed`、receiptId一致，断开连接后快照保持。确认不等于持久化或业务完成；回执丢失/unknown仍仅由明确标记的脚本peer故障试验覆盖。
+
+复用脚本 `scripts/classic-transaction-outcome-test.cjs` 仅连127.0.0.1，需已由隔离runner创建的测试broker、`STOMP_PORT` 和 `STOMP_TLS_CA`；沿用runner固定的非生产测试身份。脚本不启动或停止其他broker，不应对生产运行。原本地源码提交4e8ee03的runtime哈希与真实测试逐字绑定；该新增脚本/文档不修改运行时实现。
