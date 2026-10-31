@@ -3,6 +3,7 @@
 import argparse
 import importlib.util
 import json
+import math
 from pathlib import Path
 
 spec = importlib.util.spec_from_file_location('classic_runner', Path(__file__).with_name('classic-run.py'))
@@ -82,11 +83,11 @@ def main():
                        'open_relay_sockets', 'business_SENDs', 'upstream_tls_verified',
                        'negotiated_period_ms', 'broker_heartbeat_header', 'broker_total_eols', 'excluded_early_eols', 'idle_window_after_ms']
             good = good and all(data.get(k) is True for k in ['tls', 'real_broker', 'heartbeat_timeout', 'no_reconnect', 'upstream_tls_verified'])
-            good = good and data.get('status') == 'PASSED' and data.get('connections') == 1 and data.get('business_SENDs') == 0 and data.get('open_relay_sockets') == 0
-            good = good and all(isinstance(data.get(k), int) and data[k] >= minimum for k, minimum in [('client_heartbeats', 2), ('broker_heartbeats', 2), ('dropped_broker_bytes', 1)])
+            good = good and data.get('status') == 'PASSED' and all(type(data.get(k)) is int and data[k] == expected for k, expected in [('connections', 1), ('business_SENDs', 0), ('open_relay_sockets', 0)])
+            good = good and all(type(data.get(k)) is int and data[k] >= minimum for k, minimum in [('client_heartbeats', 2), ('broker_heartbeats', 2), ('dropped_broker_bytes', 1)])
             if name == 'heartbeat1000':
-                good = good and data.get('negotiated_period_ms') == 1000 and data.get('broker_heartbeat_header') == '1000,1000'
-                good = good and data.get('idle_window_after_ms') == 1000
+                good = good and type(data.get('negotiated_period_ms')) is int and data['negotiated_period_ms'] == 1000 and data.get('broker_heartbeat_header') == '1000,1000'
+                good = good and type(data.get('idle_window_after_ms')) is int and data['idle_window_after_ms'] == 1000
         elif name == 'soak':
             allowed = ['status', 'diagnostic', 'elapsed_ms', 'target_active_rate_per_second', 'attempted_sends',
                        'outcome_unknown', 'sent', 'received', 'acked', 'receipts', 'errors', 'timeouts', 'duplicates',
@@ -95,11 +96,11 @@ def main():
             count = data.get('sent')
             good = good and data.get('status') == 'PASSED' and data.get('diagnostic') is False and data.get('cleanup') is True
             duration = data.get('elapsed_ms')
-            good = good and isinstance(duration, (int, float)) and duration >= 300000
-            good = good and isinstance(count, int) and count > 0 and all(data.get(k) == count for k in ['attempted_sends', 'received', 'acked', 'receipts', 'unique_payloads'])
-            good = good and all(data.get(k) == 0 for k in ['outcome_unknown', 'errors', 'timeouts', 'duplicates'])
+            good = good and type(duration) in (int, float) and (type(duration) is int or math.isfinite(duration)) and duration >= 300000
+            good = good and type(count) is int and count > 0 and all(type(data.get(k)) is int and data[k] == count for k in ['attempted_sends', 'received', 'acked', 'receipts', 'unique_payloads'])
+            good = good and all(type(data.get(k)) is int and data[k] == 0 for k in ['outcome_unknown', 'errors', 'timeouts', 'duplicates'])
             windows = data.get('idle_windows', [])
-            good = good and len(windows) == 5 and all(isinstance(w.get(k), int) and w[k] > 0 for w in windows for k in ['outgoing_delta', 'incoming_delta'])
+            good = good and len(windows) == 5 and all(type(w.get(k)) is int and w[k] > 0 for w in windows for k in ['outgoing_delta', 'incoming_delta'])
             safe['idle_windows'] = [{k: w[k] for k in ['window', 'start_ms', 'end_ms', 'outgoing_delta', 'incoming_delta'] if k in w} for w in windows]
             safe['latency_ms'] = {k: data.get('latency_ms', {})[k] for k in ['mean', 'max'] if k in data.get('latency_ms', {})}
         else:
@@ -117,9 +118,16 @@ def main():
         resource = json.loads(path.read_text()) if path.is_file() else {}
         report['resources'] = {key: resource[key] for key in ['status', 'exit_code', 'stop_reason', 'elapsed_seconds',
                 'sampled_process_tree_rss_peak_bytes', 'rss_limit_bytes', 'note'] if key in resource}
-        passed.append(resource.get('status') == 'passed' and resource.get('exit_code') == 0 and resource.get('stop_reason') is None)
+        passed.append(resource.get('status') == 'passed' and type(resource.get('exit_code')) is int and resource['exit_code'] == 0 and resource.get('stop_reason') is None)
     report['status'] = 'passed' if all(passed) else 'failed'
-    (args.output / 'summary.json').write_text(json.dumps(report, indent=2))
+    try:
+        text = json.dumps(report, indent=2, allow_nan=False)
+    except ValueError:
+        # Fail closed rather than export non-standard JSON or claim a successful
+        # run with non-finite whitelisted measurements (including outer metadata).
+        report = {'status': 'failed', 'error': 'non-finite numeric value in exported evidence'}
+        text = json.dumps(report, indent=2)
+    (args.output / 'summary.json').write_text(text)
     return 0 if report['status'] == 'passed' else 1
 
 

@@ -121,5 +121,52 @@ class ExportControls(unittest.TestCase):
                     self.assertNotIn(marker, output)
 
 
+    def test_numeric_assertions_are_not_booleans_or_nonfinite_values(self):
+        # Synthetic schema controls, not evidence that a broker run happened.
+        import copy
+        common = dict(status='PASSED', tls=True, port_closed=True, private_key_removed=True)
+        heartbeat = dict(status='PASSED', tls=True, real_broker=True, heartbeat_timeout=True,
+            no_reconnect=True, upstream_tls_verified=True, connections=1, business_SENDs=0,
+            open_relay_sockets=0, client_heartbeats=2, broker_heartbeats=2, dropped_broker_bytes=1,
+            negotiated_period_ms=1000, broker_heartbeat_header='1000,1000', idle_window_after_ms=1000)
+        soak = dict(status='PASSED', diagnostic=False, cleanup=True, elapsed_ms=300001,
+            sent=1, attempted_sends=1, received=1, acked=1, receipts=1, unique_payloads=1,
+            errors=0, timeouts=0, duplicates=0, outcome_unknown=0,
+            idle_windows=[dict(window=i, outgoing_delta=1, incoming_delta=1) for i in range(5)])
+        extra = dict(heartbeat1000=dict(common, heartbeat=heartbeat), soak=dict(common, soak=soak),
+            resources=dict(status='passed', exit_code=0, stop_reason=None))
+        cases = [('valid', None, None, True),
+                 ('finite-duration', ['soak', 'soak', 'elapsed_ms'], 300000.0, True)]
+        for key in ['connections', 'business_SENDs', 'open_relay_sockets', 'dropped_broker_bytes']:
+            cases.append(('heartbeat-' + key, ['heartbeat1000', 'heartbeat', key], bool(heartbeat[key]), False))
+        for key in ['sent', 'received', 'errors', 'duplicates']:
+            cases.append(('soak-' + key, ['soak', 'soak', key], bool(soak[key]), False))
+        for value, name in [(float('inf'), 'inf'), (float('nan'), 'nan'), ('300001', 'string')]:
+            cases.append(('duration-' + name, ['soak', 'soak', 'elapsed_ms'], value, False))
+        cases += [
+            ('resource-bool', ['resources', 'exit_code'], False, False),
+            ('window-bool', ['soak', 'soak', 'idle_windows', 0, 'outgoing_delta'], True, False),
+            ('outer-inf', ['soak', 'elapsed_ms'], float('inf'), False),
+            ('resource-inf', ['resources', 'elapsed_seconds'], float('inf'), False),
+            ('period-float', ['heartbeat1000', 'heartbeat', 'negotiated_period_ms'], 1000.0, False),
+            ('idle-float', ['heartbeat1000', 'heartbeat', 'idle_window_after_ms'], 1000.0, False),
+        ]
+        for name, keys, value, good in cases:
+            data = copy.deepcopy(extra)
+            if keys:
+                target = data
+                for key in keys[:-1]:
+                    target = target[key]
+                target[keys[-1]] = value
+            with self.subTest(case=name), tempfile.TemporaryDirectory() as temp:
+                result, text = self.invoke(Path(temp), *self.fixture(), extra=data)
+                self.assertEqual(result.returncode, 0 if good else 1, result.stderr)
+                # parse_constant proves no NaN/Infinity escaped into public JSON.
+                def invalid_constant(token):
+                    raise AssertionError('invalid JSON constant ' + token)
+                output = json.loads(text, parse_constant=invalid_constant)
+                self.assertEqual(output['status'], 'passed' if good else 'failed')
+
+
 if __name__ == '__main__':
     unittest.main()

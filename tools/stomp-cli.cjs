@@ -29,9 +29,11 @@ function parse(argv, env = process.env) {
   const flags = new Set(['--no-receipt', '--stdin', '--allow-remote', '--tls']);
   let passcodeEnv;
   let bodySource;
+  const supplied = new Set();
   for (let i = 0; i < rest.length; i++) {
     const a = rest[i];
     if (!a.startsWith('--')) throw new UsageError(`unexpected argument ${a}`);
+    supplied.add(a);
     const value = flags.has(a) ? true : rest[++i];
     if (value === undefined) throw new UsageError(`${a} needs a value`);
     switch (a) {
@@ -66,6 +68,11 @@ function parse(argv, env = process.env) {
       default: throw new UsageError(`unknown option ${a}`);
     }
   }
+  const otherCommandOptions = command === 'subscribe'
+    ? ['--body', '--body-file', '--body-hex', '--stdin', '--header', '--no-receipt', '--tx']
+    : ['--count', '--ack', '--nack-if', '--timeout', '--format'];
+  const wrongOption = otherCommandOptions.find(flag => supplied.has(flag));
+  if (wrongOption) throw new UsageError(`${wrongOption} is only valid for ${command === 'subscribe' ? 'send' : 'subscribe'}`);
   if (!o.destination) throw new UsageError('--destination is required');
   if (!Number.isInteger(o.port) || o.port < 1 || o.port > 65535) throw new UsageError('--port must be 1..65535');
   if (passcodeEnv !== undefined) {
@@ -102,9 +109,51 @@ const header = (frame, name) => frame.headers.find(h => h[0] === name)?.[1];
 function render(frame, format) {
   const body = Buffer.from(frame.body);
   let utf8 = null;
-  try { utf8 = new TextDecoder('utf-8', {fatal: true}).decode(body); } catch { /* binary */ }
+  // STOMP bodies are message data: a UTF-8 BOM must not be silently stripped.
+  try { utf8 = new TextDecoder('utf-8', {fatal: true, ignoreBOM: true}).decode(body); } catch { /* binary */ }
   if (format === 'json') return safeJson({destination: header(frame, 'destination'), messageId: header(frame, 'message-id'), headers: frame.headers, bodyUtf8: utf8, bodyHex: body.toString('hex')});
   return `message destination=${safeLine(header(frame, 'destination'))} body=${utf8 !== null ? safeJson(utf8) : 'hex:' + body.toString('hex')}`;
+}
+
+// Wait for local stdout completion before acknowledging a delivery. This does
+// not prove that the pipe's consumer processed or persisted the message.
+function writeLine(text) {
+  return new Promise((resolve, reject) => {
+    const output = process.stdout;
+    const closedError = () => Object.assign(new Error('stdout is closed'), {code: 'ERR_STREAM_DESTROYED'});
+    if (output.destroyed || output.writableEnded) {
+      reject(closedError());
+      return;
+    }
+    let settled = false;
+    const cleanup = () => {
+      output.removeListener('error', onError);
+      output.removeListener('close', onClose);
+    };
+    const fail = (error, keepErrorThroughTurn = false) => {
+      if (settled) return;
+      settled = true;
+      output.removeListener('close', onClose);
+      // Writable may emit error after its callback. Retain the handler through
+      // this turn, then clean up even when a destroyed stream emits none.
+      if (keepErrorThroughTurn) setImmediate(cleanup); else cleanup();
+      reject(error);
+    };
+    const onError = error => fail(error);
+    const onClose = () => fail(closedError(), true);
+    output.once('error', onError);
+    output.once('close', onClose);
+    try {
+      output.write(text + '\n', error => {
+        if (error) fail(error, true);
+        else if (!settled) {
+          settled = true;
+          cleanup();
+          resolve();
+        }
+      });
+    } catch (error) { fail(error, true); }
+  });
 }
 
 // Offline demonstration against the in-process demo broker (a test peer, not a real broker).
@@ -112,11 +161,11 @@ async function demo() {
   const {startDemoBroker} = require('./demo-broker.cjs');
   const broker = await startDemoBroker({port: 0});
   const common = {host: '127.0.0.1', port: broker.port, versions: ['1.2'], headers: [], count: 1, ack: 'auto', timeout: 5000, format: 'text', receipt: true, destination: '/queue/demo'};
-  console.log(`demo: in-process demo broker on 127.0.0.1:${broker.port} (a test peer, not a real broker)`);
   try {
+    await writeLine(`demo: in-process demo broker on 127.0.0.1:${broker.port} (a test peer, not a real broker)`);
     await run({...common, command: 'send', body: Buffer.from('hello from MoonSTOMP', 'utf8')});
     await run({...common, command: 'subscribe'});
-    console.log('demo: ok');
+    await writeLine('demo: ok');
   } finally { await broker.close(); }
 }
 
@@ -140,19 +189,19 @@ async function run(o, state = {}) {
         const tx = await c.beginTransaction();
         tx.send(o.destination, o.body, o.headers);
         await (o.tx === 'commit' ? tx.commit() : tx.abort());
-        console.log(`sent destination=${safeLine(o.destination)} bytes=${o.body.length} tx=${o.tx}`);
+        await writeLine(`sent destination=${safeLine(o.destination)} bytes=${o.body.length} tx=${o.tx}`);
       } else if (o.receipt) {
         await c.receipt('SEND', headers, o.body);
-        console.log(`sent destination=${safeLine(o.destination)} bytes=${o.body.length} receipt=confirmed`);
+        await writeLine(`sent destination=${safeLine(o.destination)} bytes=${o.body.length} receipt=confirmed`);
       } else {
         c.send('SEND', headers, o.body);
-        console.log(`sent destination=${safeLine(o.destination)} bytes=${o.body.length} receipt=not-requested`);
+        await writeLine(`sent destination=${safeLine(o.destination)} bytes=${o.body.length} receipt=not-requested`);
       }
     } else {
       const sub = await c.subscribe(o.destination, {ack: o.ack});
       for (let n = 0; n < o.count; n++) {
         const frame = await sub.next(o.timeout);
-        console.log(render(frame, o.format));
+        await writeLine(render(frame, o.format));
         if (o.ack !== 'auto') {
           const reject = o.nackIf !== undefined && Buffer.from(frame.body).toString('utf8').includes(o.nackIf);
           if (reject) sub.nack(frame); else sub.ack(frame);
