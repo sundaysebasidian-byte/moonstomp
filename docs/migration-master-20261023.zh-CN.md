@@ -1,4 +1,4 @@
-# 从已发布 0.1.2 / 旧候选迁移到当前 master
+# 从已发布 0.1.2 / 历史源码迁移到当前 master
 
 本说明针对 **master `636ef52a8022991b15b366bf3da23ccd5c51e9a0`**。[PR #3](https://github.com/sundaysebasidian-byte/moonstomp/pull/3) 于 2026-10-23 09:28:49 UTC 合入；这只是读取到的事实，不推断操作者，也不是本次文档工作执行的合并。其他提交应重新核对 [公开接口](../pkg.generated.mbti)。
 
@@ -7,7 +7,7 @@
 | 来源 | 应如何理解 |
 |---|---|
 | 历史发布的 0.1.2 | 仅 STOMP 1.2；见 [原发布记录](https://github.com/sundaysebasidian-byte/moonstomp/blob/32090a84c0d4fd31359f764b4c92ffa16db7671c/docs/publication-0.1.2.zh-CN.md)。安装旧包不会取得新 master 的多版本功能或接口变更 |
-| 旧候选 / Library v5 | 提交 `907bea9ed4b483426dada3cc1f080e743b8cb7d9`；保留当时源码、哈希和回执，不因合并自动变成新源码包 |
+| 历史源码 / Library v5 | 提交 `907bea9ed4b483426dada3cc1f080e743b8cb7d9`；保留当时源码、哈希和回执，不因合并自动变成新源码包 |
 | 本文固定的 master | 已包含后续多版本开发与整理；`moon.mod` **仍写 0.1.2**，但没有因此发布新包，也不表示兼容旧包所有源码用法 |
 
 PR 明示字段隐藏属于破坏性变更，建议未来发布时考虑 0.2.0；**0.2.0 不是已确定或已发布版本**。本补丁不改版本号。复现时锁定完整 SHA，不把移动的 master 或裸 `moon add` 当作这个候选。
@@ -32,7 +32,7 @@ PR 明示字段隐藏属于破坏性变更，建议未来发布时考虑 0.2.0�
 
 并非所有数据类型都变成抽象类型：`Frame.body` 等公开帧数据仍可读取；`Limits` 与 `HeartbeatPlan` 仍为公开结构。不要把 MESSAGE 正文访问改成不存在的 getter。
 
-下面片段只使用公开方法；示例模块需将本地候选导入为 `@stomp`，workspace 建法见 [消费者说明](../validation/consumer/README.md)：
+下面片段只使用公开方法；示例模块需将本地源码导入为 `@stomp`，workspace 建法见 [消费者说明](../validation/consumer/README.md)：
 
 ```moonbit
 test "migration: public constructors and observations" {

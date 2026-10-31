@@ -40,4 +40,4 @@ moon add sundaysebasidian-byte/moonstomp@0.3.1
 
 ## 未验证边界
 
-native/普通 Wasm/Windows 消费者、生产 PKI、mTLS、故障转移、长期稳定性、事务 ACK 回滚/NACK 重投递完整语义未验证。脚本 peer、真实 broker、源码 CI、registry 消费分别记录。没有生产采用或获奖概率证明；[评审证据索引](https://github.com/sundaysebasidian-byte/moonstomp/blob/32090a84c0d4fd31359f764b4c92ffa16db7671c/docs/REVIEW_EVIDENCE_INDEX.zh-CN.md)列出剩余缺口。没有比赛提交。
+native/普通 Wasm/Windows 消费者、生产 PKI、mTLS、故障转移、长期稳定性、事务 ACK 回滚/NACK 重投递完整语义未验证。脚本 peer、真实 broker、源码 CI、registry 消费分别记录。[评审证据索引](https://github.com/sundaysebasidian-byte/moonstomp/blob/32090a84c0d4fd31359f764b4c92ffa16db7671c/docs/REVIEW_EVIDENCE_INDEX.zh-CN.md)列出剩余缺口。

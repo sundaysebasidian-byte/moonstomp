@@ -1,10 +1,10 @@
 # 10 月 30 日初审反馈对照与修订证据
 
-这是 AI 辅助的公开技术修订说明，面向 `review/moonbit-20261030` 复审分支源码；不是默认分支、新 Mooncakes 版本、已提交申报书或符合性证书。源码基线为 `0e60fe353127260da105e82ccd683bfda535b27c`；旧0.3.1不含本次修复。
+这是 AI 辅助的公开技术修订说明，面向 `review/moonbit-20261030` 源码分支源码；不是默认分支、新 Mooncakes 版本或符合性证书。源码基线为 `0e60fe353127260da105e82ccd683bfda535b27c`；旧0.3.1不含本次修复。
 
 ## 本次反馈与根因
 
-评审技术反馈指出缺少 STOMP 1.1/1.2 事务、完整订阅管理、ACK/NACK 模式的重要说明。既有源码已有相关核心及 Node 句柄，但原说明没有给出逐版本行为、可复现证据和分层限制。这是申报验收映射缺口，不应再用无关功能或总测试数替代。
+本页按协议版本说明事务、订阅生命周期及 ACK/NACK 行为，并分别列出核心、Node 适配器和真实 broker 的验证范围。
 
 本次针对性审查还发现实际缺陷：同一事务中，client 累积 ACK/NACK 从较早消息扩展到较晚消息会被误报跨事务重叠。新测试在修复前 79 项中失败 1 项；修复后四后端各 79 项通过。修复只放行同一事务已暂存的前缀；跨事务或无事务操作仍拒绝，防止部分变更。
 
@@ -31,9 +31,9 @@
 - 核心保留退订前消息的 ACK 资格，但已关闭 Subscription 句柄不再允许 ack()/nack()；底层 TcpClient.acknowledge()/核心 API 与句柄边界不同，应由调用方在退订前完成结算。
 - 新 broker 矩阵仅覆盖 Classic 6.3.2 非持久化 loopback 队列，150ms 附加观察窗口不是永久无消息证明。NACK 的所有 broker 重投/死信语义没有由此验证；不能写“全部协议互通已验证”，不证明业务持久化或 exactly-once。
 
-## 可用于人工改写的申报补充草稿
+## 功能摘要
 
-MoonSTOMP 的协议核心与 Node 客户端按版本提供事务、订阅及确认能力：1.1/1.2 支持 BEGIN/COMMIT/ABORT、带事务的 SEND 与 ACK/NACK；支持多订阅、SUBSCRIBE/UNSUBSCRIBE 生命周期及 receipt 屏障；支持 auto、client 累积确认和 client-individual 单条确认，并区分 1.1 的 message-id/subscription 与 1.2 的 ack/id 确认头。核心状态测试、Node 句柄测试及真实 broker 测试分别列证，不以本地发送状态或 receipt 证明业务持久化。此次修订另修复同事务累积确认扩展的误拒绝，并保留跨事务冲突保护；修订源码位于复审分支，不能冒充原发布包或默认分支已包含修复。
+MoonSTOMP 的协议核心与 Node 客户端按版本提供事务、订阅及确认能力：1.1/1.2 支持 BEGIN/COMMIT/ABORT、带事务的 SEND 与 ACK/NACK；支持多订阅、SUBSCRIBE/UNSUBSCRIBE 生命周期及 receipt 屏障；支持 auto、client 累积确认和 client-individual 单条确认，并区分 1.1 的 message-id/subscription 与 1.2 的 ack/id 确认头。核心状态测试、Node 句柄测试及真实 broker 测试分别列证，不以本地发送状态或 receipt 证明业务持久化。此次修订另修复同事务累积确认扩展的误拒绝，并保留跨事务冲突保护；修订源码位于源码分支，不能冒充原发布包或默认分支已包含修复。
 
 ## 复现与附件
 
@@ -48,25 +48,22 @@ moon build --target js bridge
 node scripts/handles-test.cjs
 ```
 
-历史验证公开摘要在 `review-evidence/public-validation-summary.json`，修前失败和最终通过阶段分开记录；原始日志私人保留。本材料不授权修改报名表或对外提交。
+历史验证公开摘要在 `review-evidence/public-validation-summary.json`，修前失败和最终通过阶段分开记录；原始日志私人保留。
 
 ## 规范来源
 
 - [STOMP 1.1](https://stomp.github.io/stomp-specification-1.1.html)：SUBSCRIBE、ACK、NACK、BEGIN、COMMIT、ABORT。
 - [STOMP 1.2](https://stomp.github.io/stomp-specification-1.2.html)：相应章节及标识符/receipt 语义。
 
-报名附件须本人理解并完成人工最终稿、核实提交版本；源码分支同步不等于报名已提交或评审已接受。
-
 ## 本轮真实 broker 回执
 
 `review-evidence/public-classic-summary.json`：2026-10-30T08:34:55Z，白名单摘要 status PASSED，14/14 新场景通过，三协议版本实际协商值已核实，TLS 校验启用，端口关闭且临时私钥已移除。官方 Classic 6.3.2 二进制下载按 scripts/classic-release.sha512 校验一致；源码包不包含 broker 二进制或私钥。复现使用 `scripts/classic-run.py --home <已校验Classic目录> --java-home <JDK21目录> --output <新测试目录> --port <空闲loopback端口> --processors 1 --tls --review-ack-matrix`。
 
-AI 辅助实现与测试；人工最终审阅及提交尚未完成。
+AI 协助范围见 [AI_USAGE.md](../AI_USAGE.md)。
 
 ## 追加功能检查：CLI正文来源
 
 多个或重复正文参数过去静默采用最后一个，现改为拒绝歧义且不先读取stdin或文件。新增回归覆盖16个有序冲突、4个单来源、缺来源和两个保持stdin开放的真实CLI拒绝场景；全部通过。严格本地完整验收新增该项后29阶段通过；本次未重跑真实broker，不将旧broker证据改为新运行。
-
 
 ## 固定SDK格式门禁修复
 

@@ -2,7 +2,7 @@
 
 核心 MoonBit 实现原创，MIT，代码与测试由 Codex 辅助设计、编写和修复，见 AI_USAGE.md。
 
-已发布 0.3.1 的能力与验证范围见 [README](../README.md)、[技术证据索引](TECHNICAL_EVIDENCE.zh-CN.md)及[版本说明](release-0.3.1.zh-CN.md)。先前私有候选的 [Linux 审计](https://github.com/sundaysebasidian-byte/moonstomp/blob/32090a84c0d4fd31359f764b4c92ffa16db7671c/docs/linux-audit-20261022.zh-CN.md)保留原阶段记录。开发工具、外部测试服务与库运行依赖分开列出，不能把外部组件算成 MoonSTOMP 的原创实现。
+已发布 0.3.1 的能力与验证范围见 [README](../README.md)、[技术证据索引](TECHNICAL_EVIDENCE.zh-CN.md)及[版本说明](release-0.3.1.zh-CN.md)。先前历史源码的 [Linux 审计](https://github.com/sundaysebasidian-byte/moonstomp/blob/32090a84c0d4fd31359f764b4c92ffa16db7671c/docs/linux-audit-20261022.zh-CN.md)保留原阶段记录。开发工具、外部测试服务与库运行依赖分开列出，不能把外部组件算成 MoonSTOMP 的原创实现。
 
 - STOMP 1.2 官方规范：https://stomp.github.io/stomp-specification-1.2.html ，CC BY 3.0。参考帧语法、转义、字节长度、命令、协商、心跳与 ACK/事务语义。规范文档未整篇复制进仓库；用例为自行编写的协议字节向量，来源在文档明确归因。
 - MoonBit core 随固定 SDK 提供，Apache-2.0；仅用 UTF-8、JSON 及基础集合，没有复制 core 源码进发布包。

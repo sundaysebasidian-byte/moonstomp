@@ -19,4 +19,4 @@ moon add sundaysebasidian-byte/moonstomp@0.2.0
 
 Node 适配器是 registry 包内的源码 glue，需要从已安装包运行 `moon build bridge --target js` 生成 bridge，并非预置 JS 二进制。该实际安装包的 bridge、TCP 认证、TLS 信任 CA/主机名和拒绝不可信证书、句柄、传输质量与控制超时脚本均通过。测试使用真实 localhost TCP/TLS socket 和脚本模拟 peer；**本轮没有重跑真实 broker**，不能替代 broker 互操作证据。
 
-本轮未验 Windows、native/Wasm 消费者、生产 PKI/mTLS/代理、持久性/故障转移、长时 soak 和性能。历史 SDK/真实 broker 验证仍按各自源码与环境单独报告，不外推至本发布。没有代交比赛或进行附加冲奖工程。
+本轮未验 Windows、native/Wasm 消费者、生产 PKI/mTLS/代理、持久性/故障转移、长时 soak 和性能。历史 SDK/真实 broker 验证仍按各自源码与环境单独报告，不外推至本发布。

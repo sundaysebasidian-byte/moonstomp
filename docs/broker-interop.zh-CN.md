@@ -28,7 +28,7 @@ NACK 由 [2.57.0 onNack 源码](https://github.com/apache/artemis/blob/2.57.0/ar
 
 仅回环 TCP、测试专用账号、无持久化。由 `scripts/classic-interop-test.cjs` 驱动，已测：错误口令被拒；STOMP 1.0/1.1/1.2 各一次带认证的二进制收发；版本化 ACK/NACK 构造；事务 SEND 的 commit 与 abort；关闭 receipt。**未测**：Classic 的事务 ACK、NACK 重投递策略、Go↔Classic、TLS、持久化、高负载。结果只适用于该版本和配置，不是一致性认证。
 
-唯一回环监听、配置、RSS 采样、SIGTERM 退出、端口释放、临时 runtime 删除均记录。RSS 采样不是峰值保证。未测其他 broker（Classic 见上节）、Artemis 上的认证、任何真实 broker 的 TLS、WebSocket、持久化/高负载，不宣称完整 STOMP 一致性认证、生产可靠性或比赛验收通过。
+唯一回环监听、配置、RSS 采样、SIGTERM 退出、端口释放、临时 runtime 删除均记录。RSS 采样不是峰值保证。未测其他 broker（Classic 见上节）、Artemis 上的认证、任何真实 broker 的 TLS、WebSocket、持久化/高负载，不宣称完整 STOMP 一致性认证、生产可靠性。
 
 ## RabbitMQ 4.1.8（2026-10-26，认证，CI 常驻）
 

@@ -1,8 +1,8 @@
-> 本页部分互通描述为历史范围；本轮事务累计ACK/NACK修复及Classic6.3.2真实验证见[复审回应](review-response-20261030.zh-CN.md)，不扩大为其他broker的实测。
+> 本页部分互通描述为历史范围；本轮事务累计ACK/NACK修复及Classic6.3.2真实验证见[实现说明](review-response-20261030.zh-CN.md)，不扩大为其他broker的实测。
 
 # 支持边界与失败行为（0.3.1）
 
-> **候选版本说明（2026-10-30）**：以下发布版记录保留其原日期；本目录未发布修复及新测试以 [本轮逐条回应](review-response-20261030.zh-CN.md) 和 [复现说明](reproduce-review-20261030.md) 为准。源码四后端 79/79 不等于旧 registry 包新增后端消费验证。
+> **源码版本说明（2026-10-30）**：以下发布版记录保留其原日期；本目录未发布修复及新测试以 [本轮逐条回应](review-response-20261030.zh-CN.md) 和 [复现说明](reproduce-review-20261030.md) 为准。源码四后端 79/79 不等于旧 registry 包新增后端消费验证。
 
 当前安装版为 [MoonSTOMP 0.3.1](https://mooncakes.io/docs/sundaysebasidian-byte/moonstomp@0.3.1/)。支持 STOMP 1.0、1.1、1.2；Node 适配器提供 TCP/TLS、有界异步 SEND。发布提交、registry 消费与源码 CI 分别见[发布回执](release-0.3.1.zh-CN.md)和[技术证据索引](TECHNICAL_EVIDENCE.zh-CN.md)。
 

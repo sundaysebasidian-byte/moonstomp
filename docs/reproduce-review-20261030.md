@@ -1,4 +1,4 @@
-# 复审分支源码复现与版本边界
+# 源码复现与版本边界
 
 本目录基于 `0e60fe353127260da105e82ccd683bfda535b27c`，不是新的 Mooncakes 发布版本。使用review/moonbit-20261030分支源码（非默认分支），配置 `review-toolchain.lock.json` 所列项目隔离工具链，不改全局 SDK。无需安装 npm 包。
 
@@ -24,4 +24,4 @@ python scripts/classic-run.py --home /path/to/verified-activemq-6.3.2 --java-hom
 
 新增14项包括8项事务ACK、4项只ACK第二条的累计/单条区别、2项多订阅取消隔离。ACK终态通过独立重新连接消费者和正向marker验证，另有150ms观察窗口。没有长期稳定性、持久化、完整NACK死信/重投策略或跨broker认证；Artemis/RabbitMQ历史回执仍绑定原提交。
 
-本分支锁、CI引导及公开文案调整须在实际新commit上复验；旧本地证据不代表本分支CI。报名材料须本人理解并人工最终定稿、自行提交；源码分支不代表已重投。
+本分支锁、CI引导及公开文案调整须在实际新commit上复验；旧本地证据不代表本分支CI。
