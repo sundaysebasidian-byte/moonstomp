@@ -9,9 +9,10 @@ function extraHeaders(headers, reserved) {
 }
 
 class Subscription {
-  #client; #state = 'active'; #messages = new WeakSet(); #cancel = new AbortController();
-  constructor(client, id, destination, ack) {
+  #client; #state = 'active'; #messages = new WeakSet(); #cancel = new AbortController(); #priorMessages;
+  constructor(client, id, destination, ack, priorMessages = new WeakSet()) {
     this.#client = client;
+    this.#priorMessages = priorMessages;
     Object.defineProperties(this, {id: {value: id, enumerable: true}, destination: {value: destination, enumerable: true}, ackMode: {value: ack, enumerable: true}});
   }
   get state() { return this.#client.state() === 'closed' ? 'closed' : this.#state; }
@@ -21,7 +22,7 @@ class Subscription {
   async next(timeout = 5000) {
     this.#active();
     const event = await this.#client._waitFor(e => {
-      if (e.event !== 'message') return false;
+      if (e.event !== 'message' || this.#priorMessages.has(e.frame)) return false;
       const subscription = e.frame.headers.find(h => h[0] === 'subscription');
       // STOMP 1.0 brokers may supply this identity for overlapping selectors
       // and mapped/wildcard destinations. Never discard a supplied identity.

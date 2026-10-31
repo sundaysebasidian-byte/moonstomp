@@ -110,8 +110,12 @@ class TcpClient {
   async subscribe(destination, {id = 'sub-' + (++this.handleSequence), ack = 'auto', headers = []} = {}) {
     if (typeof destination !== 'string' || !destination.length || typeof id !== 'string' || !id.length || !['auto', 'client', 'client-individual'].includes(ack) || (ack === 'client-individual' && this.version() === '1.0')) throw handleError('invalid subscription arguments');
     extraHeaders(headers, ['id', 'destination', 'ack', 'receipt']);
+    // A reused id (or legacy destination) must not claim already queued messages
+    // from an earlier subscription. Keep those events available to waitFor();
+    // WeakSet identity adds no ownership or queue-byte accounting changes.
+    const priorMessages = new WeakSet(this.queue.filter(e => e.event === 'message').map(e => e.frame));
     await this.receipt('SUBSCRIBE', [['id', id], ['destination', destination], ['ack', ack], ...headers]);
-    return new Subscription(this, id, destination, ack);
+    return new Subscription(this, id, destination, ack, priorMessages);
   }
   async beginTransaction({id = 'tx-' + (++this.handleSequence)} = {}) {
     if (typeof id !== 'string' || !id.length) throw handleError('invalid transaction id');

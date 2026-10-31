@@ -5,7 +5,7 @@
 // Plaintext and anonymous unless --login/--passcode-env/--tls are given; see README "Boundaries".
 const fs = require('node:fs');
 const TcpClient = require('./load-adapter.cjs').loadTcpClient();
-const {friendlyError} = require('./friendly-error.cjs');
+const {friendlyError, safeLine, safeJson} = require('./friendly-error.cjs');
 
 const USAGE = `usage:
   stomp-cli demo      (no broker needed: starts the in-memory demo broker, sends one message, receives it, exits)
@@ -103,8 +103,8 @@ function render(frame, format) {
   const body = Buffer.from(frame.body);
   let utf8 = null;
   try { utf8 = new TextDecoder('utf-8', {fatal: true}).decode(body); } catch { /* binary */ }
-  if (format === 'json') return JSON.stringify({destination: header(frame, 'destination'), messageId: header(frame, 'message-id'), headers: frame.headers, bodyUtf8: utf8, bodyHex: body.toString('hex')});
-  return `message destination=${header(frame, 'destination')} body=${utf8 !== null ? JSON.stringify(utf8) : 'hex:' + body.toString('hex')}`;
+  if (format === 'json') return safeJson({destination: header(frame, 'destination'), messageId: header(frame, 'message-id'), headers: frame.headers, bodyUtf8: utf8, bodyHex: body.toString('hex')});
+  return `message destination=${safeLine(header(frame, 'destination'))} body=${utf8 !== null ? safeJson(utf8) : 'hex:' + body.toString('hex')}`;
 }
 
 // Offline demonstration against the in-process demo broker (a test peer, not a real broker).
@@ -140,13 +140,13 @@ async function run(o, state = {}) {
         const tx = await c.beginTransaction();
         tx.send(o.destination, o.body, o.headers);
         await (o.tx === 'commit' ? tx.commit() : tx.abort());
-        console.log(`sent destination=${o.destination} bytes=${o.body.length} tx=${o.tx}`);
+        console.log(`sent destination=${safeLine(o.destination)} bytes=${o.body.length} tx=${o.tx}`);
       } else if (o.receipt) {
         await c.receipt('SEND', headers, o.body);
-        console.log(`sent destination=${o.destination} bytes=${o.body.length} receipt=confirmed`);
+        console.log(`sent destination=${safeLine(o.destination)} bytes=${o.body.length} receipt=confirmed`);
       } else {
         c.send('SEND', headers, o.body);
-        console.log(`sent destination=${o.destination} bytes=${o.body.length} receipt=not-requested`);
+        console.log(`sent destination=${safeLine(o.destination)} bytes=${o.body.length} receipt=not-requested`);
       }
     } else {
       const sub = await c.subscribe(o.destination, {ack: o.ack});
@@ -171,11 +171,11 @@ if (require.main === module) {
     if (process.argv.includes('--help') || process.argv.length < 3) { console.log(USAGE); process.exit(process.argv.length < 3 ? 2 : 0); }
     if (process.argv[2] === 'demo') {
       if (process.argv.length > 3) throw new UsageError('demo takes no options');
-      demo().then(() => process.exit(0), e => { console.error('error: ' + e.message); process.exit(1); });
+      demo().then(() => process.exit(0), e => { console.error('error: ' + safeLine(e.message)); process.exit(1); });
       return;
     }
     options = parse(process.argv.slice(2));
-  } catch (e) { console.error((e instanceof UsageError ? 'usage error: ' : 'error: ') + e.message + '\n' + USAGE); process.exit(2); }
+  } catch (e) { console.error((e instanceof UsageError ? 'usage error: ' : 'error: ') + safeLine(e.message) + '\n' + USAGE); process.exit(2); }
   const state = {};
   run(options, state).then(() => process.exit(0), e => {
     console.error('error: ' + friendlyError(e, options.host, options.port, {connecting: state.connecting, credentials: options.login !== undefined}));
