@@ -9,20 +9,24 @@ const safeLine = value => String(value).replace(/[\u0000-\u001f\u007f-\u009f\u20
 // JSON quotes C0 controls; also escape C1 and Unicode line separators.
 const quote = value => JSON.stringify(value).replace(/[\u007f-\u009f\u2028\u2029]/g, escapeControl);
 
-function describeFrame(frame) {
-  const lines = [`  broker frame: ${safeLine(frame.command)}`];
-  for (const [name, value] of frame.headers || []) lines.push(`    ${safeLine(name)}: ${quote(value)}`);
+function describeFrame(frame, redact = value => String(value)) {
+  const lines = [`  broker frame: ${safeLine(redact(frame.command))}`];
+  for (const [name, value] of frame.headers || []) lines.push(`    ${safeLine(redact(name))}: ${quote(redact(value))}`);
   const body = Buffer.from(frame.body || []);
   if (body.length) {
-    const shown = body.subarray(0, BODY_LIMIT).toString('utf8');
+    // Redact before clipping so a secret crossing the display boundary is not
+    // partially exposed. The original structured frame remains unchanged.
+    const shown = Buffer.from(redact(body.toString('utf8'))).subarray(0, BODY_LIMIT).toString('utf8');
     lines.push(`    body (${body.length} bytes${body.length > BODY_LIMIT ? `, first ${BODY_LIMIT}` : ''}): ${quote(shown)}`);
   }
   return lines;
 }
 
-// context: {connecting: error happened before CONNECTED, credentials: a login was sent}
+// context: {connecting, credentials, secrets: known literal values to omit from diagnostics}
 function friendlyError(error, host, port, context = {}) {
-  const text = String(error && error.message || error);
+  const secrets = (Array.isArray(context.secrets) ? context.secrets : []).filter(s => typeof s === 'string' && s.length).sort((a, b) => b.length - a.length);
+  const redact = value => { let text = String(value); for (const secret of secrets) text = text.split(secret).join('[redacted]'); return text; };
+  const text = redact(error && error.message || error);
   if (error && error.code === 'ECONNREFUSED') {
     return [
       `no STOMP broker is listening on ${safeLine(host)}:${safeLine(port)} (ECONNREFUSED).`,
@@ -33,13 +37,13 @@ function friendlyError(error, host, port, context = {}) {
   }
   const lines = [safeLine(text)];
   const fields = ['name', 'code', 'operation'].filter(key => error && typeof error[key] === 'string' && error[key]);
-  if (fields.length) lines.push('  ' + fields.map(key => `${key}=${safeLine(error[key])}`).join(' '));
-  if (error && typeof error.reason === 'string' && error.reason !== text) lines.push(`  reason=${quote(error.reason)}`);
-  if (error && typeof error.receiptId === 'string') lines.push(`  receiptId=${quote(error.receiptId)}`);
+  if (fields.length) lines.push('  ' + fields.map(key => `${key}=${safeLine(redact(error[key]))}`).join(' '));
+  if (error && typeof error.reason === 'string' && error.reason !== text) lines.push(`  reason=${quote(redact(error.reason))}`);
+  if (error && typeof error.receiptId === 'string') lines.push(`  receiptId=${quote(redact(error.receiptId))}`);
   if (error && error.outcomeUnknown === true) lines.push(
     '  broker outcome is unknown; the session is closed. Reconcile before retrying; no automatic resend.');
   if (error && error.frame) {
-    lines.push(...describeFrame(error.frame));
+    lines.push(...describeFrame(error.frame, redact));
     if (context.connecting) {
       lines.push(context.credentials
         ? '  the broker refused the connection: check --login and the passcode in the variable given to --passcode-env'

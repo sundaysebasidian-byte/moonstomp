@@ -1,0 +1,5 @@
+'use strict';
+// Deterministic local regression; external services are not contacted.
+const SOURCE = require('node:path').resolve(__dirname, '..');
+const assert=require('node:assert/strict');const {fixture,frame}=require('./review30-peer.cjs'),{child}=require('./review30-cli-peer.cjs');
+(async()=>{const rows=[];for(const [v,extra]of [['1.2',[]],['1.0',['--ack','client']]])await fixture(v,async(c,peer,seen)=>{const before=seen.length;const r=await child(['subscribe','--port',String(c.options.port),'--destination','/q','--versions',v,'--nack-if','reject',...extra]);rows.push({version:v,code:r.code,stderr:r.err,commands:seen.slice(before).map(x=>x.command)});},{hook:(f,s)=>{if(f.command==='SUBSCRIBE')s.write(frame('MESSAGE',[['destination','/q'],['subscription',f.h.id],['message-id','m'],...(v==='1.2'?[['ack','a']]:[])],Buffer.from('reject-this'),v));return false;}});console.log(JSON.stringify(rows,null,2));assert(rows.every(r=>r.code===2&&!r.commands.includes('SUBSCRIBE')),'incompatible --nack-if must be refused before subscribing');})().catch(e=>{console.error(e);process.exitCode=1});

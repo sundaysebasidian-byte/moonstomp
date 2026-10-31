@@ -6,11 +6,12 @@ const {performance} = require('node:perf_hooks');
 const {transportError, receiptFailure} = require('./errors.cjs');
 const {AsyncSends} = require('./async-send.cjs');
 const {Subscription, Transaction, extraHeaders, handleError} = require('./handles.cjs');
-require('../_build/js/debug/build/bridge/bridge.js');
-const protocol = globalThis.MoonSTOMP;
+const protocol = require('../_build/js/debug/build/bridge/bridge.js');
+if (typeof protocol.create !== 'function') throw new Error('rebuild the MoonSTOMP JS bridge before loading the adapter');
 class TcpClient {
   #writeSequence = 0n;
   #asyncSends;
+  #queueSizes = [];
   constructor({host = '127.0.0.1', port = 61613, tickMs = 25, maxQueue = 1024, maxWaiters = 256, maxQueueBytes = 4*1024*1024, tlsOptions = null, controlTimeoutMs = 5000, maxPendingSends = 64, maxPendingSendBytes = 4*1024*1024, maxSendFrameBytes = 1024*1024} = {}) {
     if (typeof host !== 'string' || !host.trim().length || !Number.isInteger(port) || port < 1 || port > 65535 || !Number.isInteger(tickMs) || tickMs < 1 || tickMs > 2147483647 || !Number.isInteger(maxQueue) || maxQueue < 1 || !Number.isInteger(maxWaiters) || maxWaiters < 1 || !Number.isInteger(maxQueueBytes) || maxQueueBytes < 1) throw new Error('invalid TCP configuration');
     if (!Number.isInteger(controlTimeoutMs) || controlTimeoutMs < 1 || controlTimeoutMs > 2147483647) throw new Error('invalid control timeout');
@@ -33,7 +34,7 @@ class TcpClient {
     clearInterval(this.timer); this.timer = null;
     protocol.close(this.core);
     for (const w of this.waiters.splice(0)) { w.cleanup(); w.reject(this.error || transportError('STOMP_CONNECTION_CLOSED', 'connection closed')); }
-    this.queue.length = 0; this.queueBytes = 0;
+    this.queue.length = 0; this.#queueSizes.length = 0; this.queueBytes = 0;
     if (this.socket && !this.socket.destroyed) this.socket.destroy();
   }
   _matches(predicate, event) {
@@ -46,15 +47,21 @@ class TcpClient {
     return result;
   }
   deliver(event) {
-    const i = this.waiters.findIndex(w => this._matches(w.predicate, event));
-    if (i >= 0) { const w = this.waiters.splice(i,1)[0]; w.cleanup(); w.resolve(event); }
-    else {
-      // Liveness is already updated by MoonBit. Unobserved beats are transient.
-      if (event.event === 'heartbeat') return;
-      const size = Buffer.byteLength(JSON.stringify(event));
-      if (this.queue.length >= this.maxQueue || this.queueBytes + size > this.maxQueueBytes) throw new Error('event queue limit');
-      this.queue.push(event); this.queueBytes += size;
+    // Predicates may synchronously stop/cancel a wait. Resolve the same waiter,
+    // not whatever shifted into its index during that callback.
+    for (const w of this.waiters.slice()) {
+      if (!this.waiters.includes(w)) continue;
+      if (!this._matches(w.predicate, event)) continue;
+      const i = this.waiters.indexOf(w);
+      if (i < 0) continue;
+      this.waiters.splice(i, 1); w.cleanup(); w.resolve(event); return;
     }
+    if (this.state() === 'closed') return;
+    // Liveness is already updated by MoonBit. Unobserved beats are transient.
+    if (event.event === 'heartbeat') return;
+    const size = Buffer.byteLength(JSON.stringify(event));
+    if (this.queue.length >= this.maxQueue || this.queueBytes + size > this.maxQueueBytes) throw new Error('event queue limit');
+    this.queue.push(event); this.#queueSizes.push(size); this.queueBytes += size;
   }
   waitFor(predicate, timeout = 5000) {
     return this._waitFor(predicate, timeout, false);
@@ -64,12 +71,21 @@ class TcpClient {
     if (typeof predicate !== 'function') return Promise.reject(new Error('invalid event predicate'));
     if (['AsyncFunction','AsyncGeneratorFunction','GeneratorFunction'].includes(predicate.constructor?.name)) return Promise.reject(new Error('event predicate must return a synchronous boolean'));
     if (!Number.isFinite(timeout) || timeout < 1 || timeout > 2147483647) return Promise.reject(new Error('invalid timeout'));
-    let i;
-    try { i = this.queue.findIndex(event => this._matches(predicate, event)); }
+    let selected;
+    try {
+      for (const event of this.queue.slice()) {
+        if (this._matches(predicate, event) && this.queue.includes(event)) { selected = event; break; }
+        if (this.state() === 'closed') break;
+      }
+    }
     catch (e) { return Promise.reject(e); }
+    if (signal?.aborted) return Promise.reject(handleError('subscription closed'));
+    if (this.error || this.state() === 'closed') return Promise.reject(this.error || transportError('STOMP_CONNECTION_CLOSED', 'connection closed'));
+    const i = selected === undefined ? -1 : this.queue.indexOf(selected);
     if (i >= 0) {
       const event = this.queue.splice(i, 1)[0];
-      this.queueBytes -= Buffer.byteLength(JSON.stringify(event));
+      // Account at admission: callers can mutate event fields in a predicate.
+      this.queueBytes -= this.#queueSizes.splice(i, 1)[0];
       return Promise.resolve(event);
     }
     if (this.error || this.state() === 'closed') return Promise.reject(this.error || transportError('STOMP_CONNECTION_CLOSED', 'connection closed'));

@@ -55,6 +55,21 @@ def validate_archive(bundle):
                 or p.name == 'credentials.json' or p.name == '.env' or p.name.startswith('.env.')):
             raise RuntimeError('candidate archive contains local state, credentials or unrelated evidence')
 
+def validate_source_tree(root):
+    """Package only regular project sources; do not dereference source symlinks.
+
+    Generated/cache/evidence directories are not package inputs. The ZIP alone
+    cannot reveal that moon package copied a file from a symlink target.
+    """
+    excluded = {'.git', '_build', '.moon', '.mooncakes', 'target', 'evidence', '__pycache__', '.github'}
+    for directory, directories, files in os.walk(root, followlinks=False):
+        directories[:] = [name for name in directories if name not in excluded]
+        for name in directories + files:
+            path = Path(directory) / name
+            if path.is_symlink():
+                raise RuntimeError('source symlink is not permitted for local packaging: ' + str(path.relative_to(root)))
+
+
 def parse_targets(text):
     targets = text.split(',')
     if (not targets or any(t not in {'js', 'wasm', 'wasm-gc', 'native'} for t in targets) or
@@ -93,6 +108,7 @@ def main():
         if completed.returncode:
             raise RuntimeError(name+' failed; see original log')
     try:
+        validate_source_tree(ROOT)
         module, version = manifest_identity((ROOT / 'moon.mod').read_text())
         report['candidate_module'] = module
         report['candidate_version'] = version

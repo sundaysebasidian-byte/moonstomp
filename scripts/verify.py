@@ -85,6 +85,7 @@ def main():
         run('classic-export-guards', [sys.executable, '-m', 'unittest', 'discover', '-s', 'scripts', '-p', 'test_classic_export.py'])
         run('ci-bootstrap-offline-guards', [sys.executable, '-m', 'unittest', 'discover', '-s', 'scripts', '-p', 'test_ci_sdk.py'])
         run('classic-profile-guards', [sys.executable, '-m', 'unittest', 'discover', '-s', 'scripts', '-p', 'test_classic_profile.py'])
+        run('downstream-source-guards', [sys.executable, '-m', 'unittest', 'discover', '-s', 'scripts', '-p', 'test_downstream_targets.py'])
         run('adapter-unit-faults', ['node', '--test', 'scripts/adapter-unit-test.cjs'])
         if not moon:
             raise RuntimeError('moon not available; set MOON_BIN/PATH to the existing trusted SDK')
@@ -123,6 +124,7 @@ def main():
         run('cli-fidelity-and-options', ['node', 'scripts/cli-fidelity-options-test.cjs'])
         run('cli-output-completion', ['node', 'scripts/cli-output-completion-test.cjs'])
         run('cli-output-listeners', ['node', 'scripts/cli-output-listeners-test.cjs'])
+        run('review30-boundaries', ['node', 'scripts/review30-regressions.cjs'])
         run('test-js', [moon, 'test', '--target', 'js', '-j', '1'])
         run('test-wasm-gc', [moon, 'test', '--target', 'wasm-gc', '--package', 'sundaysebasidian-byte/moonstomp', '-j', '1'])
         run('offline-example', [moon, 'run', 'examples/offline', '--target', 'js', '-j', '1'])

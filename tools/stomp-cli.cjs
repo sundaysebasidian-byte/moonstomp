@@ -20,6 +20,18 @@ common: [--host 127.0.0.1] [--port 61613] [--versions 1.0,1.1,1.2] [--heartbeat 
 exit codes: 0 ok, 1 failure, 2 usage`;
 
 class UsageError extends Error {}
+// Recognize help only in option positions, never inside a value such as --body.
+function helpRequested(argv) {
+  if (argv[0] === '--help') return true;
+  if (!['send', 'subscribe', 'listen', 'demo'].includes(argv[0])) return false;
+  const flags = new Set(['--no-receipt', '--stdin', '--allow-remote', '--tls']);
+  for (let i = 1; i < argv.length; i++) {
+    if (argv[i] === '--help') return true;
+    if (!flags.has(argv[i])) i++;
+  }
+  return false;
+}
+
 const LOOPBACK = ['127.0.0.1', '::1', 'localhost'];
 function parse(argv, env = process.env) {
   let [command, ...rest] = argv;
@@ -88,6 +100,8 @@ function parse(argv, env = process.env) {
   if (!LOOPBACK.includes(o.host) && !o.remote) throw new UsageError(`non-loopback host needs --allow-remote (${o.tls ? 'TLS is checked against --tls-ca or the system store' : 'plaintext'}; only a scripted local TLS peer has been tested)`);
   if (!LOOPBACK.includes(o.host) && o.login !== undefined && !o.tls) throw new UsageError('refusing to send a login over plaintext to a non-loopback host; add --tls');
   if (!['auto', 'client', 'client-individual'].includes(o.ack)) throw new UsageError('--ack must be auto, client or client-individual');
+  if (o.nackIf !== undefined && o.ack === 'auto') throw new UsageError('--nack-if requires --ack client or client-individual');
+  if (o.nackIf !== undefined && o.versions.length === 1 && o.versions[0] === '1.0') throw new UsageError('--nack-if requires STOMP 1.1 or 1.2');
   if (!['text', 'json'].includes(o.format)) throw new UsageError('--format must be text or json');
   if (!Number.isInteger(o.count) || o.count < 1) throw new UsageError('--count must be a positive integer');
   if (!Number.isInteger(o.timeout) || o.timeout < 1) throw new UsageError('--timeout must be a positive integer (ms)');
@@ -117,10 +131,9 @@ function render(frame, format) {
 
 // Wait for local stdout completion before acknowledging a delivery. This does
 // not prove that the pipe's consumer processed or persisted the message.
-function writeLine(text) {
+function writeLine(text, output = process.stdout) {
   return new Promise((resolve, reject) => {
-    const output = process.stdout;
-    const closedError = () => Object.assign(new Error('stdout is closed'), {code: 'ERR_STREAM_DESTROYED'});
+    const closedError = () => Object.assign(new Error('output is closed'), {code: 'ERR_STREAM_DESTROYED'});
     if (output.destroyed || output.writableEnded) {
       reject(closedError());
       return;
@@ -154,6 +167,10 @@ function writeLine(text) {
       });
     } catch (error) { fail(error, true); }
   });
+}
+
+function exitWithLine(code, text, output = process.stderr) {
+  writeLine(text, output).then(() => process.exit(code), () => process.exit(code || 1));
 }
 
 // Offline demonstration against the in-process demo broker (a test peer, not a real broker).
@@ -198,6 +215,7 @@ async function run(o, state = {}) {
         await writeLine(`sent destination=${safeLine(o.destination)} bytes=${o.body.length} receipt=not-requested`);
       }
     } else {
+      if (o.nackIf !== undefined && c.version() === '1.0') throw new Error('--nack-if unavailable in negotiated STOMP 1.0');
       const sub = await c.subscribe(o.destination, {ack: o.ack});
       for (let n = 0; n < o.count; n++) {
         const frame = await sub.next(o.timeout);
@@ -205,7 +223,7 @@ async function run(o, state = {}) {
         if (o.ack !== 'auto') {
           const reject = o.nackIf !== undefined && Buffer.from(frame.body).toString('utf8').includes(o.nackIf);
           if (reject) sub.nack(frame); else sub.ack(frame);
-          console.error(reject ? 'nack' : 'ack');
+          await writeLine(reject ? 'nack' : 'ack', process.stderr);
         }
       }
       await sub.unsubscribe();
@@ -217,18 +235,16 @@ async function run(o, state = {}) {
 if (require.main === module) {
   let options;
   try {
-    if (process.argv.includes('--help') || process.argv.length < 3) { console.log(USAGE); process.exit(process.argv.length < 3 ? 2 : 0); }
+    if (helpRequested(process.argv.slice(2)) || process.argv.length < 3) { exitWithLine(process.argv.length < 3 ? 2 : 0, USAGE, process.stdout); return; }
     if (process.argv[2] === 'demo') {
       if (process.argv.length > 3) throw new UsageError('demo takes no options');
-      demo().then(() => process.exit(0), e => { console.error('error: ' + safeLine(e.message)); process.exit(1); });
+      demo().then(() => process.exit(0), e => exitWithLine(1, 'error: ' + safeLine(e.message)));
       return;
     }
     options = parse(process.argv.slice(2));
-  } catch (e) { console.error((e instanceof UsageError ? 'usage error: ' : 'error: ') + safeLine(e.message) + '\n' + USAGE); process.exit(2); }
+  } catch (e) { exitWithLine(2, (e instanceof UsageError ? 'usage error: ' : 'error: ') + safeLine(e.message) + '\n' + USAGE); return; }
   const state = {};
-  run(options, state).then(() => process.exit(0), e => {
-    console.error('error: ' + friendlyError(e, options.host, options.port, {connecting: state.connecting, credentials: options.login !== undefined}));
-    process.exit(1);
-  });
+  run(options, state).then(() => process.exit(0), e =>
+    exitWithLine(1, 'error: ' + friendlyError(e, options.host, options.port, {connecting: state.connecting, credentials: options.login !== undefined, secrets: [options.passcode]})));
 }
 module.exports = {parse, run, UsageError};

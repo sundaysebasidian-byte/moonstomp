@@ -53,7 +53,7 @@ function fixture(reply = () => 'receipt', {handshake = true, completeEof = true,
     // Share Uint8Array identity: no codec behavior is supplied by the VM.
     Uint8Array, MoonSTOMP: protocol,
     require(name) {
-      if (name.includes('_build/')) return {};
+      if (name.includes('_build/')) return protocol;
       if (name === 'node:net') return {isIP: () => 4, createConnection() {
         socket = new Socket(); queueMicrotask(() => socket.emit('connect')); return socket;
       }};
