@@ -11,15 +11,15 @@ MoonBit 核心接收字节，输出待发送字节和事件，维护协议会话
 
 **0.3.1 已发布到 mooncakes**，含有界异步 SEND 和心跳修复，版本说明见 [release-0.3.1](docs/release-0.3.1.zh-CN.md)，验证入口见[技术证据索引](docs/TECHNICAL_EVIDENCE.zh-CN.md)。
 
-## 2026-10-30 源码分支源码（非默认分支）
+## 0.4.0 发行候选源码
 
-本源码用于 `review/moonbit-20261030` 源码分支，尚未发布新的 Mooncakes 版本，不代表默认分支或新 release。此目录基于公开提交 `0e60fe353127260da105e82ccd683bfda535b27c`，新增同事务累计确认修复、回归矩阵与真实 Classic 验证。**不能通过安装旧 0.3.1 获取本次修复**；下文旧发包和 CI 记录仅属于其原版本。此前冻结阶段四后端各 79/79；Classic 6.3.2 TLS 的新增 14 场景属于当时版本，不能当作当前源码重验，详情见[逐项回应](docs/review-response-20261030.zh-CN.md)。
+本源码已同步到默认分支，当前模块版本为 0.4.0 发行候选；尚无新 Mooncakes 发布回执。发行内容与边界见 [0.4.0 说明](docs/release-0.4.0.zh-CN.md)。此目录基于公开提交 `0e60fe353127260da105e82ccd683bfda535b27c`，新增同事务累计确认修复、回归矩阵与真实 Classic 验证。**不能通过安装旧 0.3.1 获取本次修复**；下文旧发包和 CI 记录仅属于其原版本。此前冻结阶段四后端各 79/79；Classic 6.3.2 TLS 的新增 14 场景属于当时版本，不能当作当前源码重验，详情见[逐项回应](docs/review-response-20261030.zh-CN.md)。
 
-本源码实际验证工具链是 MoonBit 0.10.18、Node 24.22.1/Linux，见 [review-toolchain.lock.json](review-toolchain.lock.json)。根目录 toolchain.lock.json 与本分支固定 CI 已同步至0.10.18；旧0.10.14性能/发布回执仅属于历史版本。固定SDK/core从官方HTTPS下载并校验记录SHA256（非另行厂商签名）。使用本分支源码而非重新 clone 默认分支来复现新修复；四后端命令与 broker 范围见[复现说明](docs/reproduce-review-20261030.md)。
+本源码实际验证工具链是 MoonBit 0.10.18、Node 24.22.1/Linux，见 [review-toolchain.lock.json](review-toolchain.lock.json)。根目录 toolchain.lock.json 与本分支固定 CI 已同步至0.10.18；旧0.10.14性能/发布回执仅属于历史版本。固定SDK/core从官方HTTPS下载并校验记录SHA256（非另行厂商签名）。默认分支已包含本次源码修复；四后端命令与 broker 范围见[复现说明](docs/reproduce-review-20261030.md)。
 
-## 历史发布版快速开始
+## 当前默认分支源码快速开始
 
-以下仅展示旧默认分支的快速开始，旧发布测试用0.10.14及Node24；源码分支使用上文0.10.18锁，**不需要外部 broker**。
+以下命令使用当前默认分支及上文 0.10.18 工具链锁，**不需要外部 broker**。0.3.1 的发布回执仍属于历史版本。
 
 ```sh
 git clone https://github.com/sundaysebasidian-byte/moonstomp.git
@@ -31,7 +31,7 @@ node examples/demo/01-pubsub.cjs            # 最后一行输出 PASS pubsub
 moon run examples/versions --target js      # 1.0 / 1.1 / 1.2 协商与边界
 ```
 
-在自己的 MoonBit 项目里使用：
+历史注册表版本安装（不含本次源码修复；0.4.0 的可安装性以官方注册表回执为准）：
 
 ```sh
 moon add sundaysebasidian-byte/moonstomp@0.3.1
