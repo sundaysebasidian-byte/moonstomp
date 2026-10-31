@@ -141,6 +141,7 @@ def main():
             run('loopback-async-send-deadlines', ['node', '--test', 'scripts/async-send-deadline-test.cjs'])
             run('loopback-transport-quality', ['node', 'scripts/transport-quality-test.cjs'])
             run('transaction-outcome', ['node', 'scripts/transaction-outcome-test.cjs'])
+            run('subscription-identity-routing', ['node', 'scripts/subscription-routing-test.cjs'])
             run('unsubscribe-prewrite-retry', ['node', 'scripts/unsubscribe-retry-test.cjs'])
             run('unsubscribe-lifecycle-controls', ['node', 'scripts/unsubscribe-lifecycle-test.cjs'])
             run('loopback-control-timeouts', ['node', 'scripts/transport-timeout-test.cjs'])

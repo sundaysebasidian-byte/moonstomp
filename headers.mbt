@@ -92,7 +92,7 @@ fn raw_header(
       c == '\n' ||
       (c == '\r' && version == V12) ||
       (key && c == ':') {
-      raise Invalid("invalid CONNECT header")
+      raise Invalid("invalid raw header")
     }
   }
   s

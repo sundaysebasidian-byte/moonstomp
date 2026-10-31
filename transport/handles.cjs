@@ -20,8 +20,15 @@ class Subscription {
   }
   async next(timeout = 5000) {
     this.#active();
-    const event = await this.#client._waitFor(e => e.event === 'message' &&
-      (this.#client.version() === '1.0' ? e.frame.headers.find(h => h[0] === 'destination')?.[1] === this.destination : e.frame.headers.find(h => h[0] === 'subscription')?.[1] === this.id), timeout, false, this.#cancel.signal);
+    const event = await this.#client._waitFor(e => {
+      if (e.event !== 'message') return false;
+      const subscription = e.frame.headers.find(h => h[0] === 'subscription');
+      // STOMP 1.0 brokers may supply this identity for overlapping selectors
+      // and mapped/wildcard destinations. Never discard a supplied identity.
+      if (subscription) return subscription[1] === this.id;
+      return this.#client.version() === '1.0' &&
+        e.frame.headers.find(h => h[0] === 'destination')?.[1] === this.destination;
+    }, timeout, false, this.#cancel.signal);
     this.#messages.add(event.frame); return event.frame;
   }
   #acknowledge(message, negative, transaction) {

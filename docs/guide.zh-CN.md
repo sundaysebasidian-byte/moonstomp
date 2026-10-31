@@ -44,7 +44,7 @@ await c.disconnect();
 | `new TcpClient({host='127.0.0.1', port=61613, tickMs=25, maxQueue=1024, maxWaiters=256, maxQueueBytes=4 MiB})` | 参数非法立即抛错；一个实例只连一次 |
 | `connect({virtualHost='localhost', versions=['1.2'], heartbeat='1000,1000', login, passcode})` | 提供 1–3 个版本；等 CONNECTED 最多 5 s；`login`/`passcode` 省略时不发送，空字符串会发送，含 CR/LF/NUL 的值在打开 socket 前被拒绝。仅提供 `['1.0']` 时默认 `heartbeat` 为 `'0,0'` |
 | `new TcpClient({…, tlsOptions})` | `tlsOptions` 非 null 时用 Node `tls.connect`，必须校验证书（`rejectUnauthorized:false` 与传入已连接 socket 被拒）；自签 CA 用 `{ca}`，IP 以外的 host 自动作 SNI，可设 `servername`。默认执行主机名检查；高级 `checkServerIdentity` 回调可替换该检查，调用方承担其正确性，不能据强制证书链验证推断所有配置都安全。**已在脚本 peer 与真实 Classic 6.3.2 回环 TLS profile 验证；不代表生产网络验收** |
-| `await subscribe(destination, {id?, ack='auto', headers=[]})` | SUBSCRIBE receipt 后返回 Subscription：`next(timeout=5000)`、`ack(frame, {transaction?})`、`nack(…)`、`unsubscribe()`；`ack`/`nack` 只接受该句柄 `next` 返回的原 frame。1.0 下同 destination 的多订阅不保证区分 |
+| `await subscribe(destination, {id?, ack='auto', headers=[]})` | SUBSCRIBE receipt 后返回 Subscription：`next(timeout=5000)`、`ack(frame, {transaction?})`、`nack(…)`、`unsubscribe()`；`ack`/`nack` 只接受该句柄 `next` 返回的原 frame。存在 MESSAGE subscription 头时按 id 路由（含 1.0）；仅 1.0 缺该头时按 destination 回退，此时同 destination 多订阅仍有歧义 |
 | `await beginTransaction({id?})` | BEGIN receipt 后返回 Transaction：`send(destination, Uint8Array, headers)`、`commit()`、`abort()` |
 | `send(command, headers, body)` | 发后不管，无回执 |
 | `receipt(command, headers, body, id?)` | 自动加 `receipt` 头并等 RECEIPT（5 s）。**超时会关闭本连接**：结果未知，库不会替你重试 |
