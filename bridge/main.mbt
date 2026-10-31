@@ -18,7 +18,8 @@ extern "js" fn expose(
   #| const clients = new WeakSet();
   #| const owned = (c, op) => { if (!clients.has(c)) throw invalid(op, 'client must be created by this bridge instance'); };
   #| const clock = (n, op) => { if (typeof n !== 'bigint' || n < 0n || n > 9223372036854775807n) throw invalid(op, 'clock must be a nonnegative Int64 bigint'); };
-  #| const bytes = (b, op) => { if (!(b instanceof Uint8Array)) throw invalid(op, 'body/chunk must be Uint8Array'); };
+  #| const byteValues = Uint8Array.prototype.values;
+  #| const bytes = (b, op) => { if (!(b instanceof Uint8Array)) throw invalid(op, 'body/chunk must be Uint8Array'); try { byteValues.call(b); } catch { throw invalid(op, 'body/chunk must have attached in-bounds storage'); } };
   #| const headers = (h, op) => { if (!Array.isArray(h) || h.some(p => !Array.isArray(p) || p.length !== 2 || p.some(v => typeof v !== 'string'))) throw invalid(op, 'header pairs must be strings'); return JSON.stringify(h); };
   #| const api = {create:() => { const c = create(); clients.add(c); return c; }, state:c => { owned(c,'state'); return state(c); }, version:c => { owned(c,'version'); return version(c); }, send:(c,cmd,h,b,n) => {
   #|   owned(c,'send');

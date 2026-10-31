@@ -8,10 +8,18 @@ const path = require('node:path');
 const {parse, UsageError} = require('../tools/stomp-cli.cjs');
 const prefix = ['send', '--destination', '/queue/body-source-review'];
 const sources = [ ['--body', 'text'], ['--body-hex', '00ff'], ['--body-file', '/not-opened-by-this-test'], ['--stdin'] ];
-const originalRead = fs.readFileSync;
+const originalRead = fs.readFileSync, originalOpen = fs.openSync, originalReadSync = fs.readSync, originalClose = fs.closeSync;
+let consumed = false;
 let reads = [];
 try {
-  fs.readFileSync = (name) => { reads.push(name); return Buffer.from(name === 0 ? 'stdin' : 'file'); };
+  fs.readFileSync = () => { throw Error('body sources must use bounded reads'); };
+  fs.openSync = name => { reads.push(name); consumed = false; return 77; };
+  fs.closeSync = fd => assert.equal(fd, 77);
+  fs.readSync = (fd, buffer, offset) => {
+    if (consumed) return 0;
+    consumed = true; if (fd === 0) reads.push(0);
+    return Buffer.from(fd === 0 ? 'stdin' : 'file').copy(buffer, offset);
+  };
   for (let a = 0; a < sources.length; a++) for (let b = 0; b < sources.length; b++) {
     reads = [];
     assert.throws(() => parse([...prefix, ...sources[a], ...sources[b]]), UsageError);
@@ -21,10 +29,10 @@ try {
     [sources[0], Buffer.from('text'), []], [sources[1], Buffer.from([0,255]), []],
     [sources[2], Buffer.from('file'), ['/not-opened-by-this-test']], [sources[3], Buffer.from('stdin'), [0]],
   ]) {
-    reads=[]; assert.deepEqual(parse([...prefix,...source]).body,body); assert.deepEqual(reads,expectedReads);
+    reads=[]; consumed=false; assert.deepEqual(parse([...prefix,...source]).body,body); assert.deepEqual(reads,expectedReads);
   }
   assert.throws(() => parse(prefix), UsageError);
-} finally { fs.readFileSync = originalRead; }
+} finally { fs.readFileSync = originalRead; fs.openSync = originalOpen; fs.readSync = originalReadSync; fs.closeSync = originalClose; }
 function processRefusal(args) {
   return new Promise((resolve,reject) => {
     const p=spawn(process.execPath,[path.join(__dirname,'../tools/stomp-cli.cjs'),...prefix,...args],{stdio:['pipe','pipe','pipe']});

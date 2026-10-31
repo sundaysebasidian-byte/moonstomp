@@ -1,4 +1,5 @@
 'use strict';
+const {isBytes} = require('./bytes.cjs');
 const {transportError} = require('./errors.cjs');
 const {performance} = require('node:perf_hooks');
 // Application SENDs only. Core validation/encoding stays in MoonBit.
@@ -9,7 +10,7 @@ class AsyncSends {
   enqueue(destination, body, {headers=[], timeoutMs=5000, signal}={}) {
     const started=performance.now();
     try {
-      if (typeof destination!=='string'||!destination.length||!(body instanceof Uint8Array)||!Array.isArray(headers)||headers.length>126||headers.some(h=>!Array.isArray(h)||h.length!==2||h.some(v=>typeof v!=='string')||['destination','receipt'].includes(h[0]))) throw this.error('STOMP_ARGUMENT','invalid async SEND arguments');
+      if (typeof destination!=='string'||!destination.length||!isBytes(body)||!Array.isArray(headers)||headers.length>126||headers.some(h=>!Array.isArray(h)||h.length!==2||h.some(v=>typeof v!=='string')||['destination','receipt'].includes(h[0]))) throw this.error('STOMP_ARGUMENT','invalid async SEND arguments');
       if (!Number.isInteger(timeoutMs)||timeoutMs<1||timeoutMs>30000||signal!==undefined&&(!(signal instanceof AbortSignal))) throw this.error('STOMP_ARGUMENT','invalid async SEND deadline/signal');
       if (signal?.aborted) throw this.error('STOMP_SEND_CANCELLED','SEND cancelled before write');
       if (this.client.state()!=='active'||this.client.error) throw this.error('STOMP_CONNECTION_CLOSED','connection is not active');

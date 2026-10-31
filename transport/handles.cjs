@@ -1,4 +1,5 @@
 'use strict';
+const {isBytes} = require('./bytes.cjs');
 
 function handleError(reason) {
   const error = new Error(reason); error.code = 'STOMP_HANDLE'; return error;
@@ -80,7 +81,7 @@ class Transaction {
   }
   send(destination, body, headers = []) {
     Transaction.idFor(this, this.#client);
-    if (typeof destination !== 'string' || !destination.length || !(body instanceof Uint8Array)) throw handleError('invalid transaction destination/body');
+    if (typeof destination !== 'string' || !destination.length || !isBytes(body)) throw handleError('invalid transaction destination/body');
     extraHeaders(headers, ['destination', 'transaction', 'receipt']);
     this.#client.send('SEND', [['destination', destination], ['transaction', this.id], ...headers], body);
   }

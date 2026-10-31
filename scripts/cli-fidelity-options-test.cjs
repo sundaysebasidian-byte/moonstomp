@@ -1,18 +1,18 @@
 // Regression probes promoted from independent 2026-10-31 review; local test peers only.
 'use strict';const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),net=require('node:net'),{spawn}=require('node:child_process');
 const SRC=path.resolve(__dirname, '..');const {parse,UsageError}=require(SRC+'/tools/stomp-cli.cjs');
-let flagsChecked=0,readCalls=[];const originalRead=fs.readFileSync;
+let flagsChecked=0,readCalls=[];const originalRead=fs.readFileSync,originalOpen=fs.openSync,originalReadSync=fs.readSync,originalClose=fs.closeSync;let consumed=false;
 const sendFlags=[['--body','x'],['--body-file','/must-not-be-opened'],['--body-hex','efbbbf'],['--stdin'],['--header','x=y'],['--no-receipt'],['--tx','commit']];
 const subFlags=[['--count','1'],['--ack','auto'],['--nack-if',''],['--timeout','1'],['--format','text']];
 const renderOnly=process.argv[3]==='--render-only';
-try{if(!renderOnly){fs.readFileSync=(p)=>{readCalls.push(p);return Buffer.from('controlled');};
+try{if(!renderOnly){fs.readFileSync=()=>{throw Error('body sources must use bounded reads');};fs.openSync=p=>{readCalls.push(p);consumed=false;return 77;};fs.readSync=(fd,b,o)=>{if(consumed)return 0;consumed=true;if(fd===0)readCalls.push(0);return Buffer.from('controlled').copy(b,o);};fs.closeSync=fd=>assert.equal(fd,77);
  for(const cmd of ['subscribe','listen'])for(const flag of sendFlags){readCalls=[];assert.throws(()=>parse([cmd,'--destination','/q',...flag]),e=>e instanceof UsageError&&/only valid for send/.test(e.message));assert.deepEqual(readCalls,[]);flagsChecked++;}
  for(const flag of subFlags)for(const source of [['--stdin'],['--body-file','/must-not-be-opened']]){readCalls=[];assert.throws(()=>parse(['send','--destination','/q',...source,...flag]),e=>e instanceof UsageError&&/only valid for subscribe/.test(e.message));assert.deepEqual(readCalls,[]);flagsChecked++;}
  for(const flag of ['--body','--body-file','--body-hex','--header','--tx','--count','--ack','--nack-if','--timeout','--format']){readCalls=[];assert.throws(()=>parse(['subscribe','--destination','/q',flag]),UsageError);assert.deepEqual(readCalls,[]);flagsChecked++;}
  for(const cmd of ['subscribe','listen']){const o=parse([cmd,'--destination','/q','--count','1','--ack','client','--nack-if','','--timeout','1','--format','json','--port','65535','--vhost','v','--heartbeat','0,0']);assert.equal(o.command,'subscribe');assert.equal(o.port,65535);flagsChecked++;}
  readCalls=[];const valid=parse(['send','--destination','/q','--body-file','controlled','--header','x=y','--tx','commit']);assert.equal(valid.body.toString(),'controlled');assert.deepEqual(readCalls,['controlled']);flagsChecked++;
  for(const n of ['0','-1','1.5','NaN']){assert.throws(()=>parse(['subscribe','--destination','/q','--count',n]),UsageError);flagsChecked++;}
-}}finally{fs.readFileSync=originalRead;}
+}}finally{fs.readFileSync=originalRead;fs.openSync=originalOpen;fs.readSync=originalReadSync;fs.closeSync=originalClose;}
 function child(args){return new Promise((resolve,reject)=>{const p=spawn(process.execPath,[SRC+'/tools/stomp-cli.cjs',...args],{stdio:['pipe','pipe','pipe']});let stdout='',stderr='';let finished=false;const timer=setTimeout(()=>{p.kill();reject(Error('blocked on unused stdin'));},2500);p.stdout.on('data',x=>stdout+=x);p.stderr.on('data',x=>stderr+=x);p.on('error',reject);p.on('close',code=>{finished=true;clearTimeout(timer);resolve({code,stdout,stderr});});/* Deliberately keep stdin open. */});}
 const vectors=[Buffer.from([239,187,191]),Buffer.from([239,187,191,65]),Buffer.from([239,187,191,239,187,191]),Buffer.from('A\ufeffB'),Buffer.from([239,187,191,255]),Buffer.from([0xc0,0xaf]),Buffer.alloc(0),Buffer.from([65,0,66])];
 (async()=>{const subprocessRefusals=[];for(const args of (renderOnly?[]:[['subscribe','--stdin'],['listen','--body-file','/not-opened'],['send','--stdin','--count','1'],['send','--body-file','/not-opened','--format','json']])){const r=await child([args[0],'--destination','/q',...args.slice(1)]);assert.equal(r.code,2);assert(!r.stderr.includes('ENOENT'));subprocessRefusals.push({args,code:r.code});}

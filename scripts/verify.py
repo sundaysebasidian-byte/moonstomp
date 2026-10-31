@@ -117,6 +117,8 @@ def main():
         run('python-compatibility-controls', [sys.executable, '-E', '-m', 'unittest', 'discover', '-s', 'scripts', '-p', 'test_python_compat.py'])
         run('check-js', [moon, 'check', '--target', 'js', '-j', '1'])
         run('build-js', [moon, 'build', '--target', 'js', '-j', '1'])
+        run('review31-byte-boundaries', ['node', '--test', 'scripts/review31-byte-boundary-test.cjs'])
+        run('review31-cli-input-budgets', ['node', '--test', 'scripts/review31-cli-input-test.cjs'])
         run('cli-body-source-guards', ['node', 'scripts/review-cli-body-source-test.cjs'])
         run('cli-control-escaping', ['node', 'scripts/cli-control-escape-test.cjs'])
         run('cli-message-escaping', ['node', 'scripts/cli-message-escape-test.cjs'])
