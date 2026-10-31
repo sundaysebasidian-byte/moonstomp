@@ -13,7 +13,7 @@ MoonBit 核心接收字节，输出待发送字节和事件，维护协议会话
 
 ## 2026-10-30 源码分支源码（非默认分支）
 
-本源码用于 `review/moonbit-20261030` 源码分支，尚未发布新的 Mooncakes 版本，不代表默认分支或新 release。此目录基于公开提交 `0e60fe353127260da105e82ccd683bfda535b27c`，新增同事务累计确认修复、回归矩阵与真实 Classic 验证。**不能通过安装旧 0.3.1 获取本次修复**；下文旧发包和 CI 记录仅属于其原版本。本源码四后端各 79/79，Classic 6.3.2 TLS 新增 14 场景通过，详情见[逐项回应](docs/review-response-20261030.zh-CN.md)。
+本源码用于 `review/moonbit-20261030` 源码分支，尚未发布新的 Mooncakes 版本，不代表默认分支或新 release。此目录基于公开提交 `0e60fe353127260da105e82ccd683bfda535b27c`，新增同事务累计确认修复、回归矩阵与真实 Classic 验证。**不能通过安装旧 0.3.1 获取本次修复**；下文旧发包和 CI 记录仅属于其原版本。此前冻结阶段四后端各 79/79；Classic 6.3.2 TLS 的新增 14 场景属于当时版本，不能当作当前源码重验，详情见[逐项回应](docs/review-response-20261030.zh-CN.md)。
 
 本源码实际验证工具链是 MoonBit 0.10.18、Node 24.22.1/Linux，见 [review-toolchain.lock.json](review-toolchain.lock.json)。根目录 toolchain.lock.json 与本分支固定 CI 已同步至0.10.18；旧0.10.14性能/发布回执仅属于历史版本。固定SDK/core从官方HTTPS下载并校验记录SHA256（非另行厂商签名）。使用本分支源码而非重新 clone 默认分支来复现新修复；四后端命令与 broker 范围见[复现说明](docs/reproduce-review-20261030.md)。
 
@@ -130,7 +130,7 @@ node tools/stomp-cli.cjs send --port 61613 --destination /queue/jobs --body hell
 
 - MoonBit 测试覆盖编解码、头部转义、心跳、会话状态、版本矩阵、属性测试和对抗输入。
 - 与 stomp.js 7.2.0 解析器的差分测试（`scripts/differential.cjs`，按不同分段长度喂入），Node 适配器的生命周期 / TLS / 凭据测试。
-- CI：[ci.yml](.github/workflows/ci.yml) 在官方 SDK 上跑完整验证（`scripts/verify.py --transport`）；[fresh-clone.yml](.github/workflows/fresh-clone.yml) 模拟新用户 `git clone` 后直接 `moon test`、本页快速开始和场景示例，并在最新 SDK 上同样跑一遍。异步示例和期限检查已在 [0.3.1 精确 head 常规 CI](https://github.com/sundaysebasidian-byte/moonstomp/actions/runs/40225200831)通过；真实 Classic TLS 心跳、短异步与五分钟源码场景见[固定 broker CI](https://github.com/sundaysebasidian-byte/moonstomp/actions/runs/40225233529)。[rabbitmq.yml](.github/workflows/rabbitmq.yml) 每次推送都在 Docker 里起 RabbitMQ 跑互通测试（`scripts/rabbitmq-interop-test.cjs`）。
+- CI：[ci.yml](.github/workflows/ci.yml) 在官方 SDK 上跑完整验证（`scripts/verify.py --transport`）；[fresh-clone.yml](.github/workflows/fresh-clone.yml) 模拟新用户 `git clone` 后直接 `moon test`、本页快速开始和场景示例；当前矩阵仅运行项目锁定的 SDK，不包含最新 SDK 浮动测试。异步示例和期限检查已在 [0.3.1 精确 head 常规 CI](https://github.com/sundaysebasidian-byte/moonstomp/actions/runs/40225200831)通过；真实 Classic TLS 心跳、短异步与五分钟源码场景见[固定 broker CI](https://github.com/sundaysebasidian-byte/moonstomp/actions/runs/40225233529)。[rabbitmq.yml](.github/workflows/rabbitmq.yml) 每次推送都在 Docker 里起 RabbitMQ 跑互通测试（`scripts/rabbitmq-interop-test.cjs`）。
 
 本地完整验证：`python3 scripts/verify.py --output ../moonstomp-verification`。
 
