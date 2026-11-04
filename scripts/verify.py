@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import sys
 import time
+from stage_process import run_command
 
 ROOT = Path(__file__).resolve().parents[1]
 EXCLUDED = {'.git', '_build', '.moon', 'target', '__pycache__'}
@@ -21,6 +22,52 @@ def sha256(path):
 def inventory():
     return {str(p.relative_to(ROOT)): sha256(p) for p in sorted(ROOT.rglob('*'))
             if p.is_file() and not any(part in EXCLUDED for part in p.relative_to(ROOT).parts)}
+
+def run_stage(report, out, name, command, env, timeout=180):
+    """Record a stage even when it times out or cannot start; keep raw logs."""
+    begin = time.monotonic()
+    stage = {'name': name, 'command': command, 'status': 'FAILED',
+             'exit_code': None, 'timeout_seconds': timeout, 'timed_out': False,
+             'stdout': name + '.stdout.txt', 'stderr': name + '.stderr.txt'}
+    report['stages'].append(stage)
+    stdout, stderr = b'', b''
+    succeeded = False
+    print('RUN', name, flush=True)
+    try:
+        result = run_command(command, cwd=ROOT, env=env, timeout=timeout)
+        stdout, stderr = result.stdout, result.stderr
+        stage['exit_code'] = result.returncode
+        if result.returncode:
+            raise RuntimeError(f'{name} failed (exit {result.returncode})')
+        succeeded = True
+        # Raw bytes remain in the logs; decoding a command's summary must not
+        # discard otherwise valid evidence when output contains non-UTF-8.
+        return stdout.decode('utf-8', errors='replace').strip()
+    except subprocess.TimeoutExpired as error:
+        stdout, stderr = error.output or b'', error.stderr or b''
+        stage['timed_out'] = True
+        if hasattr(error, 'cleanup_scope'):
+            stage['timeout_cleanup'] = {'scope': error.cleanup_scope,
+                                        'complete': error.cleanup_complete,
+                                        'error': error.cleanup_error}
+        raise RuntimeError(f'{name} timed out after {timeout} seconds') from error
+    except OSError as error:
+        stage['launch_error'] = {'type': type(error).__name__, 'errno': error.errno,
+                                 'message': str(error)}
+        raise
+    finally:
+        try:
+            (out / stage['stdout']).write_bytes(stdout)
+            (out / stage['stderr']).write_bytes(stderr)
+        except OSError as error:
+            stage['evidence_error'] = {'type': type(error).__name__, 'errno': error.errno,
+                                       'message': str(error)}
+            raise
+        finally:
+            stage['seconds'] = round(time.monotonic() - begin, 3)
+        # A successful command is not a verified stage until both logs are saved.
+        if succeeded:
+            stage['status'] = 'PASSED'
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -68,20 +115,10 @@ def main():
         report['git_head'] = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
         report['git_status'] = subprocess.check_output(['git', 'status', '--short'], cwd=ROOT, text=True)
     def run(name, command, timeout=180):
-        begin = time.monotonic()
-        stage = {'name': name, 'command': command, 'status': 'FAILED'}
-        report['stages'].append(stage)
-        print('RUN', name, flush=True)
-        result = subprocess.run(command, cwd=ROOT, env=env, capture_output=True, timeout=timeout)
-        (out / (name + '.stdout.txt')).write_bytes(result.stdout)
-        (out / (name + '.stderr.txt')).write_bytes(result.stderr)
-        stage.update(exit_code=result.returncode, seconds=round(time.monotonic()-begin, 3),
-                     stdout=name+'.stdout.txt', stderr=name+'.stderr.txt')
-        if result.returncode:
-            raise RuntimeError(f'{name} failed (exit {result.returncode})')
-        stage['status'] = 'PASSED'
-        return result.stdout.decode('utf-8').strip()
+        return run_stage(report, out, name, command, env, timeout)
     try:
+        run('verification-evidence-guards', [sys.executable, '-m', 'unittest', 'discover', '-s', 'scripts', '-p', 'test_verify_evidence.py'])
+        run('verification-process-guards', [sys.executable, '-m', 'unittest', 'discover', '-s', 'scripts', '-p', 'test_stage_process.py'])
         run('classic-export-guards', [sys.executable, '-m', 'unittest', 'discover', '-s', 'scripts', '-p', 'test_classic_export.py'])
         run('ci-bootstrap-offline-guards', [sys.executable, '-m', 'unittest', 'discover', '-s', 'scripts', '-p', 'test_ci_sdk.py'])
         run('classic-profile-guards', [sys.executable, '-m', 'unittest', 'discover', '-s', 'scripts', '-p', 'test_classic_profile.py'])
@@ -117,6 +154,7 @@ def main():
         run('python-compatibility-controls', [sys.executable, '-E', '-m', 'unittest', 'discover', '-s', 'scripts', '-p', 'test_python_compat.py'])
         run('check-js', [moon, 'check', '--target', 'js', '-j', '1'])
         run('build-js', [moon, 'build', '--target', 'js', '-j', '1'])
+        run('sparse-header-preflight', ['node', '--test', 'scripts/sparse-header-test.cjs'])
         run('review31-byte-boundaries', ['node', '--test', 'scripts/review31-byte-boundary-test.cjs'])
         run('review31-cli-input-budgets', ['node', '--test', 'scripts/review31-cli-input-test.cjs'])
         run('cli-body-source-guards', ['node', 'scripts/review-cli-body-source-test.cjs'])

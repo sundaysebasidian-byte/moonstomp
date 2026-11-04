@@ -1,11 +1,12 @@
 'use strict';
 const {isBytes} = require('./bytes.cjs');
+const {isHeaderPairs} = require('./headers.cjs');
 
 function handleError(reason) {
   const error = new Error(reason); error.code = 'STOMP_HANDLE'; return error;
 }
 function extraHeaders(headers, reserved) {
-  if (!Array.isArray(headers) || headers.some(p => !Array.isArray(p) || p.length !== 2 || p.some(v => typeof v !== 'string') || reserved.includes(p[0]))) throw handleError('invalid or reserved handle header');
+  if (!isHeaderPairs(headers) || headers.some(p => reserved.includes(p[0]))) throw handleError('invalid or reserved handle header');
   return headers;
 }
 

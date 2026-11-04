@@ -39,6 +39,8 @@ await c.disconnect();
 
 ### TcpClient 速查（以 `transport/tcp.cjs` 为准）
 
+所有 `headers` 参数应为完整的 `[名称字符串, 值字符串]` 数组；缺少数组项或名称/值的稀疏数组不合法。`receipt`、`sendAsync`、`subscribe` 和 `Transaction.send` 会在发送前拒绝此类结构错误，保留健康连接（及未结束事务）。这不改变后续协议校验或运输失败的关闭策略。
+
 | 成员 | 行为 |
 |---|---|
 | `new TcpClient({host='127.0.0.1', port=61613, tickMs=25, maxQueue=1024, maxWaiters=256, maxQueueBytes=4 MiB})` | 参数非法立即抛错；一个实例只连一次 |

@@ -1,5 +1,6 @@
 'use strict';
 const {isBytes} = require('./bytes.cjs');
+const {isHeaderPairs} = require('./headers.cjs');
 // Node TCP is glue only; framing, validation and session state run in MoonBit.
 const net = require('node:net');
 const {types: {isPromise}} = require('node:util');
@@ -207,7 +208,7 @@ class TcpClient {
       throw transportError('STOMP_ARGUMENT', 'invalid receipt command', {operation: 'receipt'});
     try {
       this._requireSyncTurn();
-      if (typeof id !== 'string' || !id.length || !Array.isArray(headers) || headers.some(h => !Array.isArray(h) || h.length !== 2 || h.some(v => typeof v !== 'string')) || !isBytes(body)) throw new Error('invalid receipt arguments');
+      if (typeof id !== 'string' || !id.length || !isHeaderPairs(headers) || !isBytes(body)) throw new Error('invalid receipt arguments');
       if (headers.some(h => h[0] === 'receipt')) throw new Error('receipt() controls the receipt header');
       if (this.error || this.state() !== 'active') throw this.error || new Error('connection is not active');
       // Registering a failed waiter must never send an unobservable command.
