@@ -1,8 +1,9 @@
 ///|
+#derive(Debug, Eq)
 pub struct HeartbeatPlan {
   send_ms : Int32
   receive_ms : Int32
-} derive(Debug, Eq)
+}
 
 ///|
 pub fn negotiate_heartbeat(

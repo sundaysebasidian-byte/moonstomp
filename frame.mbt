@@ -1,16 +1,18 @@
 ///|
 /// Protocol errors are fatal for a decoder/connection.
+#derive(Debug)
 pub suberror ProtocolError {
   Invalid(String)
-} derive(Debug)
+}
 
 ///|
 /// Ordered headers preserve repetition/history. `header` returns the first.
+#derive(Debug, Eq)
 pub struct Frame {
   command : String
   headers : Array[(String, String)]
   body : Bytes
-} derive(Debug, Eq)
+}
 
 ///|
 pub fn Frame::new(

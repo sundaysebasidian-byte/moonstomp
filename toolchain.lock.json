@@ -1,18 +1,18 @@
 {
   "schema": 1,
-  "compiler_version": "v0.10.18+6c83a7f62 (2026-10-28)",
-  "moon_version": "moon 0.1.20261028 (e1e1f15 2026-10-28)",
-  "sdk_release": "0.10.18+6c83a7f62",
+  "compiler_version": "v0.10.20+65efd5b93 (2026-11-05)",
+  "moon_version": "moon 0.1.20261104 (940aa18 2026-11-04)",
+  "sdk_release": "0.10.20+65efd5b93",
   "tested_node_version": "v24.22.1",
   "tested_python_version": "Python 3.12.14",
   "tested_platform": "Linux x86_64",
-  "compiler_requirement": "exact candidate SDK release; old 0.10.14 results are historical",
+  "compiler_requirement": "MoonBit 0.10.20 or newer: the source uses that release's #derive syntax, which 0.10.18 rejects. 0.10.18 and 0.10.14 results are historical",
   "runtime_dependencies": "MoonBit core included with SDK; Node built-ins; no registry install required",
-  "ci_note": "Review branch CI uses only this pinned, isolated SDK; no latest/global installer job. Historical release CI records remain bound to their original commits.",
+  "ci_note": "CI installs this pinned, isolated SDK; fresh-clone.yml additionally runs the latest official release on every push and weekly. Historical release CI records remain bound to their original commits.",
   "consumer_dependency_mode": "workspace",
-  "sdk_url": "https://cli.moonbitlang.com/binaries/0.10.18%2B6c83a7f62/moonbit-linux-x86_64.tar.gz",
-  "sdk_sha256": "0e4cde1ace98e8ef00552a937738b59c6901c4b8a004ebad71ea0e63688f63f1",
-  "core_url": "https://cli.moonbitlang.com/cores/core-0.10.18%2B6c83a7f62.tar.gz",
-  "core_sha256": "30a8ae1c1e1e8fde478ea742cbc928c8f4ae1f5c00090afe3f10c97be9e5da64",
-  "hash_basis": "prior recorded bytes, rechecked after fresh official download; not claimed separately vendor-signed checksums"
+  "sdk_url": "https://cli.moonbitlang.com/binaries/0.10.20%2B65efd5b93/moonbit-linux-x86_64.tar.gz",
+  "sdk_sha256": "80d987523308fa490eba9f1baf98df996a5a7891e118357553b7c2608c0597c5",
+  "core_url": "https://cli.moonbitlang.com/cores/core-0.10.20%2B65efd5b93.tar.gz",
+  "core_sha256": "8ec2a2c01335501d703867bb4eef5f92d3cd7e1ae1ee5f7f14d54d16d2c7c2b5",
+  "hash_basis": "bytes downloaded from the official host on 2026-11-11; not claimed separately vendor-signed checksums"
 }

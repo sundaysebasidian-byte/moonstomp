@@ -1,7 +1,14 @@
 # Mirrors what a reviewer does after `git clone`: install the official SDK,
 # then plain `moon check` / `moon test` and the README quick start.
 name: Fresh clone quick start
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    # Weekly run so a new official SDK release that breaks the build or the
+    # Node bridge is noticed even when nothing is pushed.
+    - cron: "37 4 * * 1"
 permissions:
   contents: read
 jobs:
@@ -11,9 +18,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        sdk: [pinned]
+        sdk: [pinned, latest]
     env:
-      PINNED_SDK: 0.10.18+6c83a7f62
+      PINNED_SDK: 0.10.20+65efd5b93
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -22,7 +29,11 @@ jobs:
       - name: Install official MoonBit SDK
         run: |
           export MOON_HOME="$RUNNER_TEMP/moonstomp-sdk"
-          python3 scripts/install-ci-sdk.py --dest "$MOON_HOME"
+          if [ "${{ matrix.sdk }}" = pinned ]; then
+            python3 scripts/install-ci-sdk.py --dest "$MOON_HOME"
+          else
+            curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          fi
           echo "MOON_HOME=$MOON_HOME" >> "$GITHUB_ENV"
           echo "$MOON_HOME/bin" >> "$GITHUB_PATH"
       - run: moon version --all

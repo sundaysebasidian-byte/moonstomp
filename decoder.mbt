@@ -1,17 +1,19 @@
 ///|
+#derive(Debug, Eq)
 pub enum WireEvent {
   Heartbeat
   Frame(Frame)
-} derive(Debug, Eq)
+}
 
 ///|
 /// Resource limits apply while data arrives, before allocating an entire frame.
+#derive(Debug)
 pub struct Limits {
   max_line : Int32
   max_headers : Int32
   max_body : Int32
   max_events : Int32
-} derive(Debug)
+}
 
 ///|
 pub fn Limits::default() -> Limits {

@@ -45,9 +45,10 @@ pub fn unsubscribe_destination(String) -> Frame
 pub fn valid_command(String) -> Bool
 
 // Errors
+#derive(@debug.Debug)
 pub suberror ProtocolError {
   Invalid(String)
-} derive(@debug.Debug)
+}
 pub fn ProtocolError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
@@ -63,13 +64,14 @@ pub fn Client::state(Self) -> State
 pub fn Client::tick(Self, Int64) -> Bytes raise ProtocolError
 pub fn Client::version(Self) -> Version?
 
+#derive(Eq, @debug.Debug)
 pub enum ClientEvent {
   Connected
   Message(Frame)
   Receipt(String)
   ServerError(Frame)
   Heartbeat
-} derive(Eq, @debug.Debug)
+}
 pub fn ClientEvent::equal(Self, Self) -> Bool
 pub fn ClientEvent::not_equal(Self, Self) -> Bool
 pub fn ClientEvent::to_repr(Self) -> @debug.Repr
@@ -79,11 +81,12 @@ pub fn Decoder::end(Self) -> Unit raise ProtocolError
 pub fn Decoder::feed(Self, Bytes) -> Array[WireEvent] raise ProtocolError
 pub fn Decoder::new(limits? : Limits, version? : Version) -> Self raise ProtocolError
 
+#derive(Eq, @debug.Debug)
 pub struct Frame {
   command : String
   headers : Array[(String, String)]
   body : Bytes
-} derive(Eq, @debug.Debug)
+}
 pub fn Frame::equal(Self, Self) -> Bool
 pub fn Frame::header(Self, String) -> String?
 pub fn Frame::new(String, Array[(String, String)], body? : Bytes) -> Self
@@ -96,49 +99,54 @@ pub fn HeartbeatClock::poll(Self, Int64) -> (Bool, Bool) raise ProtocolError
 pub fn HeartbeatClock::received_data(Self, Int64) -> Unit raise ProtocolError
 pub fn HeartbeatClock::sent_data(Self, Int64) -> Unit raise ProtocolError
 
+#derive(Eq, @debug.Debug)
 pub struct HeartbeatPlan {
   send_ms : Int32
   receive_ms : Int32
-} derive(Eq, @debug.Debug)
+}
 pub fn HeartbeatPlan::equal(Self, Self) -> Bool
 pub fn HeartbeatPlan::not_equal(Self, Self) -> Bool
 pub fn HeartbeatPlan::to_repr(Self) -> @debug.Repr
 
+#derive(@debug.Debug)
 pub struct Limits {
   max_line : Int32
   max_headers : Int32
   max_body : Int32
   max_events : Int32
-} derive(@debug.Debug)
+}
 pub fn Limits::default() -> Self
 pub fn Limits::new(max_line? : Int32, max_headers? : Int32, max_body? : Int32, max_events? : Int32) -> Self raise ProtocolError
 pub fn Limits::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub enum State {
   Fresh
   Connecting
   Active
   Disconnecting
   Closed
-} derive(Eq, @debug.Debug)
+}
 pub fn State::equal(Self, Self) -> Bool
 pub fn State::not_equal(Self, Self) -> Bool
 pub fn State::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) enum Version {
   V10
   V11
   V12
-} derive(Eq, @debug.Debug)
+}
 pub fn Version::equal(Self, Self) -> Bool
 pub fn Version::not_equal(Self, Self) -> Bool
 pub fn Version::to_repr(Self) -> @debug.Repr
 pub fn Version::wire(Self) -> String
 
+#derive(Eq, @debug.Debug)
 pub enum WireEvent {
   Heartbeat
   Frame(Frame)
-} derive(Eq, @debug.Debug)
+}
 pub fn WireEvent::equal(Self, Self) -> Bool
 pub fn WireEvent::not_equal(Self, Self) -> Bool
 pub fn WireEvent::to_repr(Self) -> @debug.Repr

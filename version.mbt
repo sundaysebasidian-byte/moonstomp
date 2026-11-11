@@ -1,10 +1,11 @@
 ///|
 /// Wire semantics; legacy constructors continue to default to V12.
+#derive(Debug, Eq)
 pub(all) enum Version {
   V10
   V11
   V12
-} derive(Debug, Eq)
+}
 
 ///|
 pub fn Version::wire(self : Version) -> String {

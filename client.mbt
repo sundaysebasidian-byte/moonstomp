@@ -1,20 +1,22 @@
 ///|
+#derive(Debug, Eq)
 pub enum State {
   Fresh
   Connecting
   Active
   Disconnecting
   Closed
-} derive(Debug, Eq)
+}
 
 ///|
+#derive(Debug, Eq)
 pub enum ClientEvent {
   Connected
   Message(Frame)
   Receipt(String)
   ServerError(Frame)
   Heartbeat
-} derive(Debug, Eq)
+}
 
 ///|
 priv struct Delivery {

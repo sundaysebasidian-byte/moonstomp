@@ -1,4 +1,7 @@
 // Stable explicit JS boundary: no reliance on generated object field names.
+// Event lists cross it as one newline-joined String (JSON texts contain no raw
+// newline) because the JS layout of Array[String] is not stable across MoonBit
+// releases: 0.10.20 passes it as an internal {buf, len} object, not a JS array.
 
 ///|
 extern "js" fn expose(
@@ -6,11 +9,11 @@ extern "js" fn expose(
   state : (@stomp.Client) -> String,
   version : (@stomp.Client) -> String,
   send : (@stomp.Client, String, String, Bytes, Int64) -> Bytes,
-  receive : (@stomp.Client, Bytes, Int64) -> Array[String],
+  receive : (@stomp.Client, Bytes, Int64) -> String,
   tick : (@stomp.Client, Int64) -> Bytes,
   close : (@stomp.Client) -> Unit,
   eof : (@stomp.Client) -> Bool,
-  parse : (Bytes) -> Array[String],
+  parse : (Bytes) -> String,
   acknowledge : (@stomp.Client, String, Bool, String, Int64) -> Bytes,
 ) -> Unit =
   #| (create,state,version,send,receive,tick,close,eof,parse,acknowledge) => {
@@ -20,12 +23,13 @@ extern "js" fn expose(
   #| const clock = (n, op) => { if (typeof n !== 'bigint' || n < 0n || n > 9223372036854775807n) throw invalid(op, 'clock must be a nonnegative Int64 bigint'); };
   #| const byteValues = Uint8Array.prototype.values;
   #| const bytes = (b, op) => { if (!(b instanceof Uint8Array)) throw invalid(op, 'body/chunk must be Uint8Array'); try { byteValues.call(b); } catch { throw invalid(op, 'body/chunk must have attached in-bounds storage'); } };
+  #| const lines = text => text === '' ? [] : text.split('\n');
   #| const headers = (h, op) => { if (!Array.isArray(h)) throw invalid(op, 'header pairs must be strings'); for (const p of h) { if (!Array.isArray(p) || p.length !== 2 || typeof p[0] !== 'string' || typeof p[1] !== 'string') throw invalid(op, 'header pairs must be strings'); } return JSON.stringify(h); };
   #| const api = {create:() => { const c = create(); clients.add(c); return c; }, state:c => { owned(c,'state'); return state(c); }, version:c => { owned(c,'version'); return version(c); }, send:(c,cmd,h,b,n) => {
   #|   owned(c,'send');
   #|   if (typeof cmd !== 'string') throw invalid('send', 'command must be a string');
   #|   bytes(b,'send'); clock(n,'send'); return send(c,cmd,headers(h,'send'),b,n);
-  #| }, receive:(c,b,n) => { owned(c,'receive'); bytes(b,'receive'); clock(n,'receive'); return receive(c,b,n); }, tick:(c,n) => { owned(c,'tick'); clock(n,'tick'); return tick(c,n); }, close:c => { owned(c,'close'); return close(c); }, eof:c => { owned(c,'eof'); return eof(c); }, parse:b => { bytes(b,'parse'); return parse(b); },
+  #| }, receive:(c,b,n) => { owned(c,'receive'); bytes(b,'receive'); clock(n,'receive'); return lines(receive(c,b,n)); }, tick:(c,n) => { owned(c,'tick'); clock(n,'tick'); return tick(c,n); }, close:c => { owned(c,'close'); return close(c); }, eof:c => { owned(c,'eof'); return eof(c); }, parse:b => { bytes(b,'parse'); return lines(parse(b)); },
   #| acknowledge:(c,h,negative,transaction,n) => { owned(c,'acknowledge'); if (typeof negative !== 'boolean' || typeof transaction !== 'string') throw invalid('acknowledge', 'negative/transaction types invalid'); clock(n,'acknowledge'); return acknowledge(c,headers(h,'acknowledge'),negative,transaction,n); }};
   #| globalThis.MoonSTOMP = api;
   #| if (typeof module !== 'undefined' && module.exports) module.exports = api;
@@ -93,7 +97,8 @@ fn main {
       let events = c.receive(chunk, now) catch {
         error => failed("receive", error)
       }
-      events.map(e => {
+      events
+      .map(e => {
         match e {
           Connected => "{\"event\":\"connected\"}"
           Heartbeat => "{\"event\":\"heartbeat\"}"
@@ -108,6 +113,7 @@ fn main {
             "{\"event\":\"error\",\"frame\":" + frame_json(f) + "}"
         }
       })
+      .join("\n")
     },
     (c, now) => c.tick(now) catch { error => failed("tick", error) },
     c => c.fail(),
@@ -125,12 +131,14 @@ fn main {
       d.end() catch {
         error => failed("parse", error)
       }
-      events.map(e => {
+      events
+      .map(e => {
         match e {
           Heartbeat => "{\"heartbeat\":true}"
           Frame(f) => frame_json(f)
         }
       })
+      .join("\n")
     },
     (c, headers, negative, transaction, now) => {
       let version = match c.version() {
