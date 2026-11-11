@@ -12,7 +12,7 @@
 
 原运行时代码的默认分支 [检查](https://github.com/sundaysebasidian-byte/moonstomp/actions/runs/41214099934)、[fresh clone](https://github.com/sundaysebasidian-byte/moonstomp/actions/runs/41214099906)、[RabbitMQ](https://github.com/sundaysebasidian-byte/moonstomp/actions/runs/41214099917) 已通过。此处不冒充本发行候选或注册表包的独立验收。
 
-RabbitMQ 测试覆盖 SEND 事务提交/中止及 NACK 重投递，不是事务 ACK 验证。Classic 14 场景、Artemis/Go 证据绑定各自历史版本，未在本次重新执行。SDK 仅锁定 0.10.18。STOMP ZIP Windows-path guard 未完成，不计作本次修复。
+RabbitMQ 测试覆盖 SEND 事务提交/中止及 NACK 重投递，不是事务 ACK 验证。Classic 14 场景、Artemis/Go 证据绑定各自历史版本，未在本次重新执行。SDK 锁定 0.10.20+65efd5b93（2026-11-11 由 0.10.18 更新，源码需要 0.10.20 及以上）；fresh-clone 工作流另在最新官方 SDK 上运行。STOMP ZIP Windows-path guard 未完成，不计作本次修复。
 
 ## 发布门槛
 
